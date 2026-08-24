@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.myapp.web</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/opt/homebrew/bin/node</string>
+    <string>/ABSOLUTE/PATH/TO/Voice App/deploy/mac-mini/server.mjs</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>/ABSOLUTE/PATH/TO/Voice App</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>HANDLED_HOST</key>
+    <string>127.0.0.1</string>
+    <key>HANDLED_PORT</key>
+    <string>4173</string>
+  </dict>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>/ABSOLUTE/PATH/TO/Voice App/deploy/mac-mini/logs/launchagent.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>/ABSOLUTE/PATH/TO/Voice App/deploy/mac-mini/logs/launchagent.err.log</string>
+</dict>
+</plist>

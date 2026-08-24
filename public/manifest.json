@@ -1,0 +1,18 @@
+{
+  "name": "Handled",
+  "short_name": "Handled",
+  "description": "Say it. Understand it. Back it up. Use it.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#24725D",
+  "background_color": "#F7F8F5",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ]
+}

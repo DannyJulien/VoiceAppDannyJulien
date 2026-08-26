@@ -7,9 +7,21 @@ import { AppState, Platform } from 'react-native';
 import { type Database } from '@/types/database';
 
 import { isSupabaseConfigured, supabaseConfig, SUPABASE_CONFIGURATION_ERROR } from './config';
+import { fetchWithTimeout } from './fetch-with-timeout';
 
-export const supabase: SupabaseClient<Database> | null = isSupabaseConfigured
-  ? createClient<Database>(supabaseConfig.url!, supabaseConfig.publishableKey!, {
+type SupabaseRuntimeState = {
+  client?: SupabaseClient<Database>;
+  isAppStateListenerRegistered?: boolean;
+};
+
+const runtime = globalThis as typeof globalThis & {
+  __handledSupabaseRuntime?: SupabaseRuntimeState;
+};
+
+const runtimeState = (runtime.__handledSupabaseRuntime ??= {});
+
+function createSupabaseClient() {
+  return createClient<Database>(supabaseConfig.url!, supabaseConfig.publishableKey!, {
       auth: {
         ...(Platform.OS === 'web' ? {} : { storage: AsyncStorage }),
         autoRefreshToken: true,
@@ -17,10 +29,16 @@ export const supabase: SupabaseClient<Database> | null = isSupabaseConfigured
         detectSessionInUrl: false,
         lock: processLock,
       },
-    })
+      global: { fetch: fetchWithTimeout },
+    });
+}
+
+export const supabase: SupabaseClient<Database> | null = isSupabaseConfigured
+  ? (runtimeState.client ??= createSupabaseClient())
   : null;
 
-if (supabase && Platform.OS !== 'web') {
+if (supabase && Platform.OS !== 'web' && !runtimeState.isAppStateListenerRegistered) {
+  runtimeState.isAppStateListenerRegistered = true;
   AppState.addEventListener('change', (state) => {
     if (state === 'active') {
       supabase.auth.startAutoRefresh();

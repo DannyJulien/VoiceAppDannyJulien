@@ -117,11 +117,14 @@ export default function ContactsScreen() {
         <Text style={styles.listTitle}>Saved contacts</Text>
         {contactsQuery.isPending ? <Text style={styles.copy}>Loading contacts…</Text> : null}
         {contactsQuery.error ? (
-          <Text accessibilityRole="alert" style={styles.error}>
-            {contactsQuery.error instanceof Error
-              ? contactsQuery.error.message
-              : 'Unable to load contacts.'}
-          </Text>
+          <View accessibilityRole="alert" style={styles.errorCard}>
+            <Text style={styles.error}>
+              {contactsQuery.error instanceof Error
+                ? contactsQuery.error.message
+                : 'Unable to load contacts.'}
+            </Text>
+            <AppButton label="Try again" onPress={() => contactsQuery.refetch()} variant="secondary" />
+          </View>
         ) : null}
         {contactsQuery.data?.length === 0 ? (
           <Text style={styles.copy}>No contacts yet. Add one above when you are ready.</Text>
@@ -177,4 +180,5 @@ const styles = StyleSheet.create({
   contactName: { color: Colors.ink, fontSize: 17, fontWeight: '800' },
   contactDetails: { color: Colors.muted, fontSize: 14, lineHeight: 20 },
   error: { color: Colors.danger, fontSize: 14, lineHeight: 20 },
+  errorCard: { gap: 10 },
 });

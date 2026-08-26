@@ -60,7 +60,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingHorizontal: 18,
   },
-  primary: { backgroundColor: Colors.brand, shadowColor: Colors.brand, shadowOpacity: 0.18, shadowRadius: 10 },
+  primary: { backgroundColor: Colors.brand, boxShadow: `0px 4px 10px ${Colors.brand}2E` },
   secondary: { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border },
   quiet: { backgroundColor: 'transparent' },
   pressed: { opacity: 0.86 },

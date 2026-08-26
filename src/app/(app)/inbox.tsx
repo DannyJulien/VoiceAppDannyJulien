@@ -58,11 +58,14 @@ export default function InboxScreen() {
 
         {actionsQuery.isPending ? <Text style={styles.copy}>Loading your actions…</Text> : null}
         {actionsQuery.error ? (
-          <Text accessibilityRole="alert" style={styles.error}>
-            {actionsQuery.error instanceof Error
-              ? actionsQuery.error.message
-              : 'Unable to load your actions.'}
-          </Text>
+          <View accessibilityRole="alert" style={styles.errorCard}>
+            <Text style={styles.error}>
+              {actionsQuery.error instanceof Error
+                ? actionsQuery.error.message
+                : 'Unable to load your actions.'}
+            </Text>
+            <AppButton label="Try again" onPress={() => actionsQuery.refetch()} variant="secondary" />
+          </View>
         ) : null}
         {actionsQuery.data?.length === 0 ? (
           <View style={styles.empty}>
@@ -130,4 +133,5 @@ const styles = StyleSheet.create({
   },
   emptyTitle: { color: Colors.ink, fontSize: 19, fontWeight: '800' },
   error: { color: Colors.danger, fontSize: 14, lineHeight: 20 },
+  errorCard: { gap: 10 },
 });

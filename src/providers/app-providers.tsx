@@ -5,13 +5,17 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ActionReviewProvider } from '@/features/actions/action-review-provider';
 import { AuthProvider } from '@/features/auth/auth-provider';
+import { isNetworkTimeoutError } from '@/services/supabase/fetch-with-timeout';
 
 export function AppProviders({ children }: PropsWithChildren) {
   const [queryClient] = useState(
     () =>
       new QueryClient({
         defaultOptions: {
-          queries: { retry: 1, staleTime: 30_000 },
+          queries: {
+            retry: (failureCount, error) => failureCount < 1 && !isNetworkTimeoutError(error),
+            staleTime: 30_000,
+          },
         },
       }),
   );

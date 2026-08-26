@@ -68,11 +68,14 @@ export default function ResearchListScreen() {
           <Text style={styles.startTitle}>Research a saved note</Text>
           {notesQuery.isPending ? <Text style={styles.copy}>Loading saved notes…</Text> : null}
           {notesQuery.error ? (
-            <Text accessibilityRole="alert" style={styles.error}>
-              {notesQuery.error instanceof Error
-                ? notesQuery.error.message
-                : 'Unable to load saved notes.'}
-            </Text>
+            <View accessibilityRole="alert" style={styles.errorCard}>
+              <Text style={styles.error}>
+                {notesQuery.error instanceof Error
+                  ? notesQuery.error.message
+                  : 'Unable to load saved notes.'}
+              </Text>
+              <AppButton label="Try again" onPress={() => notesQuery.refetch()} variant="secondary" />
+            </View>
           ) : null}
           {!notesQuery.isPending && !notesQuery.error && researchableNotes.length === 0 ? (
             <Text style={styles.copy}>Save a voice note first, then return here to research it.</Text>
@@ -117,11 +120,14 @@ export default function ResearchListScreen() {
 
         {sessionsQuery.isPending ? <Text style={styles.copy}>Loading research…</Text> : null}
         {sessionsQuery.error ? (
-          <Text accessibilityRole="alert" style={styles.error}>
-            {sessionsQuery.error instanceof Error
-              ? sessionsQuery.error.message
-              : 'Unable to load research.'}
-          </Text>
+          <View accessibilityRole="alert" style={styles.errorCard}>
+            <Text style={styles.error}>
+              {sessionsQuery.error instanceof Error
+                ? sessionsQuery.error.message
+                : 'Unable to load research.'}
+            </Text>
+            <AppButton label="Try again" onPress={() => sessionsQuery.refetch()} variant="secondary" />
+          </View>
         ) : null}
         {sessionsQuery.data?.length === 0 ? (
           <View style={styles.empty}>
@@ -227,4 +233,5 @@ const styles = StyleSheet.create({
   },
   emptyTitle: { color: Colors.ink, fontSize: 19, fontWeight: '800' },
   error: { color: Colors.danger, fontSize: 14, lineHeight: 20 },
+  errorCard: { gap: 10 },
 });

@@ -17,6 +17,38 @@ export type StartResearchInput = {
   topic: string;
 };
 
+async function captureForResearch(actionId: string | null, captureId: string | null) {
+  if (captureId) return captureId;
+  if (!actionId) throw new Error('This note needs to be saved before it can be researched.');
+
+  const client = getSupabaseClient();
+  const { data: action, error: actionError } = await client
+    .from('actions')
+    .select('id, title, summary')
+    .eq('id', actionId)
+    .single();
+  if (actionError || !action) throw actionError ?? new Error('This note is unavailable.');
+
+  const transcript = [action.title, action.summary].filter(Boolean).join('\n\n').trim();
+  if (!transcript) throw new Error('Add a title or details before starting research.');
+
+  const { data: capture, error: captureError } = await client
+    .from('voice_captures')
+    .insert({ processing_status: 'transcribed', transcript })
+    .select('id')
+    .single();
+  if (captureError || !capture) {
+    throw captureError ?? new Error('Unable to prepare this note for research.');
+  }
+
+  const { error: linkError } = await client
+    .from('actions')
+    .update({ voice_capture_id: capture.id })
+    .eq('id', action.id);
+  if (linkError) throw linkError;
+  return capture.id;
+}
+
 async function messageForResearchError(error: unknown) {
   if (error instanceof FunctionsHttpError) {
     const payload = (await error.context.json().catch(() => null)) as { error?: unknown } | null;
@@ -33,10 +65,11 @@ export async function startResearch({
   researchGoal = 'general_background',
   topic,
 }: StartResearchInput) {
+  const resolvedCaptureId = await captureForResearch(actionId, captureId);
   const { data, error } = await getSupabaseClient().functions.invoke('research', {
     body: {
       actionId,
-      captureId,
+      captureId: resolvedCaptureId,
       researchFreshness,
       researchGoal,
       topic: topic.trim(),

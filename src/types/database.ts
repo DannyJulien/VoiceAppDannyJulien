@@ -110,6 +110,7 @@ export type Database = {
           category?: ActionCategory;
         };
         Update: {
+          voice_capture_id?: string | null;
           title?: string;
           summary?: string | null;
           status?: ActionStatus;

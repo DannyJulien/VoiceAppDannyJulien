@@ -81,9 +81,9 @@ export default function HomeScreen() {
 
         <View style={styles.hero}>
           <Text style={styles.eyebrow}>CAPTURE</Text>
-          <Text style={styles.title}>Clear your head.</Text>
+          <Text style={styles.title}>Say it. Save it.</Text>
           <Text style={styles.copy}>
-            Record a thought. We turn it into something you can act on.
+            Capture a thought by voice or write one down. Sort it after, without losing the flow.
           </Text>
           <View style={styles.captureArea}>
             <Pressable
@@ -108,7 +108,7 @@ export default function HomeScreen() {
             </Pressable>
             <Text style={styles.captureStatus}>
               {isRecording
-                ? `Recording ${formatDuration(durationMillis)}`
+                ? `Listening · ${formatDuration(durationMillis)}`
                 : phase === 'understanding'
                   ? 'Making sense of it…'
                   : isBusy
@@ -117,13 +117,30 @@ export default function HomeScreen() {
                       ? 'Saved. Preparing your action…'
                       : 'Tap to start recording'}
             </Text>
+            {isRecording ? (
+              <View style={styles.liveRow}>
+                <View style={styles.liveDot} />
+                <Text style={styles.liveText}>
+                  Voice is being captured. You can review the transcript after you stop.
+                </Text>
+              </View>
+            ) : null}
           </View>
         </View>
 
+        <View style={styles.quickActions}>
+          <AppButton
+            label="Write a note"
+            onPress={() => router.push('/note/new')}
+            variant="secondary"
+          />
+          <AppButton label="View timeline" onPress={() => router.push('/inbox')} variant="quiet" />
+        </View>
+
         <View style={styles.tipCard}>
-          <Text style={styles.tipTitle}>One place for the follow-through</Text>
+          <Text style={styles.tipTitle}>Keep the context together</Text>
           <Text style={styles.tipCopy}>
-            Find saved thoughts in Inbox, research a note, or send it to a person.
+            Assign every note to a project or category, research it when useful, and link a person.
           </Text>
         </View>
 
@@ -236,6 +253,10 @@ const styles = StyleSheet.create({
   },
   stopIcon: { backgroundColor: Colors.surface, borderRadius: 7, height: 30, width: 30 },
   captureStatus: { color: Colors.surface, fontSize: 15, fontWeight: '800' },
+  liveRow: { alignItems: 'center', flexDirection: 'row', gap: 7, maxWidth: 300 },
+  liveDot: { backgroundColor: '#FDE68A', borderRadius: 5, height: 8, width: 8 },
+  liveText: { color: '#E0E7FF', flex: 1, fontSize: 12, lineHeight: 17 },
+  quickActions: { flexDirection: 'row', gap: 10 },
   tipCard: { backgroundColor: Colors.accentSoft, borderRadius: 18, gap: 4, padding: 16 },
   tipTitle: { color: Colors.ink, fontSize: 15, fontWeight: '900' },
   tipCopy: { color: Colors.muted, fontSize: 14, lineHeight: 20 },

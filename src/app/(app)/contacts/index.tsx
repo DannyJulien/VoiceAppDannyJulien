@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { AppButton } from '@/components/app-button';
@@ -10,6 +11,7 @@ import { createContact, getContacts } from '@/features/contacts/contact-service'
 import { useAuth } from '@/features/auth/auth-provider';
 
 export default function ContactsScreen() {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const { session } = useAuth();
   const userId = session?.user.id;
@@ -123,7 +125,11 @@ export default function ContactsScreen() {
                 ? contactsQuery.error.message
                 : 'Unable to load contacts.'}
             </Text>
-            <AppButton label="Try again" onPress={() => contactsQuery.refetch()} variant="secondary" />
+            <AppButton
+              label="Try again"
+              onPress={() => contactsQuery.refetch()}
+              variant="secondary"
+            />
           </View>
         ) : null}
         {contactsQuery.data?.length === 0 ? (
@@ -131,10 +137,19 @@ export default function ContactsScreen() {
         ) : null}
         <View style={styles.list}>
           {contactsQuery.data?.map((contact) => (
-            <View key={contact.id} style={styles.contactCard}>
+            <Pressable
+              accessibilityLabel={`Open timeline for ${contact.name}`}
+              accessibilityRole="button"
+              key={contact.id}
+              onPress={() =>
+                router.push({ pathname: '/contacts/[id]', params: { id: contact.id } })
+              }
+              style={({ pressed }) => [styles.contactCard, pressed && styles.pressed]}
+            >
               <Text style={styles.contactName}>{contact.name}</Text>
               <Text style={styles.contactDetails}>{contactLabel(contact)}</Text>
-            </View>
+              <Text style={styles.timelineLink}>View conversation timeline ›</Text>
+            </Pressable>
           ))}
         </View>
       </ScrollView>
@@ -146,7 +161,13 @@ const styles = StyleSheet.create({
   content: { gap: 18, paddingBottom: 30, paddingTop: 24 },
   titleBlock: { gap: 5 },
   eyebrow: { color: Colors.brand, fontSize: 13, fontWeight: '800', letterSpacing: 1.1 },
-  title: { color: Colors.ink, fontSize: 34, fontWeight: '900', letterSpacing: -1.1, lineHeight: 40 },
+  title: {
+    color: Colors.ink,
+    fontSize: 34,
+    fontWeight: '900',
+    letterSpacing: -1.1,
+    lineHeight: 40,
+  },
   copy: { color: Colors.muted, fontSize: 16, lineHeight: 24 },
   card: {
     backgroundColor: Colors.surface,
@@ -179,6 +200,8 @@ const styles = StyleSheet.create({
   },
   contactName: { color: Colors.ink, fontSize: 17, fontWeight: '800' },
   contactDetails: { color: Colors.muted, fontSize: 14, lineHeight: 20 },
+  timelineLink: { color: Colors.brand, fontSize: 13, fontWeight: '800', marginTop: 4 },
+  pressed: { opacity: 0.8 },
   error: { color: Colors.danger, fontSize: 14, lineHeight: 20 },
   errorCard: { gap: 10 },
 });

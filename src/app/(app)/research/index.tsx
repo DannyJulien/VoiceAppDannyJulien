@@ -28,16 +28,12 @@ export default function ResearchListScreen() {
     enabled: Boolean(userId),
   });
   const researchMutation = useMutation({
-    mutationFn: (action: SavedAction) => {
-      if (!action.voice_capture_id) {
-        throw new Error('This saved note has no transcribed voice capture to research.');
-      }
-      return startResearch({
+    mutationFn: (action: SavedAction) =>
+      startResearch({
         actionId: action.id,
         captureId: action.voice_capture_id,
         topic: action.title,
-      });
-    },
+      }),
     onMutate: (action) => {
       setLastAttempt(action);
       setResearchingActionId(action.id);
@@ -50,7 +46,7 @@ export default function ResearchListScreen() {
     },
     onSettled: () => setResearchingActionId(null),
   });
-  const researchableNotes = notesQuery.data?.filter((action) => Boolean(action.voice_capture_id)) ?? [];
+  const researchableNotes = notesQuery.data ?? [];
 
   return (
     <Screen>
@@ -60,7 +56,7 @@ export default function ResearchListScreen() {
           <Text style={styles.title}>Research, when you need it.</Text>
         </View>
         <Text style={styles.copy}>
-          Ask about any saved voice note. Your original note always stays safe, even if research is
+          Ask about any saved note. Your original note always stays safe, even if research is
           temporarily unavailable.
         </Text>
 
@@ -74,11 +70,15 @@ export default function ResearchListScreen() {
                   ? notesQuery.error.message
                   : 'Unable to load saved notes.'}
               </Text>
-              <AppButton label="Try again" onPress={() => notesQuery.refetch()} variant="secondary" />
+              <AppButton
+                label="Try again"
+                onPress={() => notesQuery.refetch()}
+                variant="secondary"
+              />
             </View>
           ) : null}
           {!notesQuery.isPending && !notesQuery.error && researchableNotes.length === 0 ? (
-            <Text style={styles.copy}>Save a voice note first, then return here to research it.</Text>
+            <Text style={styles.copy}>Save a note first, then return here to research it.</Text>
           ) : null}
           {researchableNotes.map((action) => (
             <View key={action.id} style={styles.noteRow}>
@@ -113,7 +113,11 @@ export default function ResearchListScreen() {
                 }
                 variant="secondary"
               />
-              <AppButton label="Go to inbox" onPress={() => router.replace('/inbox')} variant="quiet" />
+              <AppButton
+                label="Go to inbox"
+                onPress={() => router.replace('/inbox')}
+                variant="quiet"
+              />
             </View>
           ) : null}
         </View>
@@ -126,14 +130,18 @@ export default function ResearchListScreen() {
                 ? sessionsQuery.error.message
                 : 'Unable to load research.'}
             </Text>
-            <AppButton label="Try again" onPress={() => sessionsQuery.refetch()} variant="secondary" />
+            <AppButton
+              label="Try again"
+              onPress={() => sessionsQuery.refetch()}
+              variant="secondary"
+            />
           </View>
         ) : null}
         {sessionsQuery.data?.length === 0 ? (
           <View style={styles.empty}>
             <Text style={styles.emptyTitle}>No research yet</Text>
             <Text style={styles.copy}>
-              Choose one of the saved voice notes above to get a sourced answer.
+              Choose one of the saved notes above to get a sourced answer.
             </Text>
           </View>
         ) : null}
@@ -180,7 +188,13 @@ const styles = StyleSheet.create({
   content: { gap: 18, paddingBottom: 30, paddingTop: 24 },
   titleBlock: { gap: 5 },
   eyebrow: { color: Colors.brand, fontSize: 12, fontWeight: '800', letterSpacing: 1.1 },
-  title: { color: Colors.ink, fontSize: 32, fontWeight: '900', letterSpacing: -1.1, lineHeight: 39 },
+  title: {
+    color: Colors.ink,
+    fontSize: 32,
+    fontWeight: '900',
+    letterSpacing: -1.1,
+    lineHeight: 39,
+  },
   copy: { color: Colors.muted, fontSize: 16, lineHeight: 24 },
   list: { gap: 10 },
   startCard: {

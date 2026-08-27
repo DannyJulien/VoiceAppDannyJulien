@@ -1,6 +1,7 @@
 export type PreferredLanguage = 'en' | 'nl' | 'fr';
 export type ActionType = 'note' | 'task' | 'reminder' | 'message';
 export type ActionStatus = 'pending' | 'approved' | 'completed' | 'cancelled';
+export type ActionCategory = 'inbox' | 'work' | 'personal' | 'meeting' | 'idea';
 export type ResearchGoal =
   | 'answer_question'
   | 'support_claim'
@@ -86,6 +87,8 @@ export type Database = {
           confidence: number | null;
           requires_clarification: boolean;
           clarification_question: string | null;
+          project_id: string | null;
+          category: ActionCategory;
           created_at: string;
           updated_at: string;
         };
@@ -103,6 +106,8 @@ export type Database = {
           confidence?: number | null;
           requires_clarification?: boolean;
           clarification_question?: string | null;
+          project_id?: string | null;
+          category?: ActionCategory;
         };
         Update: {
           title?: string;
@@ -114,6 +119,29 @@ export type Database = {
           confidence?: number | null;
           requires_clarification?: boolean;
           clarification_question?: string | null;
+          project_id?: string | null;
+          category?: ActionCategory;
+        };
+        Relationships: [];
+      };
+      projects: {
+        Row: {
+          id: string;
+          user_id: string;
+          name: string;
+          color: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id?: string;
+          name: string;
+          color?: string;
+        };
+        Update: {
+          name?: string;
+          color?: string;
         };
         Relationships: [];
       };
@@ -339,6 +367,7 @@ export type Database = {
       preferred_language: PreferredLanguage;
       action_type: ActionType;
       action_status: ActionStatus;
+      action_category: ActionCategory;
       research_goal: ResearchGoal;
       research_freshness: ResearchFreshness;
       research_status: ResearchStatus;

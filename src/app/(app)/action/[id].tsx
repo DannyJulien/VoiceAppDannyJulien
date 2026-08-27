@@ -140,9 +140,7 @@ export default function ActionDetailsScreen() {
   });
   const researchMutation = useMutation({
     mutationFn: () => {
-      if (!action?.voice_capture_id) {
-        throw new Error('Only a saved voice note can be researched.');
-      }
+      if (!action) throw new Error('This note is not available for research.');
       return startResearch({
         actionId: action.id,
         captureId: action.voice_capture_id,
@@ -352,15 +350,11 @@ export default function ActionDetailsScreen() {
               style={styles.input}
               value={researchTopic}
             />
-            {action.voice_capture_id ? (
-              <AppButton
-                label="Research this note"
-                loading={researchMutation.isPending}
-                onPress={() => researchMutation.mutate()}
-              />
-            ) : (
-              <Text style={styles.cardCopy}>This action was not created from a voice note.</Text>
-            )}
+            <AppButton
+              label="Research this note"
+              loading={researchMutation.isPending}
+              onPress={() => researchMutation.mutate()}
+            />
             {researchQuery.isPending ? (
               <Text style={styles.cardCopy}>Checking past research…</Text>
             ) : null}

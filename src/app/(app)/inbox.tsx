@@ -9,6 +9,8 @@ import { Colors } from '@/constants/theme';
 import { type ActionFilter, getActions } from '@/features/actions/action-service';
 import { actionTypeLabel, formatActionWhen, statusLabel } from '@/features/actions/action-utils';
 import { useAuth } from '@/features/auth/auth-provider';
+import { getProjects } from '@/features/projects/project-service';
+import { categoryDetails } from '@/features/projects/project-utils';
 
 const filters: { label: string; value: ActionFilter }[] = [
   { label: 'All', value: 'all' },
@@ -28,17 +30,30 @@ export default function InboxScreen() {
     queryFn: () => getActions(userId!, filter),
     enabled: Boolean(userId),
   });
+  const projectsQuery = useQuery({
+    queryKey: ['projects', userId],
+    queryFn: () => getProjects(userId!),
+    enabled: Boolean(userId),
+  });
 
   return (
     <Screen>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.titleBlock}>
-          <Text style={styles.eyebrow}>YOUR THOUGHTS, ORGANIZED</Text>
-          <Text style={styles.title}>Inbox</Text>
+          <Text style={styles.eyebrow}>YOUR STORY, IN ORDER</Text>
+          <Text style={styles.title}>Timeline</Text>
         </View>
         <Text style={styles.copy}>
-          Every saved thought lives here until you are ready to act on it.
+          Your notes, recordings and follow-ups — organized by when they happened.
         </Text>
+        <View style={styles.topActions}>
+          <AppButton label="Write a note" onPress={() => router.push('/note/new')} />
+          <AppButton
+            label="Projects"
+            onPress={() => router.push('/projects' as never)}
+            variant="secondary"
+          />
+        </View>
 
         <ScrollView
           contentContainerStyle={styles.filters}
@@ -64,13 +79,19 @@ export default function InboxScreen() {
                 ? actionsQuery.error.message
                 : 'Unable to load your actions.'}
             </Text>
-            <AppButton label="Try again" onPress={() => actionsQuery.refetch()} variant="secondary" />
+            <AppButton
+              label="Try again"
+              onPress={() => actionsQuery.refetch()}
+              variant="secondary"
+            />
           </View>
         ) : null}
         {actionsQuery.data?.length === 0 ? (
           <View style={styles.empty}>
-            <Text style={styles.emptyTitle}>Nothing handled yet</Text>
-            <Text style={styles.copy}>Your confirmed voice actions will appear here.</Text>
+            <Text style={styles.emptyTitle}>Your timeline starts here</Text>
+            <Text style={styles.copy}>
+              Capture a thought or type a note. Both stay easy to find.
+            </Text>
             <AppButton label="Capture a thought" onPress={() => router.replace('/home')} />
           </View>
         ) : null}
@@ -85,11 +106,21 @@ export default function InboxScreen() {
               style={({ pressed }) => [styles.actionCard, pressed && styles.actionCardPressed]}
             >
               <View style={styles.cardTopRow}>
-                <Text style={styles.cardType}>{actionTypeLabel(action.action_type)}</Text>
+                <Text style={[styles.cardType, { color: categoryDetails(action.category).color }]}>
+                  {categoryDetails(action.category).label} · {actionTypeLabel(action.action_type)}
+                </Text>
                 <Text style={styles.cardStatus}>{statusLabel(action.status)}</Text>
               </View>
               <Text style={styles.cardTitle}>{action.title}</Text>
-              <Text style={styles.cardWhen}>{formatActionWhen(action.scheduled_at)}</Text>
+              <Text numberOfLines={2} style={styles.cardSummary}>
+                {action.summary}
+              </Text>
+              <Text style={styles.cardWhen}>
+                {action.project_id
+                  ? `${projectsQuery.data?.find((project) => project.id === action.project_id)?.name ?? 'Project'} · `
+                  : ''}
+                {formatActionWhen(action.created_at)}
+              </Text>
             </Pressable>
           ))}
         </View>
@@ -102,9 +133,16 @@ const styles = StyleSheet.create({
   content: { gap: 18, paddingBottom: 30, paddingTop: 24 },
   titleBlock: { gap: 5 },
   eyebrow: { color: Colors.brand, fontSize: 12, fontWeight: '800', letterSpacing: 1.1 },
-  title: { color: Colors.ink, fontSize: 34, fontWeight: '900', letterSpacing: -1.1, lineHeight: 40 },
+  title: {
+    color: Colors.ink,
+    fontSize: 34,
+    fontWeight: '900',
+    letterSpacing: -1.1,
+    lineHeight: 40,
+  },
   copy: { color: Colors.muted, fontSize: 16, lineHeight: 24 },
   filters: { gap: 8 },
+  topActions: { flexDirection: 'row', gap: 10 },
   filter: { minHeight: 42, paddingHorizontal: 14 },
   activeFilter: { minHeight: 42, paddingHorizontal: 14 },
   list: { gap: 10 },
@@ -121,6 +159,7 @@ const styles = StyleSheet.create({
   cardType: { color: Colors.brand, fontSize: 12, fontWeight: '900', letterSpacing: 0.7 },
   cardStatus: { color: Colors.muted, fontSize: 13, fontWeight: '700' },
   cardTitle: { color: Colors.ink, fontSize: 18, fontWeight: '800', lineHeight: 24 },
+  cardSummary: { color: Colors.muted, fontSize: 14, lineHeight: 20 },
   cardWhen: { color: Colors.muted, fontSize: 14, lineHeight: 20 },
   empty: {
     alignItems: 'flex-start',

@@ -18,6 +18,39 @@ export async function getContacts(userId: string) {
   return data;
 }
 
+export async function getContact(contactId: string, userId: string) {
+  const { data, error } = await getSupabaseClient()
+    .from('people')
+    .select()
+    .eq('id', contactId)
+    .eq('user_id', userId)
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function getContactTimeline(contactId: string, userId: string) {
+  const client = getSupabaseClient();
+  const { data: links, error: linksError } = await client
+    .from('action_people')
+    .select('action_id')
+    .eq('person_id', contactId);
+  if (linksError) throw linksError;
+  if (!links.length) return [];
+
+  const { data, error } = await client
+    .from('actions')
+    .select()
+    .eq('user_id', userId)
+    .in(
+      'id',
+      links.map((link) => link.action_id),
+    )
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data;
+}
+
 export async function createContact(userId: string, input: ContactInput) {
   const { data, error } = await getSupabaseClient()
     .from('people')

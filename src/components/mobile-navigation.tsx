@@ -6,8 +6,8 @@ import { Colors } from '@/constants/theme';
 
 const destinations = [
   { icon: '●', label: 'Capture', path: '/home' },
-  { icon: '✓', label: 'Inbox', path: '/inbox' },
-  { icon: '⌕', label: 'Research', path: '/research' },
+  { icon: '↗', label: 'Timeline', path: '/inbox' },
+  { icon: '□', label: 'Projects', path: '/projects' },
   { icon: '◌', label: 'People', path: '/contacts' },
 ] as const;
 
@@ -31,11 +31,13 @@ export function MobileNavigation() {
               accessibilityRole="tab"
               accessibilityState={{ selected }}
               key={destination.path}
-              onPress={() => router.replace(destination.path)}
+              onPress={() => router.replace(destination.path as never)}
               style={({ pressed }) => [styles.item, pressed && styles.pressed]}
             >
               <Text style={[styles.icon, selected && styles.iconSelected]}>{destination.icon}</Text>
-              <Text style={[styles.label, selected && styles.labelSelected]}>{destination.label}</Text>
+              <Text style={[styles.label, selected && styles.labelSelected]}>
+                {destination.label}
+              </Text>
             </Pressable>
           );
         })}
@@ -55,7 +57,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingTop: 7,
   },
-  item: { alignItems: 'center', borderRadius: 14, gap: 2, minWidth: 58, paddingHorizontal: 9, paddingVertical: 5 },
+  item: {
+    alignItems: 'center',
+    borderRadius: 14,
+    gap: 2,
+    minWidth: 58,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+  },
   pressed: { opacity: 0.72 },
   icon: { color: '#98A2B3', fontSize: 18, fontWeight: '900', lineHeight: 21 },
   iconSelected: { color: '#FFFFFF' },

@@ -1,12 +1,16 @@
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { AppButton } from '@/components/app-button';
 import { Screen } from '@/components/screen';
 import { Colors } from '@/constants/theme';
-import { saveReviewedAction } from '@/features/actions/action-service';
+import {
+  saveReviewedAction,
+  type ActionReviewInput,
+  type SavedAction,
+} from '@/features/actions/action-service';
 import { understoodActionSchema } from '@/features/actions/action-schema';
 import { useActionReview } from '@/features/actions/action-review-provider';
 import {
@@ -15,7 +19,11 @@ import {
   normalizedSchedule,
 } from '@/features/actions/action-utils';
 import { useAuth } from '@/features/auth/auth-provider';
+import { getProjects } from '@/features/projects/project-service';
+import { categories } from '@/features/projects/project-utils';
+import { startResearch } from '@/features/research/research-service';
 import { researchPrompt, shouldOfferResearch } from '@/features/research/research-utils';
+import type { ActionCategory } from '@/types/database';
 
 function summaryPoints(value: string) {
   return value
@@ -37,14 +45,45 @@ export default function ReviewScreen() {
   const [messageDraft, setMessageDraft] = useState(() => draft?.action.messageDraft ?? '');
   const [validationError, setValidationError] = useState<string | null>(null);
   const [researchDismissed, setResearchDismissed] = useState(false);
+  const [category, setCategory] = useState<ActionCategory>('inbox');
+  const [projectId, setProjectId] = useState<string | null>(null);
+  const [savedAction, setSavedAction] = useState<SavedAction | null>(null);
+
+  const projectsQuery = useQuery({
+    queryKey: ['projects', session?.user.id],
+    queryFn: () => getProjects(session!.user.id),
+    enabled: Boolean(session?.user.id),
+  });
 
   const saveMutation = useMutation({
-    mutationFn: saveReviewedAction,
-    onSuccess: () => {
+    mutationFn: async ({
+      input,
+      shouldResearch,
+    }: {
+      input: ActionReviewInput;
+      shouldResearch: boolean;
+    }) => {
+      const saved = await saveReviewedAction(input);
+      setSavedAction(saved);
       if (session?.user.id)
         queryClient.invalidateQueries({ queryKey: ['actions', session.user.id] });
+      if (!shouldResearch) return { saved, researchSessionId: null };
+      const result = await startResearch({
+        actionId: saved.id,
+        captureId: input.captureId,
+        researchFreshness: input.action.researchFreshness,
+        researchGoal: input.action.researchGoal,
+        topic: input.action.topic ?? input.action.title,
+      });
+      return { saved, researchSessionId: result.researchSessionId };
+    },
+    onSuccess: ({ researchSessionId }) => {
       clearDraft();
-      router.replace('/inbox');
+      router.replace(
+        researchSessionId
+          ? { pathname: '/research/[id]', params: { id: researchSessionId } }
+          : '/inbox',
+      );
     },
   });
   if (!draft || !session?.user.id) {
@@ -71,7 +110,7 @@ export default function ReviewScreen() {
     router.replace('/home');
   }
 
-  function save() {
+  function save(shouldResearch = false) {
     const normalized = normalizedSchedule(scheduledAt);
     if (normalized === undefined) {
       setValidationError('Use a valid date and time, for example 2026-08-23 16:30.');
@@ -92,10 +131,15 @@ export default function ReviewScreen() {
 
     setValidationError(null);
     saveMutation.mutate({
-      action: parsedAction.data,
-      captureId: reviewDraft.captureId,
-      timezone: reviewDraft.timezone,
-      userId,
+      input: {
+        action: parsedAction.data,
+        captureId: reviewDraft.captureId,
+        category,
+        projectId,
+        timezone: reviewDraft.timezone,
+        userId,
+      },
+      shouldResearch,
     });
   }
 
@@ -115,8 +159,8 @@ export default function ReviewScreen() {
             <Text style={styles.researchTitle}>Add reliable information?</Text>
             <Text style={styles.researchCopy}>{researchPrompt(action)}</Text>
             <Text style={styles.researchCopy}>
-              Save this first. You can refine the topic and start research from the saved note
-              whenever you are ready.
+              Save this now, or save and research immediately. The result will stay linked to this
+              note.
             </Text>
             <AppButton
               label="I'll do it later"
@@ -234,29 +278,120 @@ export default function ReviewScreen() {
           </View>
         )}
 
+        <View style={styles.organizeCard}>
+          <Text style={styles.cardHeading}>Keep it together</Text>
+          <Text style={styles.editorCopy}>Choose where this belongs before you save it.</Text>
+          <Text style={styles.fieldLabel}>Category</Text>
+          <ScrollView
+            contentContainerStyle={styles.choices}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+          >
+            {categories.map((item) => {
+              const selected = item.value === category;
+              return (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                  key={item.value}
+                  onPress={() => setCategory(item.value)}
+                  style={[
+                    styles.choice,
+                    selected && { backgroundColor: item.color, borderColor: item.color },
+                  ]}
+                >
+                  <Text style={[styles.choiceText, selected && styles.choiceTextSelected]}>
+                    {item.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+          <Text style={styles.fieldLabel}>Project</Text>
+          <ScrollView
+            contentContainerStyle={styles.choices}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+          >
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ selected: projectId === null }}
+              onPress={() => setProjectId(null)}
+              style={[styles.choice, projectId === null && styles.choiceSelected]}
+            >
+              <Text style={[styles.choiceText, projectId === null && styles.choiceTextSelected]}>
+                No project
+              </Text>
+            </Pressable>
+            {projectsQuery.data?.map((project) => {
+              const selected = project.id === projectId;
+              return (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                  key={project.id}
+                  onPress={() => setProjectId(project.id)}
+                  style={[
+                    styles.choice,
+                    selected && { backgroundColor: project.color, borderColor: project.color },
+                  ]}
+                >
+                  <Text style={[styles.choiceText, selected && styles.choiceTextSelected]}>
+                    {project.name}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
+
         {validationError ? (
           <Text accessibilityRole="alert" style={styles.error}>
             {validationError}
           </Text>
         ) : null}
         {saveMutation.error ? (
-          <Text accessibilityRole="alert" style={styles.error}>
-            {saveMutation.error instanceof Error
-              ? saveMutation.error.message
-              : 'Unable to save this action.'}
-          </Text>
+          <View accessibilityRole="alert" style={styles.saveError}>
+            <Text style={styles.error}>
+              {savedAction
+                ? `Your note was saved, but research could not start: ${saveMutation.error instanceof Error ? saveMutation.error.message : 'Please try again.'}`
+                : saveMutation.error instanceof Error
+                  ? saveMutation.error.message
+                  : 'Unable to save this action.'}
+            </Text>
+            {savedAction ? (
+              <AppButton
+                label="Open saved note"
+                onPress={() =>
+                  router.replace({ pathname: '/action/[id]', params: { id: savedAction.id } })
+                }
+                variant="secondary"
+              />
+            ) : null}
+          </View>
         ) : null}
         <View style={styles.actions}>
           <AppButton
+            disabled={Boolean(savedAction)}
             label={editing ? 'Save changes' : 'Adjust summary'}
-            onPress={editing ? save : () => setEditing(true)}
+            onPress={editing ? () => save(false) : () => setEditing(true)}
             variant="secondary"
           />
           <AppButton
+            disabled={Boolean(savedAction)}
             label={action.intent === 'message' ? 'Save message' : 'Save to Inbox'}
             loading={saveMutation.isPending}
-            onPress={save}
+            onPress={() => save(false)}
           />
+          {researchSuggested || action.couldBenefitFromResearch ? (
+            <AppButton
+              disabled={Boolean(savedAction)}
+              label="Save & research now"
+              loading={saveMutation.isPending}
+              onPress={() => save(true)}
+              variant="secondary"
+            />
+          ) : null}
           <AppButton label="Discard" onPress={discard} variant="quiet" />
         </View>
       </ScrollView>
@@ -342,10 +477,32 @@ const styles = StyleSheet.create({
     gap: 10,
     padding: 18,
   },
+  organizeCard: {
+    backgroundColor: Colors.surface,
+    borderColor: Colors.border,
+    borderRadius: 22,
+    borderWidth: 1,
+    gap: 9,
+    padding: 18,
+  },
   editorHeader: { gap: 3, marginBottom: 4 },
   cardHeading: { color: Colors.ink, fontSize: 20, fontWeight: '900' },
   editorCopy: { color: Colors.muted, fontSize: 14, lineHeight: 20 },
   fieldLabel: { color: Colors.ink, fontSize: 14, fontWeight: '700', marginTop: 2 },
+  choices: { gap: 8 },
+  choice: {
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderColor: Colors.border,
+    borderRadius: 99,
+    borderWidth: 1,
+    justifyContent: 'center',
+    minHeight: 40,
+    paddingHorizontal: 14,
+  },
+  choiceSelected: { backgroundColor: Colors.brand, borderColor: Colors.brand },
+  choiceText: { color: Colors.ink, fontSize: 14, fontWeight: '800' },
+  choiceTextSelected: { color: Colors.surface },
   input: {
     backgroundColor: Colors.canvas,
     borderColor: Colors.border,
@@ -358,5 +515,6 @@ const styles = StyleSheet.create({
   },
   multilineInput: { minHeight: 110, paddingTop: 13, textAlignVertical: 'top' },
   error: { color: Colors.danger, fontSize: 14, lineHeight: 20 },
+  saveError: { backgroundColor: Colors.dangerSoft, borderRadius: 16, gap: 10, padding: 14 },
   actions: { gap: 10, marginTop: 4 },
 });

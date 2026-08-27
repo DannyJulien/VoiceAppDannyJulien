@@ -114,27 +114,39 @@ Deno.serve(async (request) => {
     const input = parsedRequest.data;
     const admin = createClient(url, serviceRoleKey);
 
+    let sourceText: string | null = null;
+    let captureId = input.captureId ?? null;
     if (input.actionId) {
       const { data: action, error: actionError } = await admin
         .from('actions')
-        .select('id, voice_capture_id')
+        .select('id, voice_capture_id, title, summary')
         .eq('id', input.actionId)
         .eq('user_id', userId)
         .single();
-      if (actionError || !action || action.voice_capture_id !== input.captureId) {
+      if (actionError || !action || (captureId && action.voice_capture_id !== captureId)) {
         return json({ error: 'This note is not available for research.' }, 404);
       }
+      captureId = action.voice_capture_id;
+      if (!captureId)
+        sourceText = [action.title, action.summary].filter(Boolean).join('\n\n').trim();
     }
 
-    const { data: capture, error: captureError } = await admin
-      .from('voice_captures')
-      .select('id, transcript')
-      .eq('id', input.captureId)
-      .eq('user_id', userId)
-      .single();
-    if (captureError || !capture?.transcript?.trim()) {
-      return json({ error: 'A transcribed capture is required for research.' }, 422);
+    let capture: { id: string; transcript: string | null } | null = null;
+    if (captureId) {
+      const { data, error: captureError } = await admin
+        .from('voice_captures')
+        .select('id, transcript')
+        .eq('id', captureId)
+        .eq('user_id', userId)
+        .single();
+      if (captureError || !data?.transcript?.trim()) {
+        return json({ error: 'This voice note has not finished transcribing yet.' }, 422);
+      }
+      capture = data;
+      sourceText = data.transcript.trim();
     }
+    if (!sourceText)
+      return json({ error: 'This note needs a title or details before research.' }, 422);
 
     const now = new Date();
     const reuseSince = new Date(now.getTime() - freshnessReuseWindow(input.researchFreshness));
@@ -169,13 +181,13 @@ Deno.serve(async (request) => {
       .from('research_sessions')
       .insert({
         action_id: input.actionId ?? null,
-        original_query: capture.transcript,
+        original_query: sourceText,
         research_freshness: input.researchFreshness,
         research_goal: input.researchGoal,
         status: 'processing',
         topic: input.topic,
         user_id: userId,
-        voice_capture_id: capture.id,
+        voice_capture_id: capture?.id ?? null,
       })
       .select('id')
       .single();
@@ -202,7 +214,7 @@ Deno.serve(async (request) => {
           input.researchFreshness,
           now.toISOString(),
         ),
-        input: `Topic: ${input.topic}\n\nOriginal voice capture:\n${capture.transcript}`,
+        input: `Topic: ${input.topic}\n\nOriginal note:\n${sourceText}`,
         text: {
           format: {
             type: 'json_schema',

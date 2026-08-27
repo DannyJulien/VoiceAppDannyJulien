@@ -11,7 +11,7 @@ import type { Database } from '@/types/database';
 
 export type StartResearchInput = {
   actionId?: string | null;
-  captureId: string;
+  captureId?: string | null;
   researchFreshness?: ResearchFreshness;
   researchGoal?: ResearchGoal | null;
   topic: string;
@@ -28,7 +28,7 @@ async function messageForResearchError(error: unknown) {
 
 export async function startResearch({
   actionId = null,
-  captureId,
+  captureId = null,
   researchFreshness = 'not_time_sensitive',
   researchGoal = 'general_background',
   topic,

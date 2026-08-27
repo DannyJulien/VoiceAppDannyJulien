@@ -1,21 +1,25 @@
 import { z } from 'https://esm.sh/zod@4.4.3';
 
-export const researchRequestSchema = z.object({
-  actionId: z.string().uuid().nullable().optional(),
-  captureId: z.string().uuid(),
-  topic: z.string().trim().min(1).max(280),
-  researchGoal: z
-    .enum([
-      'answer_question',
-      'support_claim',
-      'challenge_claim',
-      'meeting_preparation',
-      'decision_support',
-      'general_background',
-    ])
-    .nullable(),
-  researchFreshness: z.enum(['current', 'recent', 'historical', 'not_time_sensitive']),
-});
+export const researchRequestSchema = z
+  .object({
+    actionId: z.string().uuid().nullable().optional(),
+    captureId: z.string().uuid().nullable().optional(),
+    topic: z.string().trim().min(1).max(280),
+    researchGoal: z
+      .enum([
+        'answer_question',
+        'support_claim',
+        'challenge_claim',
+        'meeting_preparation',
+        'decision_support',
+        'general_background',
+      ])
+      .nullable(),
+    researchFreshness: z.enum(['current', 'recent', 'historical', 'not_time_sensitive']),
+  })
+  .refine((value) => Boolean(value.actionId || value.captureId), {
+    message: 'An action or capture is required.',
+  });
 
 export const researchSynthesisSchema = z.object({
   topic: z.string().trim().min(1).max(280),

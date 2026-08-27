@@ -33,6 +33,8 @@ const action: SavedAction = {
   confidence: 0.9,
   requires_clarification: false,
   clarification_question: null,
+  project_id: null,
+  category: 'inbox',
   created_at: contact.created_at,
   updated_at: contact.updated_at,
 };

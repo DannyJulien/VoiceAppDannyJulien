@@ -2,15 +2,21 @@ export const NETWORK_TIMEOUT_MESSAGE =
   'The connection took too long. Check your internet connection and try again.';
 
 export const DEFAULT_NETWORK_TIMEOUT_MS = 12_000;
+export const EDGE_FUNCTION_TIMEOUT_MS = 90_000;
 
 export function isNetworkTimeoutError(error: unknown) {
   return error instanceof Error && error.message === NETWORK_TIMEOUT_MESSAGE;
 }
 
+export function timeoutForRequest(input: Parameters<typeof fetch>[0]) {
+  const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+  return url.includes('/functions/v1/') ? EDGE_FUNCTION_TIMEOUT_MS : DEFAULT_NETWORK_TIMEOUT_MS;
+}
+
 export async function fetchWithTimeout(
   input: Parameters<typeof fetch>[0],
   init?: Parameters<typeof fetch>[1],
-  timeoutMs = DEFAULT_NETWORK_TIMEOUT_MS,
+  timeoutMs = timeoutForRequest(input),
 ) {
   const controller = new AbortController();
   let didTimeOut = false;

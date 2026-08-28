@@ -10,6 +10,7 @@ import {
   canonicalSourceUrl,
   inferResearchSubject,
   selectReliableSources,
+  type RetrievedSource,
 } from '../_shared/research/source-policy.ts';
 
 const corsHeaders = {
@@ -77,6 +78,33 @@ Freshness requirement: ${freshness}.
 Use primary or authoritative sources first. For Belgian statistics, prefer Statbel, the National Bank of Belgium and Eurostat. For EU law, prefer europa.eu or EUR-Lex. For scientific claims, prefer peer-reviewed research, universities or authoritative research institutions. For company financial results, prefer company filings or investor relations. For product functionality, prefer official documentation.
 
 Do not invent a URL, publisher, publication date, statistic or citation. A source URL in keyFindings must be an exact URL returned by the web search. Each key finding needs at least one source URL. If credible sources conflict, state that clearly in counterpoints and reduce confidence. Avoid Tier 5 social, forum and blog sources as primary evidence. Keep the direct answer concise, and make talking points practical for a meeting. Never claim research is verified when it lacks retrieved evidence.`;
+}
+
+function citedSourcesFromSynthesis(findings: { sourceUrls: string[] }[]): RetrievedSource[] {
+  const seen = new Set<string>();
+  const sources: RetrievedSource[] = [];
+
+  for (const url of findings.flatMap((finding) => finding.sourceUrls)) {
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol !== 'https:') continue;
+      const canonical = canonicalSourceUrl(parsed.toString());
+      if (seen.has(canonical)) continue;
+      seen.add(canonical);
+      const publisher = parsed.hostname.replace(/^www\./, '');
+      sources.push({
+        title: `Source: ${publisher}`,
+        publisher,
+        url: canonical,
+        publishedAt: null,
+        metadata: { citationType: 'synthesis_url_fallback' },
+      });
+    } catch {
+      // The validated response can still contain a malformed URL. Never persist it.
+    }
+  }
+
+  return sources;
 }
 
 Deno.serve(async (request) => {
@@ -251,7 +279,13 @@ Deno.serve(async (request) => {
     }
 
     const subject = inferResearchSubject(input.topic);
-    const sources = selectReliableSources(extractRetrievedSources(responsePayload), subject);
+    const sources = selectReliableSources(
+      [
+        ...extractRetrievedSources(responsePayload),
+        ...citedSourcesFromSynthesis(parsedSynthesis.data.keyFindings),
+      ],
+      subject,
+    );
     if (sources.length === 0) {
       await markFailed();
       return json({ error: 'Research did not retrieve reliable sources. Please try again.' }, 502);

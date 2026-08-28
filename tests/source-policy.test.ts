@@ -53,4 +53,22 @@ describe('source policy', () => {
     expect(sources).toHaveLength(1);
     expect(sources[0]).toMatchObject({ sourceType: 'statistics', trustTier: 1 });
   });
+
+  it('keeps a normal HTTPS source when it has no provider metadata', () => {
+    const sources = selectReliableSources(
+      [
+        {
+          title: 'Source: gold.org',
+          publisher: 'gold.org',
+          url: 'https://www.gold.org/goldhub/data/gold-prices',
+          publishedAt: null,
+          metadata: { citationType: 'synthesis_url_fallback' },
+        },
+      ],
+      inferResearchSubject('gold price information'),
+    );
+
+    expect(sources).toHaveLength(1);
+    expect(sources[0]).toMatchObject({ sourceType: 'other', trustTier: 3 });
+  });
 });

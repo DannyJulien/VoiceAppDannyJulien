@@ -10,6 +10,10 @@ export const categories: { value: ActionCategory; label: string; color: string }
 
 export const projectColors = ['#4F46E5', '#0F766E', '#DB2777', '#EA580C', '#2563EB'];
 
+export function normalizedProjectName(name: string) {
+  return name.trim().replace(/\s+/g, ' ').toLocaleLowerCase();
+}
+
 export function categoryDetails(category: ActionCategory) {
   return categories.find((item) => item.value === category) ?? categories[0];
 }

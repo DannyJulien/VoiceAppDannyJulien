@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { AppButton } from '@/components/app-button';
 import { Screen } from '@/components/screen';
 import { Colors } from '@/constants/theme';
-import { useActionReview } from '@/features/actions/action-review-provider';
+import { getActions } from '@/features/actions/action-service';
 import { signOut } from '@/features/auth/auth-service';
 import { useAuth } from '@/features/auth/auth-provider';
 import { formatDuration } from '@/features/captures/capture-utils';
@@ -14,39 +15,38 @@ import { useVoiceCapture } from '@/features/captures/use-voice-capture';
 export default function HomeScreen() {
   const { session } = useAuth();
   const router = useRouter();
-  const { draft, setDraft } = useActionReview();
+  const queryClient = useQueryClient();
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const voiceCapture = useVoiceCapture(session?.user.id);
   const {
-    action,
     canRetryProcessing,
+    clearInboxAction,
     discardPendingUploads,
     durationMillis,
     error: captureError,
     isRecording,
+    inboxAction,
     pendingCount,
     phase,
     retryProcessing,
     retryUploads,
     startRecording,
     stopRecording,
-    takeActionForReview,
   } = voiceCapture;
   const isBusy = phase === 'uploading' || phase === 'understanding';
+  const pendingReviewsQuery = useQuery({
+    queryKey: ['actions', session?.user.id, 'all'],
+    queryFn: () => getActions(session!.user.id, 'all'),
+    enabled: Boolean(session?.user.id),
+  });
+  const pendingReviewCount =
+    pendingReviewsQuery.data?.filter((item) => item.status === 'pending').length ?? 0;
 
   useEffect(() => {
-    if (!action) return;
-
-    const review = takeActionForReview();
-    if (!review) return;
-
-    setDraft({
-      ...review,
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC',
-    });
-    router.push('/review');
-  }, [action, router, setDraft, takeActionForReview]);
+    if (!inboxAction || !session?.user.id) return;
+    void queryClient.invalidateQueries({ queryKey: ['actions', session.user.id] });
+  }, [inboxAction, queryClient, session?.user.id]);
 
   async function onSignOut() {
     setError(null);
@@ -113,8 +113,8 @@ export default function HomeScreen() {
                   ? 'Making sense of it…'
                   : isBusy
                     ? 'Saving your recording…'
-                    : phase === 'uploaded'
-                      ? 'Saved. Preparing your action…'
+                    : inboxAction
+                      ? 'Saved to your Inbox — review it whenever you are ready.'
                       : 'Tap to start recording'}
             </Text>
             {isRecording ? (
@@ -144,20 +144,33 @@ export default function HomeScreen() {
           </Text>
         </View>
 
-        {draft ? (
+        {inboxAction ? (
           <View style={styles.resumeCard}>
             <View style={styles.resumeCopyBlock}>
-              <Text style={styles.resumeTitle}>Your summary is ready</Text>
+              <Text style={styles.resumeTitle}>Saved to your Inbox</Text>
               <Text numberOfLines={2} style={styles.resumeCopy}>
-                {draft.action.title}
+                {inboxAction.title}
               </Text>
             </View>
             <AppButton
-              label="Review it"
-              onPress={() => router.push('/review')}
+              label="Open Inbox"
+              onPress={() => {
+                clearInboxAction();
+                router.push('/inbox');
+              }}
               style={styles.resumeButton}
               variant="secondary"
             />
+          </View>
+        ) : null}
+
+        {!inboxAction && pendingReviewCount > 0 ? (
+          <View style={styles.inboxReminder}>
+            <Text style={styles.inboxReminderTitle}>
+              {pendingReviewCount} {pendingReviewCount === 1 ? 'capture needs' : 'captures need'}{' '}
+              your approval
+            </Text>
+            <AppButton label="Review Inbox" onPress={() => router.push('/inbox')} variant="quiet" />
           </View>
         ) : null}
 
@@ -274,6 +287,16 @@ const styles = StyleSheet.create({
   resumeTitle: { color: Colors.ink, fontSize: 15, fontWeight: '900' },
   resumeCopy: { color: Colors.muted, fontSize: 14, lineHeight: 20 },
   resumeButton: { minHeight: 42, paddingHorizontal: 13 },
+  inboxReminder: {
+    alignItems: 'center',
+    backgroundColor: Colors.accentSoft,
+    borderRadius: 18,
+    flexDirection: 'row',
+    gap: 10,
+    justifyContent: 'space-between',
+    padding: 14,
+  },
+  inboxReminderTitle: { color: Colors.ink, flex: 1, fontSize: 14, fontWeight: '800' },
   retryCard: { backgroundColor: Colors.dangerSoft, borderRadius: 18, gap: 8, padding: 18 },
   retryTitle: { color: Colors.ink, fontSize: 16, fontWeight: '800' },
   retryCopy: { color: Colors.muted, fontSize: 14, lineHeight: 20 },

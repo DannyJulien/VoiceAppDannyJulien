@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors } from '@/constants/theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Colors, Layout } from '@/constants/theme';
 
 const destinations = [
   { icon: '●', label: 'Capture', path: '/home' },
@@ -11,6 +11,9 @@ const destinations = [
   { icon: '◌', label: 'People', path: '/contacts' },
 ] as const;
 
+// Space between the pill and the physical bottom edge when the device has no home indicator.
+const MIN_BOTTOM_GAP = 12;
+
 function isCurrent(pathname: string, destination: (typeof destinations)[number]['path']) {
   if (destination === '/home') return pathname === '/home' || pathname === '/';
   return pathname === destination || pathname.startsWith(`${destination}/`);
@@ -19,9 +22,12 @@ function isCurrent(pathname: string, destination: (typeof destinations)[number][
 export function MobileNavigation() {
   const pathname = usePathname();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  // On phones with a home indicator the inset (~34pt) already clears it; otherwise use a fixed gap.
+  const bottomGap = Math.max(insets.bottom, MIN_BOTTOM_GAP);
 
   return (
-    <SafeAreaView edges={['bottom']} style={styles.safeArea}>
+    <View style={[styles.wrapper, { paddingBottom: bottomGap }]}>
       <View style={styles.bar}>
         {destinations.map((destination) => {
           const selected = isCurrent(pathname, destination.path);
@@ -32,7 +38,11 @@ export function MobileNavigation() {
               accessibilityState={{ selected }}
               key={destination.path}
               onPress={() => router.replace(destination.path as never)}
-              style={({ pressed }) => [styles.item, pressed && styles.pressed]}
+              style={({ pressed }) => [
+                styles.item,
+                selected && styles.itemSelected,
+                pressed && styles.pressed,
+              ]}
             >
               <View style={styles.iconWrap}>
                 <Text style={[styles.icon, selected && styles.iconSelected]}>
@@ -46,29 +56,43 @@ export function MobileNavigation() {
           );
         })}
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { backgroundColor: Colors.nav },
+  wrapper: {
+    backgroundColor: Colors.canvas,
+    paddingHorizontal: 16,
+    paddingTop: 8,
+  },
   bar: {
     alignItems: 'center',
+    alignSelf: 'center',
     backgroundColor: Colors.nav,
+    borderRadius: 999,
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    minHeight: 68,
+    justifyContent: 'space-between',
+    maxWidth: Layout.contentMaxWidth,
     paddingHorizontal: 8,
-    paddingTop: 7,
+    paddingVertical: 8,
+    width: '100%',
+    // Soft lift so the pill reads as floating above the page.
+    shadowColor: '#0F172A',
+    shadowOffset: { height: 8, width: 0 },
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    elevation: 10,
   },
   item: {
     alignItems: 'center',
-    borderRadius: 14,
+    borderRadius: 999,
+    flex: 1,
     gap: 2,
-    minWidth: 54,
     paddingHorizontal: 4,
-    paddingVertical: 5,
+    paddingVertical: 8,
   },
+  itemSelected: { backgroundColor: 'rgba(255,255,255,0.12)' },
   pressed: { opacity: 0.72 },
   iconWrap: { alignItems: 'center', justifyContent: 'center', minHeight: 21, minWidth: 24 },
   icon: { color: '#98A2B3', fontSize: 18, fontWeight: '900', lineHeight: 21 },

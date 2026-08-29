@@ -13,11 +13,6 @@ alter table public.actions
   add column suggested_people jsonb not null default '[]'::jsonb
     check (jsonb_typeof(suggested_people) = 'array');
 
--- One capture represents one actionable Inbox item. This also makes retrying
--- processing safe: the client can find the original item instead of duplicating it.
-alter table public.actions
-  add constraint actions_voice_capture_unique unique (voice_capture_id);
-
 create index actions_user_status_created_at_idx
   on public.actions (user_id, status, created_at desc);
 

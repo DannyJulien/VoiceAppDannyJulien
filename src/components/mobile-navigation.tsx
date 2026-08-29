@@ -1,7 +1,8 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors, Layout } from '@/constants/theme';
+import { Layout } from '@/constants/theme';
+import { type AppColors, useTheme } from '@/features/theme/theme-provider';
 
 const destinations = [
   { icon: '●', label: 'Capture', path: '/home' },
@@ -41,6 +42,8 @@ function isCurrent(pathname: string, destination: (typeof destinations)[number][
 }
 
 export function MobileNavigation() {
+  const colors = useTheme();
+  const styles = createStyles(colors);
   const pathname = usePathname();
   const router = useRouter();
   const bottomGap = useBottomGap();
@@ -80,7 +83,7 @@ export function MobileNavigation() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   wrapper: {
     // Overlay the screen content instead of reserving a strip below it.
     bottom: 0,
@@ -92,7 +95,7 @@ const styles = StyleSheet.create({
   bar: {
     alignItems: 'center',
     alignSelf: 'center',
-    backgroundColor: Colors.nav,
+    backgroundColor: colors.nav,
     borderRadius: 999,
     flexDirection: 'row',
     justifyContent: 'space-between',

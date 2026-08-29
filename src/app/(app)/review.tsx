@@ -6,7 +6,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AppButton } from '@/components/app-button';
 import { useTabBarInset } from '@/components/mobile-navigation';
 import { Screen } from '@/components/screen';
-import { Colors } from '@/constants/theme';
+import { type AppColors, useTheme } from '@/features/theme/theme-provider';
 import {
   saveReviewedAction,
   type ActionReviewInput,
@@ -35,6 +35,8 @@ function summaryPoints(value: string) {
 }
 
 export default function ReviewScreen() {
+  const colors = useTheme();
+  const styles = createStyles(colors);
   const tabBarInset = useTabBarInset();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -192,7 +194,7 @@ export default function ReviewScreen() {
               accessibilityLabel="Action title"
               onChangeText={setTitle}
               placeholder="Action title"
-              placeholderTextColor={Colors.muted}
+              placeholderTextColor={colors.muted}
               style={styles.input}
               value={title}
             />
@@ -202,7 +204,7 @@ export default function ReviewScreen() {
               multiline
               onChangeText={setSummary}
               placeholder="Add details"
-              placeholderTextColor={Colors.muted}
+              placeholderTextColor={colors.muted}
               style={[styles.input, styles.multilineInput]}
               value={summary}
             />
@@ -212,7 +214,7 @@ export default function ReviewScreen() {
               accessibilityLabel="Schedule"
               onChangeText={setScheduledAt}
               placeholder="2026-08-23 16:30"
-              placeholderTextColor={Colors.muted}
+              placeholderTextColor={colors.muted}
               style={styles.input}
               value={scheduledAt}
             />
@@ -224,7 +226,7 @@ export default function ReviewScreen() {
                   multiline
                   onChangeText={setMessageDraft}
                   placeholder="Write the message you want to send later"
-                  placeholderTextColor={Colors.muted}
+                  placeholderTextColor={colors.muted}
                   style={[styles.input, styles.multilineInput]}
                   value={messageDraft}
                 />
@@ -401,28 +403,28 @@ export default function ReviewScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   content: { gap: 18, paddingBottom: 30, paddingTop: 24 },
   emptyScreen: { gap: 16, justifyContent: 'center' },
   header: { gap: 5 },
-  eyebrow: { color: Colors.brand, fontSize: 13, fontWeight: '800', letterSpacing: 1.2 },
+  eyebrow: { color: colors.brand, fontSize: 13, fontWeight: '800', letterSpacing: 1.2 },
   title: {
-    color: Colors.ink,
+    color: colors.ink,
     fontSize: 34,
     fontWeight: '900',
     letterSpacing: -1.1,
     lineHeight: 40,
   },
-  copy: { color: Colors.muted, fontSize: 16, lineHeight: 24 },
-  clarification: { backgroundColor: Colors.accentSoft, borderRadius: 18, gap: 5, padding: 16 },
-  clarificationTitle: { color: Colors.ink, fontSize: 16, fontWeight: '800' },
-  clarificationCopy: { color: Colors.muted, fontSize: 15, lineHeight: 21 },
-  researchCard: { backgroundColor: Colors.brandSoft, borderRadius: 18, gap: 8, padding: 16 },
-  researchTitle: { color: Colors.ink, fontSize: 18, fontWeight: '800' },
-  researchCopy: { color: Colors.muted, fontSize: 15, lineHeight: 22 },
+  copy: { color: colors.muted, fontSize: 16, lineHeight: 24 },
+  clarification: { backgroundColor: colors.accentSoft, borderRadius: 18, gap: 5, padding: 16 },
+  clarificationTitle: { color: colors.ink, fontSize: 16, fontWeight: '800' },
+  clarificationCopy: { color: colors.muted, fontSize: 15, lineHeight: 21 },
+  researchCard: { backgroundColor: colors.brandSoft, borderRadius: 18, gap: 8, padding: 16 },
+  researchTitle: { color: colors.ink, fontSize: 18, fontWeight: '800' },
+  researchCopy: { color: colors.muted, fontSize: 15, lineHeight: 22 },
   summaryCard: {
-    backgroundColor: Colors.surface,
-    borderColor: Colors.border,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: 24,
     borderWidth: 1,
     gap: 16,
@@ -434,89 +436,89 @@ const styles = StyleSheet.create({
     gap: 12,
     justifyContent: 'space-between',
   },
-  summaryLabel: { color: Colors.brand, fontSize: 12, fontWeight: '900', letterSpacing: 1 },
-  summaryCaption: { color: Colors.muted, fontSize: 13, marginTop: 3 },
+  summaryLabel: { color: colors.brand, fontSize: 12, fontWeight: '900', letterSpacing: 1 },
+  summaryCaption: { color: colors.muted, fontSize: 13, marginTop: 3 },
   typePill: {
     alignSelf: 'flex-start',
-    backgroundColor: Colors.brandSoft,
+    backgroundColor: colors.brandSoft,
     borderRadius: 99,
     paddingHorizontal: 11,
     paddingVertical: 6,
   },
-  typePillText: { color: Colors.brand, fontSize: 13, fontWeight: '800' },
+  typePillText: { color: colors.brand, fontSize: 13, fontWeight: '800' },
   actionTitle: {
-    color: Colors.ink,
+    color: colors.ink,
     fontSize: 26,
     fontWeight: '900',
     letterSpacing: -0.6,
     lineHeight: 33,
   },
-  divider: { backgroundColor: Colors.border, height: 1 },
-  sectionLabel: { color: Colors.muted, fontSize: 11, fontWeight: '900', letterSpacing: 1 },
+  divider: { backgroundColor: colors.border, height: 1 },
+  sectionLabel: { color: colors.muted, fontSize: 11, fontWeight: '900', letterSpacing: 1 },
   points: { gap: 11 },
   pointRow: { alignItems: 'flex-start', flexDirection: 'row', gap: 10 },
-  pointDot: { backgroundColor: Colors.accent, borderRadius: 5, height: 9, marginTop: 6, width: 9 },
-  pointText: { color: Colors.ink, flex: 1, fontSize: 16, lineHeight: 23 },
-  emptySummary: { color: Colors.muted, fontSize: 15, lineHeight: 22 },
+  pointDot: { backgroundColor: colors.accent, borderRadius: 5, height: 9, marginTop: 6, width: 9 },
+  pointText: { color: colors.ink, flex: 1, fontSize: 16, lineHeight: 23 },
+  emptySummary: { color: colors.muted, fontSize: 15, lineHeight: 22 },
   metaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   metaTile: {
-    backgroundColor: Colors.canvas,
+    backgroundColor: colors.canvas,
     borderRadius: 14,
     flexGrow: 1,
     gap: 4,
     minWidth: 150,
     padding: 13,
   },
-  metaLabel: { color: Colors.muted, fontSize: 12, fontWeight: '800', letterSpacing: 0.8 },
-  metaValue: { color: Colors.ink, fontSize: 16, lineHeight: 23 },
-  messageBox: { backgroundColor: Colors.accentSoft, borderRadius: 14, gap: 7, padding: 14 },
-  messageText: { color: Colors.ink, fontSize: 16, lineHeight: 23 },
+  metaLabel: { color: colors.muted, fontSize: 12, fontWeight: '800', letterSpacing: 0.8 },
+  metaValue: { color: colors.ink, fontSize: 16, lineHeight: 23 },
+  messageBox: { backgroundColor: colors.accentSoft, borderRadius: 14, gap: 7, padding: 14 },
+  messageText: { color: colors.ink, fontSize: 16, lineHeight: 23 },
   editorCard: {
-    backgroundColor: Colors.surface,
-    borderColor: Colors.border,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: 22,
     borderWidth: 1,
     gap: 10,
     padding: 18,
   },
   organizeCard: {
-    backgroundColor: Colors.surface,
-    borderColor: Colors.border,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: 22,
     borderWidth: 1,
     gap: 9,
     padding: 18,
   },
   editorHeader: { gap: 3, marginBottom: 4 },
-  cardHeading: { color: Colors.ink, fontSize: 20, fontWeight: '900' },
-  editorCopy: { color: Colors.muted, fontSize: 14, lineHeight: 20 },
-  fieldLabel: { color: Colors.ink, fontSize: 14, fontWeight: '700', marginTop: 2 },
+  cardHeading: { color: colors.ink, fontSize: 20, fontWeight: '900' },
+  editorCopy: { color: colors.muted, fontSize: 14, lineHeight: 20 },
+  fieldLabel: { color: colors.ink, fontSize: 14, fontWeight: '700', marginTop: 2 },
   choices: { gap: 8 },
   choice: {
     alignItems: 'center',
-    backgroundColor: Colors.surface,
-    borderColor: Colors.border,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: 99,
     borderWidth: 1,
     justifyContent: 'center',
     minHeight: 40,
     paddingHorizontal: 14,
   },
-  choiceSelected: { backgroundColor: Colors.brand, borderColor: Colors.brand },
-  choiceText: { color: Colors.ink, fontSize: 14, fontWeight: '800' },
-  choiceTextSelected: { color: Colors.surface },
+  choiceSelected: { backgroundColor: colors.brand, borderColor: colors.brand },
+  choiceText: { color: colors.ink, fontSize: 14, fontWeight: '800' },
+  choiceTextSelected: { color: colors.surface },
   input: {
-    backgroundColor: Colors.canvas,
-    borderColor: Colors.border,
+    backgroundColor: colors.canvas,
+    borderColor: colors.border,
     borderRadius: 12,
     borderWidth: 1,
-    color: Colors.ink,
+    color: colors.ink,
     fontSize: 16,
     minHeight: 52,
     paddingHorizontal: 14,
   },
   multilineInput: { minHeight: 110, paddingTop: 13, textAlignVertical: 'top' },
-  error: { color: Colors.danger, fontSize: 14, lineHeight: 20 },
-  saveError: { backgroundColor: Colors.dangerSoft, borderRadius: 16, gap: 10, padding: 14 },
+  error: { color: colors.danger, fontSize: 14, lineHeight: 20 },
+  saveError: { backgroundColor: colors.dangerSoft, borderRadius: 16, gap: 10, padding: 14 },
   actions: { gap: 10, marginTop: 4 },
 });

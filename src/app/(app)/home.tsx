@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
@@ -6,20 +6,19 @@ import { useQueryClient } from '@tanstack/react-query';
 import { AppButton } from '@/components/app-button';
 import { useTabBarInset } from '@/components/mobile-navigation';
 import { Screen } from '@/components/screen';
-import { Colors } from '@/constants/theme';
+import { type AppColors, useTheme } from '@/features/theme/theme-provider';
 import { filingReasonLabel } from '@/features/actions/filing-gate';
-import { signOut } from '@/features/auth/auth-service';
 import { useAuth } from '@/features/auth/auth-provider';
 import { formatDuration } from '@/features/captures/capture-utils';
 import { useVoiceCapture } from '@/features/captures/use-voice-capture';
 
 export default function HomeScreen() {
+  const colors = useTheme();
+  const styles = createStyles(colors);
   const tabBarInset = useTabBarInset();
   const { session } = useAuth();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [isSigningOut, setIsSigningOut] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const voiceCapture = useVoiceCapture(session?.user.id);
   const {
     canRetryProcessing,
@@ -44,18 +43,6 @@ export default function HomeScreen() {
     void queryClient.invalidateQueries({ queryKey: ['actions', session.user.id] });
   }, [inboxAction, queryClient, session?.user.id]);
 
-  async function onSignOut() {
-    setError(null);
-    setIsSigningOut(true);
-    try {
-      await signOut();
-    } catch (signOutError) {
-      setError(signOutError instanceof Error ? signOutError.message : 'Unable to sign out.');
-    } finally {
-      setIsSigningOut(false);
-    }
-  }
-
   return (
     <Screen contentStyle={styles.content}>
       <ScrollView contentContainerStyle={[styles.scrollContent, tabBarInset]} showsVerticalScrollIndicator={false}>
@@ -64,15 +51,6 @@ export default function HomeScreen() {
             <View style={styles.mark} />
             <Text style={styles.brand}>Handled</Text>
           </View>
-          <Pressable
-            accessibilityLabel="Sign out"
-            accessibilityRole="button"
-            disabled={isSigningOut}
-            onPress={onSignOut}
-            style={({ pressed }) => [styles.signOut, pressed && styles.signOutPressed]}
-          >
-            <Text style={styles.signOutLabel}>{isSigningOut ? 'Signing out…' : 'Sign out'}</Text>
-          </Pressable>
         </View>
 
         <View style={styles.hero}>
@@ -199,34 +177,27 @@ export default function HomeScreen() {
             {captureError}
           </Text>
         ) : null}
-        {error ? (
-          <Text accessibilityRole="alert" style={styles.error}>
-            {error}
-          </Text>
-        ) : null}
       </ScrollView>
     </Screen>
   );
 }
 
-const styles = StyleSheet.create({
-  content: { paddingTop: 12 },
-  scrollContent: { gap: 16, paddingBottom: 30, paddingTop: 8 },
-  // Right gutter keeps Sign out clear of the floating Inbox button.
+const createStyles = (colors: AppColors) => StyleSheet.create({
+  content: { paddingTop: 8 },
+  scrollContent: { gap: 16, paddingBottom: 30, paddingTop: 0 },
+  // Keeps the Handled mark clear of the shared Inbox and Settings controls.
   topRow: {
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingRight: 100,
+    minHeight: 40,
+    paddingRight: 140,
   },
   brandRow: { flexDirection: 'row', alignItems: 'center', gap: 9 },
-  mark: { width: 11, height: 11, borderRadius: 6, backgroundColor: Colors.brand },
-  brand: { color: Colors.ink, fontSize: 18, fontWeight: '800' },
-  signOut: { borderRadius: 12, paddingHorizontal: 10, paddingVertical: 8 },
-  signOutPressed: { backgroundColor: Colors.brandSoft },
-  signOutLabel: { color: Colors.brand, fontSize: 13, fontWeight: '800' },
+  mark: { width: 11, height: 11, borderRadius: 6, backgroundColor: colors.brand },
+  brand: { color: colors.ink, fontSize: 18, fontWeight: '800' },
   hero: {
-    backgroundColor: Colors.brand,
+    backgroundColor: colors.brand,
     borderRadius: 26,
     gap: 12,
     overflow: 'hidden',
@@ -234,7 +205,7 @@ const styles = StyleSheet.create({
   },
   eyebrow: { color: '#C7D2FE', fontSize: 12, fontWeight: '900', letterSpacing: 1.25 },
   title: {
-    color: Colors.surface,
+    color: colors.surface,
     fontSize: 36,
     lineHeight: 42,
     fontWeight: '900',
@@ -244,7 +215,7 @@ const styles = StyleSheet.create({
   captureArea: { alignItems: 'center', gap: 12, marginTop: 6 },
   microphone: {
     alignItems: 'center',
-    backgroundColor: Colors.accent,
+    backgroundColor: colors.accent,
     borderColor: '#FFFFFF',
     borderRadius: 66,
     borderWidth: 4,
@@ -253,13 +224,13 @@ const styles = StyleSheet.create({
     boxShadow: '0px 8px 16px rgba(17, 24, 39, 0.25)',
     width: 132,
   },
-  microphoneRecording: { backgroundColor: Colors.danger },
+  microphoneRecording: { backgroundColor: colors.danger },
   microphonePressed: { opacity: 0.82, transform: [{ scale: 0.97 }] },
   microphoneIcon: { alignItems: 'center', height: 55, justifyContent: 'center', width: 55 },
-  micStem: { backgroundColor: Colors.surface, borderRadius: 12, height: 33, width: 22 },
+  micStem: { backgroundColor: colors.surface, borderRadius: 12, height: 33, width: 22 },
   micBase: {
     borderBottomWidth: 4,
-    borderColor: Colors.surface,
+    borderColor: colors.surface,
     borderLeftWidth: 4,
     borderRightWidth: 4,
     borderRadius: 18,
@@ -267,19 +238,19 @@ const styles = StyleSheet.create({
     marginTop: -2,
     width: 42,
   },
-  stopIcon: { backgroundColor: Colors.surface, borderRadius: 7, height: 30, width: 30 },
-  captureStatus: { color: Colors.surface, fontSize: 15, fontWeight: '800' },
+  stopIcon: { backgroundColor: colors.surface, borderRadius: 7, height: 30, width: 30 },
+  captureStatus: { color: colors.surface, fontSize: 15, fontWeight: '800' },
   liveRow: { alignItems: 'center', flexDirection: 'row', gap: 7, maxWidth: 300 },
   liveDot: { backgroundColor: '#FDE68A', borderRadius: 5, height: 8, width: 8 },
   liveText: { color: '#E0E7FF', flex: 1, fontSize: 12, lineHeight: 17 },
   quickActions: { flexDirection: 'row', gap: 10 },
-  tipCard: { backgroundColor: Colors.accentSoft, borderRadius: 18, gap: 4, padding: 16 },
-  tipTitle: { color: Colors.ink, fontSize: 15, fontWeight: '900' },
-  tipCopy: { color: Colors.muted, fontSize: 14, lineHeight: 20 },
+  tipCard: { backgroundColor: colors.accentSoft, borderRadius: 18, gap: 4, padding: 16 },
+  tipTitle: { color: colors.ink, fontSize: 15, fontWeight: '900' },
+  tipCopy: { color: colors.muted, fontSize: 14, lineHeight: 20 },
   resumeCard: {
     alignItems: 'center',
-    backgroundColor: Colors.brandSoft,
-    borderColor: Colors.focus,
+    backgroundColor: colors.brandSoft,
+    borderColor: colors.focus,
     borderRadius: 18,
     borderWidth: 1,
     flexDirection: 'row',
@@ -287,11 +258,11 @@ const styles = StyleSheet.create({
     padding: 14,
   },
   resumeCopyBlock: { flex: 1, gap: 3 },
-  resumeTitle: { color: Colors.ink, fontSize: 15, fontWeight: '900' },
-  resumeCopy: { color: Colors.muted, fontSize: 14, lineHeight: 20 },
+  resumeTitle: { color: colors.ink, fontSize: 15, fontWeight: '900' },
+  resumeCopy: { color: colors.muted, fontSize: 14, lineHeight: 20 },
   resumeButton: { minHeight: 42, paddingHorizontal: 13 },
-  retryCard: { backgroundColor: Colors.dangerSoft, borderRadius: 18, gap: 8, padding: 18 },
-  retryTitle: { color: Colors.ink, fontSize: 16, fontWeight: '800' },
-  retryCopy: { color: Colors.muted, fontSize: 14, lineHeight: 20 },
-  error: { color: Colors.danger, fontSize: 14, marginTop: 4 },
+  retryCard: { backgroundColor: colors.dangerSoft, borderRadius: 18, gap: 8, padding: 18 },
+  retryTitle: { color: colors.ink, fontSize: 16, fontWeight: '800' },
+  retryCopy: { color: colors.muted, fontSize: 14, lineHeight: 20 },
+  error: { color: colors.danger, fontSize: 14, marginTop: 4 },
 });

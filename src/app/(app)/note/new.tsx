@@ -6,7 +6,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { AppButton } from '@/components/app-button';
 import { useTabBarInset } from '@/components/mobile-navigation';
 import { Screen } from '@/components/screen';
-import { Colors } from '@/constants/theme';
+import { type AppColors, useTheme } from '@/features/theme/theme-provider';
 import { useAuth } from '@/features/auth/auth-provider';
 import {
   messageForUnderstandingError,
@@ -14,6 +14,8 @@ import {
 } from '@/features/captures/understanding-service';
 
 export default function NewNoteScreen() {
+  const colors = useTheme();
+  const styles = createStyles(colors);
   const tabBarInset = useTabBarInset();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -78,7 +80,7 @@ export default function NewNoteScreen() {
           multiline
           onChangeText={setText}
           placeholder="For example: I need to prepare the proposal with Daniel for next Thursday…"
-          placeholderTextColor={Colors.muted}
+          placeholderTextColor={colors.muted}
           style={styles.input}
           textAlignVertical="top"
           value={text}
@@ -107,29 +109,29 @@ export default function NewNoteScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   content: { gap: 18, paddingBottom: 32, paddingTop: 16 },
   back: { alignSelf: 'flex-start', minHeight: 36, paddingHorizontal: 0 },
   header: { gap: 5 },
-  eyebrow: { color: Colors.brand, fontSize: 12, fontWeight: '900', letterSpacing: 1.1 },
+  eyebrow: { color: colors.brand, fontSize: 12, fontWeight: '900', letterSpacing: 1.1 },
   title: {
-    color: Colors.ink,
+    color: colors.ink,
     fontSize: 32,
     fontWeight: '900',
     letterSpacing: -1.1,
     lineHeight: 39,
   },
-  copy: { color: Colors.muted, fontSize: 16, lineHeight: 23 },
+  copy: { color: colors.muted, fontSize: 16, lineHeight: 23 },
   input: {
-    backgroundColor: Colors.surface,
-    borderColor: Colors.border,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: 22,
     borderWidth: 1,
-    color: Colors.ink,
+    color: colors.ink,
     fontSize: 17,
     lineHeight: 25,
     minHeight: 250,
     padding: 18,
   },
-  error: { color: Colors.danger, fontSize: 14, lineHeight: 20 },
+  error: { color: colors.danger, fontSize: 14, lineHeight: 20 },
 });

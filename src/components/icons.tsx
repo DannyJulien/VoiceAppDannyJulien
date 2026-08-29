@@ -25,7 +25,6 @@ function IconFrame({ children, size }: { children: React.ReactNode; size: number
     </Svg>
   );
 }
-
 export function PlusIcon({ color, size = 20 }: IconProps) {
   return (
     <IconFrame size={size}>

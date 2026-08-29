@@ -1,35 +1,26 @@
-import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 
 import { AppButton } from '@/components/app-button';
 import { useTabBarInset } from '@/components/mobile-navigation';
 import { Screen } from '@/components/screen';
-import { Colors } from '@/constants/theme';
+import { type AppColors, useTheme } from '@/features/theme/theme-provider';
 import { getActions } from '@/features/actions/action-service';
 import { actionTypeLabel, formatActionWhen } from '@/features/actions/action-utils';
 import { useAuth } from '@/features/auth/auth-provider';
-import { getProfile, updateProfile } from '@/features/auth/profile-service';
 
 export default function InboxScreen() {
+  const colors = useTheme();
+  const styles = createStyles(colors);
   const tabBarInset = useTabBarInset();
   const router = useRouter();
-  const queryClient = useQueryClient();
   const { session } = useAuth();
   const userId = session?.user.id;
   const actionsQuery = useQuery({
     queryKey: ['actions', userId, 'all'],
     queryFn: () => getActions(userId!, 'all'),
     enabled: Boolean(userId),
-  });
-  const profileQuery = useQuery({
-    queryKey: ['profile', userId],
-    queryFn: () => getProfile(userId!),
-    enabled: Boolean(userId),
-  });
-  const autoFileMutation = useMutation({
-    mutationFn: (enabled: boolean) => updateProfile(userId!, { auto_file_captures: enabled }),
-    onSuccess: (profile) => queryClient.setQueryData(['profile', userId], profile),
   });
   // Only captures still waiting for a decision live here; everything else is on the Timeline.
   const pendingActions = (actionsQuery.data ?? []).filter((action) => action.status === 'pending');
@@ -95,58 +86,28 @@ export default function InboxScreen() {
             </Pressable>
           ))}
         </View>
-
-        {profileQuery.data ? (
-          <View style={styles.settingRow}>
-            <View style={styles.settingCopy}>
-              <Text style={styles.settingTitle}>File confident captures automatically</Text>
-              <Text style={styles.settingHint}>
-                Off means every capture waits here for your approval.
-              </Text>
-            </View>
-            <Switch
-              accessibilityLabel="File confident captures automatically"
-              disabled={autoFileMutation.isPending}
-              onValueChange={(value) => autoFileMutation.mutate(value)}
-              value={profileQuery.data.auto_file_captures}
-            />
-          </View>
-        ) : null}
       </ScrollView>
     </Screen>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   content: { gap: 18, paddingBottom: 30, paddingTop: 16 },
   back: { alignSelf: 'flex-start', minHeight: 36, paddingHorizontal: 0 },
   titleBlock: { gap: 5 },
-  eyebrow: { color: Colors.danger, fontSize: 12, fontWeight: '800', letterSpacing: 1.1 },
+  eyebrow: { color: colors.danger, fontSize: 12, fontWeight: '800', letterSpacing: 1.1 },
   title: {
-    color: Colors.ink,
+    color: colors.ink,
     fontSize: 34,
     fontWeight: '900',
     letterSpacing: -1.1,
     lineHeight: 40,
   },
-  copy: { color: Colors.muted, fontSize: 16, lineHeight: 24 },
-  settingRow: {
-    alignItems: 'center',
-    backgroundColor: Colors.surface,
-    borderColor: Colors.border,
-    borderRadius: 18,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: 12,
-    padding: 16,
-  },
-  settingCopy: { flex: 1, gap: 2 },
-  settingTitle: { color: Colors.ink, fontSize: 15, fontWeight: '800' },
-  settingHint: { color: Colors.muted, fontSize: 13, lineHeight: 18 },
+  copy: { color: colors.muted, fontSize: 16, lineHeight: 24 },
   list: { gap: 10 },
   actionCard: {
-    backgroundColor: Colors.surface,
-    borderColor: Colors.border,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: 20,
     borderWidth: 1,
     gap: 8,
@@ -154,21 +115,21 @@ const styles = StyleSheet.create({
   },
   actionCardPressed: { opacity: 0.82, transform: [{ scale: 0.99 }] },
   cardTopRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  cardType: { color: Colors.danger, fontSize: 12, fontWeight: '900', letterSpacing: 0.7 },
-  cardStatus: { color: Colors.muted, fontSize: 13, fontWeight: '700' },
-  cardTitle: { color: Colors.ink, fontSize: 18, fontWeight: '800', lineHeight: 24 },
-  cardSummary: { color: Colors.muted, fontSize: 14, lineHeight: 20 },
-  cardWhen: { color: Colors.muted, fontSize: 14, lineHeight: 20 },
+  cardType: { color: colors.danger, fontSize: 12, fontWeight: '900', letterSpacing: 0.7 },
+  cardStatus: { color: colors.muted, fontSize: 13, fontWeight: '700' },
+  cardTitle: { color: colors.ink, fontSize: 18, fontWeight: '800', lineHeight: 24 },
+  cardSummary: { color: colors.muted, fontSize: 14, lineHeight: 20 },
+  cardWhen: { color: colors.muted, fontSize: 14, lineHeight: 20 },
   empty: {
     alignItems: 'flex-start',
-    backgroundColor: Colors.surface,
-    borderColor: Colors.border,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: 20,
     borderWidth: 1,
     gap: 12,
     padding: 20,
   },
-  emptyTitle: { color: Colors.ink, fontSize: 19, fontWeight: '800' },
-  error: { color: Colors.danger, fontSize: 14, lineHeight: 20 },
+  emptyTitle: { color: colors.ink, fontSize: 19, fontWeight: '800' },
+  error: { color: colors.danger, fontSize: 14, lineHeight: 20 },
   errorCard: { gap: 10 },
 });

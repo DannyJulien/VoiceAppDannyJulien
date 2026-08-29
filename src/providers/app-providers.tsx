@@ -5,6 +5,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ActionReviewProvider } from '@/features/actions/action-review-provider';
 import { AuthProvider } from '@/features/auth/auth-provider';
+import { ThemeProvider } from '@/features/theme/theme-provider';
+import { ThemedStatusBar } from '@/components/themed-status-bar';
 import { isNetworkTimeoutError } from '@/services/supabase/fetch-with-timeout';
 
 export function AppProviders({ children }: PropsWithChildren) {
@@ -23,11 +25,14 @@ export function AppProviders({ children }: PropsWithChildren) {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-            <ActionReviewProvider>{children}</ActionReviewProvider>
-          </AuthProvider>
-        </QueryClientProvider>
+        <ThemeProvider>
+          <ThemedStatusBar />
+          <QueryClientProvider client={queryClient}>
+            <AuthProvider>
+              <ActionReviewProvider>{children}</ActionReviewProvider>
+            </AuthProvider>
+          </QueryClientProvider>
+        </ThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

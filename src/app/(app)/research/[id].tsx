@@ -6,7 +6,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AppButton } from '@/components/app-button';
 import { useTabBarInset } from '@/components/mobile-navigation';
 import { Screen } from '@/components/screen';
-import { Colors } from '@/constants/theme';
+import { type AppColors, useTheme } from '@/features/theme/theme-provider';
 import { createTaskFromResearch, getResearchResult } from '@/features/research/research-service';
 import type { ResearchResult } from '@/features/research/research-schema';
 import { trustTierLabel } from '@/features/research/research-utils';
@@ -14,6 +14,8 @@ import { copyText, shareText } from '@/features/share/share';
 import { useAuth } from '@/features/auth/auth-provider';
 
 export default function ResearchResultScreen() {
+  const colors = useTheme();
+  const styles = createStyles(colors);
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { session } = useAuth();
@@ -63,6 +65,8 @@ export default function ResearchResultScreen() {
 }
 
 function ResearchResultContent({ result, userId }: { result: ResearchResult; userId: string }) {
+  const colors = useTheme();
+  const styles = createStyles(colors);
   const tabBarInset = useTabBarInset();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -234,72 +238,72 @@ function ResearchResultContent({ result, userId }: { result: ResearchResult; use
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   content: { gap: 16, paddingVertical: 20 },
   centered: { gap: 16, justifyContent: 'center' },
   recoveryActions: { gap: 9 },
   back: { alignSelf: 'flex-start', minHeight: 38, paddingHorizontal: 0 },
-  eyebrow: { color: Colors.brand, fontSize: 12, fontWeight: '800', letterSpacing: 1.1 },
+  eyebrow: { color: colors.brand, fontSize: 12, fontWeight: '800', letterSpacing: 1.1 },
   title: {
-    color: Colors.ink,
+    color: colors.ink,
     fontSize: 32,
     fontWeight: '800',
     letterSpacing: -0.7,
     lineHeight: 40,
   },
-  copy: { color: Colors.muted, fontSize: 15, lineHeight: 23 },
-  answerCard: { backgroundColor: Colors.brandSoft, borderRadius: 18, gap: 9, padding: 18 },
+  copy: { color: colors.muted, fontSize: 15, lineHeight: 23 },
+  answerCard: { backgroundColor: colors.brandSoft, borderRadius: 18, gap: 9, padding: 18 },
   section: { gap: 10 },
-  sectionLabel: { color: Colors.muted, fontSize: 12, fontWeight: '800', letterSpacing: 0.9 },
-  answer: { color: Colors.ink, fontSize: 18, fontWeight: '700', lineHeight: 27 },
-  confidence: { color: Colors.brand, fontSize: 13, fontWeight: '700' },
+  sectionLabel: { color: colors.muted, fontSize: 12, fontWeight: '800', letterSpacing: 0.9 },
+  answer: { color: colors.ink, fontSize: 18, fontWeight: '700', lineHeight: 27 },
+  confidence: { color: colors.brand, fontSize: 13, fontWeight: '700' },
   findingCard: {
-    backgroundColor: Colors.surface,
-    borderColor: Colors.border,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: 16,
     borderWidth: 1,
     gap: 8,
     padding: 16,
   },
-  findingClaim: { color: Colors.ink, fontSize: 17, fontWeight: '800', lineHeight: 24 },
+  findingClaim: { color: colors.ink, fontSize: 17, fontWeight: '800', lineHeight: 24 },
   citations: { gap: 5 },
   citation: {
-    color: Colors.brand,
+    color: colors.brand,
     fontSize: 14,
     fontWeight: '700',
     lineHeight: 20,
     textDecorationLine: 'underline',
   },
-  bullet: { color: Colors.ink, fontSize: 16, lineHeight: 24 },
+  bullet: { color: colors.ink, fontSize: 16, lineHeight: 24 },
   sourceCard: {
-    backgroundColor: Colors.surface,
-    borderColor: Colors.border,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: 14,
     borderWidth: 1,
     gap: 5,
     padding: 14,
   },
-  sourceTitle: { color: Colors.ink, fontSize: 16, fontWeight: '800', lineHeight: 22 },
-  sourceMeta: { color: Colors.muted, fontSize: 13, lineHeight: 19 },
+  sourceTitle: { color: colors.ink, fontSize: 16, fontWeight: '800', lineHeight: 22 },
+  sourceMeta: { color: colors.muted, fontSize: 13, lineHeight: 19 },
   shareBox: {
-    backgroundColor: Colors.surface,
-    borderColor: Colors.border,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: 18,
     borderWidth: 1,
     gap: 10,
     padding: 16,
   },
   shareInput: {
-    backgroundColor: Colors.canvas,
-    borderColor: Colors.border,
+    backgroundColor: colors.canvas,
+    borderColor: colors.border,
     borderRadius: 12,
     borderWidth: 1,
-    color: Colors.ink,
+    color: colors.ink,
     fontSize: 16,
     minHeight: 120,
     padding: 13,
     textAlignVertical: 'top',
   },
   actions: { gap: 10 },
-  error: { color: Colors.danger, fontSize: 14 },
+  error: { color: colors.danger, fontSize: 14 },
 });

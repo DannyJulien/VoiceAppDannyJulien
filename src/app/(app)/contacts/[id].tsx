@@ -8,7 +8,7 @@ import { IconButton } from '@/components/icon-button';
 import { PencilIcon, PlusIcon, TrashIcon } from '@/components/icons';
 import { useTabBarInset } from '@/components/mobile-navigation';
 import { Screen } from '@/components/screen';
-import { Colors } from '@/constants/theme';
+import { type AppColors, useTheme } from '@/features/theme/theme-provider';
 import { actionTypeLabel } from '@/features/actions/action-utils';
 import { useAuth } from '@/features/auth/auth-provider';
 import { contactLabel, contactValidationError } from '@/features/contacts/contact-utils';
@@ -21,6 +21,8 @@ import {
 import { categoryDetails } from '@/features/projects/project-utils';
 
 export default function ContactTimelineScreen() {
+  const colors = useTheme();
+  const styles = createStyles(colors);
   const tabBarInset = useTabBarInset();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -121,7 +123,7 @@ export default function ContactTimelineScreen() {
               accessibilityLabel="Contact name"
               onChangeText={setName}
               placeholder="Name"
-              placeholderTextColor={Colors.muted}
+              placeholderTextColor={colors.muted}
               style={styles.input}
               value={name}
             />
@@ -131,7 +133,7 @@ export default function ContactTimelineScreen() {
               keyboardType="email-address"
               onChangeText={setEmail}
               placeholder="Email (optional if phone is present)"
-              placeholderTextColor={Colors.muted}
+              placeholderTextColor={colors.muted}
               style={styles.input}
               value={email}
             />
@@ -140,7 +142,7 @@ export default function ContactTimelineScreen() {
               keyboardType="phone-pad"
               onChangeText={setPhone}
               placeholder="Phone, e.g. +32470123456 (for WhatsApp)"
-              placeholderTextColor={Colors.muted}
+              placeholderTextColor={colors.muted}
               style={styles.input}
               value={phone}
             />
@@ -148,7 +150,7 @@ export default function ContactTimelineScreen() {
               accessibilityLabel="Contact company"
               onChangeText={setCompany}
               placeholder="Company (optional)"
-              placeholderTextColor={Colors.muted}
+              placeholderTextColor={colors.muted}
               style={styles.input}
               value={company}
             />
@@ -264,29 +266,29 @@ export default function ContactTimelineScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   content: { gap: 18, paddingBottom: 32, paddingTop: 16 },
   center: { gap: 14, justifyContent: 'center' },
   back: { alignSelf: 'flex-start', minHeight: 36, paddingHorizontal: 0 },
   header: { gap: 5 },
-  eyebrow: { color: Colors.brand, fontSize: 12, fontWeight: '900', letterSpacing: 1.1 },
-  title: { color: Colors.ink, fontSize: 32, fontWeight: '900', letterSpacing: -1, lineHeight: 40 },
-  copy: { color: Colors.muted, fontSize: 16, lineHeight: 23 },
+  eyebrow: { color: colors.brand, fontSize: 12, fontWeight: '900', letterSpacing: 1.1 },
+  title: { color: colors.ink, fontSize: 32, fontWeight: '900', letterSpacing: -1, lineHeight: 40 },
+  copy: { color: colors.muted, fontSize: 16, lineHeight: 23 },
   card: {
-    backgroundColor: Colors.surface,
-    borderColor: Colors.border,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: 22,
     borderWidth: 1,
     gap: 10,
     padding: 18,
   },
-  cardTitle: { color: Colors.ink, fontSize: 18, fontWeight: '800', marginBottom: 2 },
+  cardTitle: { color: colors.ink, fontSize: 18, fontWeight: '800', marginBottom: 2 },
   input: {
-    backgroundColor: Colors.canvas,
-    borderColor: Colors.border,
+    backgroundColor: colors.canvas,
+    borderColor: colors.border,
     borderRadius: 14,
     borderWidth: 1,
-    color: Colors.ink,
+    color: colors.ink,
     fontSize: 16,
     minHeight: 50,
     paddingHorizontal: 14,
@@ -294,32 +296,32 @@ const styles = StyleSheet.create({
   actions: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
   actionsRight: { flexDirection: 'row', gap: 10 },
   confirmCard: {
-    backgroundColor: Colors.dangerSoft,
-    borderColor: Colors.danger,
+    backgroundColor: colors.dangerSoft,
+    borderColor: colors.danger,
     borderRadius: 20,
     borderWidth: 1,
     gap: 10,
     padding: 16,
   },
-  confirmTitle: { color: Colors.ink, fontSize: 17, fontWeight: '900' },
-  confirmCopy: { color: Colors.muted, fontSize: 14, lineHeight: 20 },
+  confirmTitle: { color: colors.ink, fontSize: 17, fontWeight: '900' },
+  confirmCopy: { color: colors.muted, fontSize: 14, lineHeight: 20 },
   confirmRow: { flexDirection: 'row', gap: 10 },
-  confirmDelete: { backgroundColor: Colors.danger, flex: 1 },
+  confirmDelete: { backgroundColor: colors.danger, flex: 1 },
   confirmCancel: { flex: 1 },
-  error: { color: Colors.danger, fontSize: 14, lineHeight: 20 },
+  error: { color: colors.danger, fontSize: 14, lineHeight: 20 },
   empty: {
-    backgroundColor: Colors.surface,
-    borderColor: Colors.border,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: 20,
     borderWidth: 1,
     gap: 8,
     padding: 20,
   },
-  emptyTitle: { color: Colors.ink, fontSize: 19, fontWeight: '900' },
+  emptyTitle: { color: colors.ink, fontSize: 19, fontWeight: '900' },
   timeline: { gap: 2 },
   eventRow: { flexDirection: 'row', gap: 12 },
   dot: {
-    borderColor: Colors.canvas,
+    borderColor: colors.canvas,
     borderRadius: 8,
     borderWidth: 4,
     height: 16,
@@ -327,8 +329,8 @@ const styles = StyleSheet.create({
     width: 16,
   },
   event: {
-    backgroundColor: Colors.surface,
-    borderColor: Colors.border,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: 18,
     borderWidth: 1,
     flex: 1,
@@ -337,8 +339,8 @@ const styles = StyleSheet.create({
     padding: 15,
   },
   category: { fontSize: 12, fontWeight: '900', letterSpacing: 0.6 },
-  eventTitle: { color: Colors.ink, fontSize: 17, fontWeight: '900', lineHeight: 23 },
-  eventCopy: { color: Colors.muted, fontSize: 14, lineHeight: 20 },
-  date: { color: Colors.muted, fontSize: 12 },
+  eventTitle: { color: colors.ink, fontSize: 17, fontWeight: '900', lineHeight: 23 },
+  eventCopy: { color: colors.muted, fontSize: 14, lineHeight: 20 },
+  date: { color: colors.muted, fontSize: 12 },
   open: { alignSelf: 'flex-start', minHeight: 32, paddingHorizontal: 0 },
 });

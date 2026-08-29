@@ -6,12 +6,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AppButton } from '@/components/app-button';
 import { useTabBarInset } from '@/components/mobile-navigation';
 import { Screen } from '@/components/screen';
-import { Colors } from '@/constants/theme';
+import { type AppColors, useTheme } from '@/features/theme/theme-provider';
 import { type SavedAction, getActions } from '@/features/actions/action-service';
 import { getResearchSessions, startResearch } from '@/features/research/research-service';
 import { useAuth } from '@/features/auth/auth-provider';
 
 export default function ResearchListScreen() {
+  const colors = useTheme();
+  const styles = createStyles(colors);
   const tabBarInset = useTabBarInset();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -186,48 +188,48 @@ export default function ResearchListScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   content: { gap: 18, paddingBottom: 30, paddingTop: 24 },
   titleBlock: { gap: 5 },
-  eyebrow: { color: Colors.brand, fontSize: 12, fontWeight: '800', letterSpacing: 1.1 },
+  eyebrow: { color: colors.brand, fontSize: 12, fontWeight: '800', letterSpacing: 1.1 },
   title: {
-    color: Colors.ink,
+    color: colors.ink,
     fontSize: 32,
     fontWeight: '900',
     letterSpacing: -1.1,
     lineHeight: 39,
   },
-  copy: { color: Colors.muted, fontSize: 16, lineHeight: 24 },
+  copy: { color: colors.muted, fontSize: 16, lineHeight: 24 },
   list: { gap: 10 },
   startCard: {
-    backgroundColor: Colors.brandSoft,
+    backgroundColor: colors.brandSoft,
     borderRadius: 22,
     gap: 12,
     padding: 18,
   },
-  startTitle: { color: Colors.ink, fontSize: 19, fontWeight: '800' },
+  startTitle: { color: colors.ink, fontSize: 19, fontWeight: '800' },
   noteRow: {
-    backgroundColor: Colors.surface,
-    borderColor: Colors.border,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: 16,
     borderWidth: 1,
     gap: 10,
     padding: 13,
   },
-  noteTitle: { color: Colors.ink, fontSize: 16, fontWeight: '800', lineHeight: 22 },
+  noteTitle: { color: colors.ink, fontSize: 16, fontWeight: '800', lineHeight: 22 },
   failureCard: {
-    backgroundColor: Colors.dangerSoft,
+    backgroundColor: colors.dangerSoft,
     borderColor: '#FECDCA',
     borderRadius: 16,
     borderWidth: 1,
     gap: 9,
     padding: 14,
   },
-  failureTitle: { color: Colors.ink, fontSize: 16, fontWeight: '900' },
-  failureCopy: { color: Colors.muted, fontSize: 14, lineHeight: 20 },
+  failureTitle: { color: colors.ink, fontSize: 16, fontWeight: '900' },
+  failureCopy: { color: colors.muted, fontSize: 14, lineHeight: 20 },
   card: {
-    backgroundColor: Colors.surface,
-    borderColor: Colors.border,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: 18,
     borderWidth: 1,
     gap: 8,
@@ -235,19 +237,19 @@ const styles = StyleSheet.create({
   },
   pressed: { opacity: 0.8 },
   cardTop: { flexDirection: 'row', justifyContent: 'space-between' },
-  cardStatus: { color: Colors.brand, fontSize: 12, fontWeight: '800', letterSpacing: 0.7 },
-  cardDate: { color: Colors.muted, fontSize: 13 },
-  cardTitle: { color: Colors.ink, fontSize: 18, fontWeight: '800', lineHeight: 24 },
-  cardCopy: { color: Colors.muted, fontSize: 14, lineHeight: 20 },
+  cardStatus: { color: colors.brand, fontSize: 12, fontWeight: '800', letterSpacing: 0.7 },
+  cardDate: { color: colors.muted, fontSize: 13 },
+  cardTitle: { color: colors.ink, fontSize: 18, fontWeight: '800', lineHeight: 24 },
+  cardCopy: { color: colors.muted, fontSize: 14, lineHeight: 20 },
   empty: {
-    backgroundColor: Colors.surface,
-    borderColor: Colors.border,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: 18,
     borderWidth: 1,
     gap: 8,
     padding: 20,
   },
-  emptyTitle: { color: Colors.ink, fontSize: 19, fontWeight: '800' },
-  error: { color: Colors.danger, fontSize: 14, lineHeight: 20 },
+  emptyTitle: { color: colors.ink, fontSize: 19, fontWeight: '800' },
+  error: { color: colors.danger, fontSize: 14, lineHeight: 20 },
   errorCard: { gap: 10 },
 });

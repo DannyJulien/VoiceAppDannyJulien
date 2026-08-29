@@ -6,7 +6,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AppButton } from '@/components/app-button';
 import { useTabBarInset } from '@/components/mobile-navigation';
 import { Screen } from '@/components/screen';
-import { Colors } from '@/constants/theme';
+import { type AppColors, useTheme } from '@/features/theme/theme-provider';
 import {
   approvePendingAction,
   deleteAction,
@@ -49,6 +49,8 @@ function summaryPoints(value: string) {
 }
 
 export default function ActionDetailsScreen() {
+  const colors = useTheme();
+  const styles = createStyles(colors);
   const tabBarInset = useTabBarInset();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -327,7 +329,7 @@ export default function ActionDetailsScreen() {
                   accessibilityLabel="Schedule"
                   onChangeText={setEditedScheduledAt}
                   placeholder="2026-08-23 16:30"
-                  placeholderTextColor={Colors.muted}
+                  placeholderTextColor={colors.muted}
                   style={styles.input}
                   value={scheduledAt}
                 />
@@ -474,7 +476,7 @@ export default function ActionDetailsScreen() {
                   accessibilityLabel="Suggested project"
                   onChangeText={setReviewProjectName}
                   placeholder="No project"
-                  placeholderTextColor={Colors.muted}
+                  placeholderTextColor={colors.muted}
                   style={styles.input}
                   value={selectedReviewProjectName}
                 />
@@ -522,7 +524,7 @@ export default function ActionDetailsScreen() {
                 accessibilityLabel="Research topic"
                 onChangeText={setResearchTopic}
                 placeholder={action.title}
-                placeholderTextColor={Colors.muted}
+                placeholderTextColor={colors.muted}
                 style={styles.input}
                 value={researchTopic}
               />
@@ -693,82 +695,82 @@ export default function ActionDetailsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   content: { gap: 16, paddingVertical: 20 },
   centered: { gap: 16, justifyContent: 'center' },
   back: { alignSelf: 'flex-start', minHeight: 38, paddingHorizontal: 0 },
-  eyebrow: { color: Colors.brand, fontSize: 13, fontWeight: '800', letterSpacing: 1.1 },
+  eyebrow: { color: colors.brand, fontSize: 13, fontWeight: '800', letterSpacing: 1.1 },
   title: {
-    color: Colors.ink,
+    color: colors.ink,
     fontSize: 34,
     fontWeight: '800',
     letterSpacing: -0.7,
     lineHeight: 42,
   },
-  copy: { color: Colors.muted, fontSize: 16, lineHeight: 24 },
+  copy: { color: colors.muted, fontSize: 16, lineHeight: 24 },
   statusPill: {
     alignSelf: 'flex-start',
-    backgroundColor: Colors.brandSoft,
+    backgroundColor: colors.brandSoft,
     borderRadius: 99,
     paddingHorizontal: 11,
     paddingVertical: 6,
   },
-  statusText: { color: Colors.brand, fontSize: 13, fontWeight: '800' },
+  statusText: { color: colors.brand, fontSize: 13, fontWeight: '800' },
   summaryCard: {
-    backgroundColor: Colors.surface,
-    borderColor: Colors.border,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: 24,
     borderWidth: 1,
     gap: 14,
     padding: 20,
   },
-  summaryLabel: { color: Colors.brand, fontSize: 12, fontWeight: '900', letterSpacing: 1 },
+  summaryLabel: { color: colors.brand, fontSize: 12, fontWeight: '900', letterSpacing: 1 },
   points: { gap: 11 },
   pointRow: { alignItems: 'flex-start', flexDirection: 'row', gap: 10 },
-  pointDot: { backgroundColor: Colors.accent, borderRadius: 5, height: 9, marginTop: 6, width: 9 },
-  pointText: { color: Colors.ink, flex: 1, fontSize: 16, lineHeight: 23 },
-  emptySummary: { color: Colors.muted, fontSize: 15, lineHeight: 22 },
+  pointDot: { backgroundColor: colors.accent, borderRadius: 5, height: 9, marginTop: 6, width: 9 },
+  pointText: { color: colors.ink, flex: 1, fontSize: 16, lineHeight: 23 },
+  emptySummary: { color: colors.muted, fontSize: 15, lineHeight: 22 },
   metaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   metaTile: {
-    backgroundColor: Colors.canvas,
+    backgroundColor: colors.canvas,
     borderRadius: 14,
     flexGrow: 1,
     gap: 4,
     minWidth: 150,
     padding: 13,
   },
-  metaLabel: { color: Colors.muted, fontSize: 12, fontWeight: '800', letterSpacing: 0.8 },
-  metaValue: { color: Colors.ink, fontSize: 16, lineHeight: 23 },
-  messageBox: { backgroundColor: Colors.accentSoft, borderRadius: 14, gap: 7, padding: 14 },
-  messageText: { color: Colors.ink, fontSize: 16, lineHeight: 23 },
-  researchCard: { backgroundColor: Colors.brandSoft, borderRadius: 16, gap: 10, padding: 16 },
-  reviewCard: { backgroundColor: Colors.brandSoft, borderRadius: 16, gap: 10, padding: 16 },
+  metaLabel: { color: colors.muted, fontSize: 12, fontWeight: '800', letterSpacing: 0.8 },
+  metaValue: { color: colors.ink, fontSize: 16, lineHeight: 23 },
+  messageBox: { backgroundColor: colors.accentSoft, borderRadius: 14, gap: 7, padding: 14 },
+  messageText: { color: colors.ink, fontSize: 16, lineHeight: 23 },
+  researchCard: { backgroundColor: colors.brandSoft, borderRadius: 16, gap: 10, padding: 16 },
+  reviewCard: { backgroundColor: colors.brandSoft, borderRadius: 16, gap: 10, padding: 16 },
   contactCard: {
-    backgroundColor: Colors.surface,
-    borderColor: Colors.border,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: 16,
     borderWidth: 1,
     gap: 10,
     padding: 16,
   },
-  cardTitle: { color: Colors.ink, fontSize: 18, fontWeight: '800' },
-  cardCopy: { color: Colors.muted, fontSize: 14, lineHeight: 21 },
+  cardTitle: { color: colors.ink, fontSize: 18, fontWeight: '800' },
+  cardCopy: { color: colors.muted, fontSize: 14, lineHeight: 21 },
   contactChoices: { gap: 8 },
   contactChoice: { minHeight: 42, paddingHorizontal: 13 },
   selectedContact: { minHeight: 42, paddingHorizontal: 13 },
-  recipient: { color: Colors.ink, fontSize: 14, fontWeight: '700', lineHeight: 20 },
+  recipient: { color: colors.ink, fontSize: 14, fontWeight: '700', lineHeight: 20 },
   suggestionRow: {
     alignItems: 'center',
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: 13,
     paddingVertical: 11,
   },
-  suggestionLabel: { color: Colors.muted, fontSize: 11, fontWeight: '900', letterSpacing: 0.8 },
+  suggestionLabel: { color: colors.muted, fontSize: 11, fontWeight: '900', letterSpacing: 0.8 },
   suggestionValue: {
-    color: Colors.ink,
+    color: colors.ink,
     flexShrink: 1,
     fontSize: 14,
     fontWeight: '800',
@@ -778,32 +780,32 @@ const styles = StyleSheet.create({
   choices: { gap: 8 },
   choice: {
     alignItems: 'center',
-    backgroundColor: Colors.surface,
-    borderColor: Colors.border,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: 99,
     borderWidth: 1,
     justifyContent: 'center',
     minHeight: 40,
     paddingHorizontal: 14,
   },
-  choiceText: { color: Colors.ink, fontSize: 14, fontWeight: '800' },
-  choiceTextSelected: { color: Colors.surface },
-  transcript: { backgroundColor: Colors.brandSoft, borderRadius: 16, gap: 7, padding: 16 },
-  transcriptText: { color: Colors.ink, fontSize: 15, lineHeight: 23 },
-  fieldLabel: { color: Colors.ink, fontSize: 14, fontWeight: '700', marginTop: 2 },
+  choiceText: { color: colors.ink, fontSize: 14, fontWeight: '800' },
+  choiceTextSelected: { color: colors.surface },
+  transcript: { backgroundColor: colors.brandSoft, borderRadius: 16, gap: 7, padding: 16 },
+  transcriptText: { color: colors.ink, fontSize: 15, lineHeight: 23 },
+  fieldLabel: { color: colors.ink, fontSize: 14, fontWeight: '700', marginTop: 2 },
   input: {
-    backgroundColor: Colors.canvas,
-    borderColor: Colors.border,
+    backgroundColor: colors.canvas,
+    borderColor: colors.border,
     borderRadius: 12,
     borderWidth: 1,
-    color: Colors.ink,
+    color: colors.ink,
     fontSize: 16,
     minHeight: 52,
     paddingHorizontal: 14,
   },
   multilineInput: { minHeight: 110, paddingTop: 13, textAlignVertical: 'top' },
   actions: { gap: 10 },
-  error: { color: Colors.danger, fontSize: 14, lineHeight: 20 },
-  deleteButton: { backgroundColor: Colors.danger },
-  deleteHint: { color: Colors.danger, fontSize: 14, textAlign: 'center' },
+  error: { color: colors.danger, fontSize: 14, lineHeight: 20 },
+  deleteButton: { backgroundColor: colors.danger },
+  deleteHint: { color: colors.danger, fontSize: 14, textAlign: 'center' },
 });

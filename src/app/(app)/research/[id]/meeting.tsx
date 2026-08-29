@@ -6,7 +6,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { AppButton } from '@/components/app-button';
 import { useTabBarInset } from '@/components/mobile-navigation';
 import { Screen } from '@/components/screen';
-import { Colors } from '@/constants/theme';
+import { type AppColors, useTheme } from '@/features/theme/theme-provider';
 import { normalizedSchedule } from '@/features/actions/action-utils';
 import { createMeetingContext } from '@/features/meetings/meeting-service';
 import { createIcsEvent } from '@/features/meetings/meeting-utils';
@@ -15,6 +15,8 @@ import { downloadIcs } from '@/features/share/share';
 import { useAuth } from '@/features/auth/auth-provider';
 
 export default function AddToMeetingScreen() {
+  const colors = useTheme();
+  const styles = createStyles(colors);
   const tabBarInset = useTabBarInset();
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -126,7 +128,7 @@ export default function AddToMeetingScreen() {
             accessibilityLabel="Meeting title"
             onChangeText={setMeetingTitle}
             placeholder="Customer AI Strategy Call"
-            placeholderTextColor={Colors.muted}
+            placeholderTextColor={colors.muted}
             style={styles.input}
             value={meetingTitle}
           />
@@ -136,7 +138,7 @@ export default function AddToMeetingScreen() {
             accessibilityLabel="Meeting start"
             onChangeText={setMeetingStart}
             placeholder="2026-08-24 14:00"
-            placeholderTextColor={Colors.muted}
+            placeholderTextColor={colors.muted}
             style={styles.input}
             value={meetingStart}
           />
@@ -175,40 +177,40 @@ export default function AddToMeetingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   content: { gap: 16, paddingVertical: 20 },
   centered: { gap: 16, justifyContent: 'center' },
   back: { alignSelf: 'flex-start', minHeight: 38, paddingHorizontal: 0 },
-  eyebrow: { color: Colors.brand, fontSize: 12, fontWeight: '800', letterSpacing: 1.1 },
+  eyebrow: { color: colors.brand, fontSize: 12, fontWeight: '800', letterSpacing: 1.1 },
   title: {
-    color: Colors.ink,
+    color: colors.ink,
     fontSize: 32,
     fontWeight: '800',
     letterSpacing: -0.7,
     lineHeight: 40,
   },
-  copy: { color: Colors.muted, fontSize: 16, lineHeight: 24 },
+  copy: { color: colors.muted, fontSize: 16, lineHeight: 24 },
   card: {
-    backgroundColor: Colors.surface,
-    borderColor: Colors.border,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: 18,
     borderWidth: 1,
     gap: 10,
     padding: 18,
   },
-  topic: { color: Colors.ink, fontSize: 18, fontWeight: '800', marginBottom: 4 },
-  fieldLabel: { color: Colors.ink, fontSize: 14, fontWeight: '700', marginTop: 2 },
+  topic: { color: colors.ink, fontSize: 18, fontWeight: '800', marginBottom: 4 },
+  fieldLabel: { color: colors.ink, fontSize: 14, fontWeight: '700', marginTop: 2 },
   input: {
-    backgroundColor: Colors.canvas,
-    borderColor: Colors.border,
+    backgroundColor: colors.canvas,
+    borderColor: colors.border,
     borderRadius: 12,
     borderWidth: 1,
-    color: Colors.ink,
+    color: colors.ink,
     fontSize: 16,
     minHeight: 52,
     paddingHorizontal: 14,
   },
-  error: { color: Colors.danger, fontSize: 14, lineHeight: 20 },
-  successCard: { backgroundColor: Colors.brandSoft, borderRadius: 18, gap: 10, padding: 18 },
-  successTitle: { color: Colors.ink, fontSize: 18, fontWeight: '800' },
+  error: { color: colors.danger, fontSize: 14, lineHeight: 20 },
+  successCard: { backgroundColor: colors.brandSoft, borderRadius: 18, gap: 10, padding: 18 },
+  successTitle: { color: colors.ink, fontSize: 18, fontWeight: '800' },
 });

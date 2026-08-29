@@ -142,7 +142,7 @@ export default function ContactsScreen() {
             >
               <Text style={styles.contactName}>{contact.name}</Text>
               <Text style={styles.contactDetails}>{contactLabel(contact)}</Text>
-              <Text style={styles.timelineLink}>Timeline, edit or delete ›</Text>
+              <Text style={styles.timelineLink}>Timeline ›</Text>
             </Pressable>
           ))}
         </View>

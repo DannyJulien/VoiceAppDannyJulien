@@ -23,3 +23,14 @@ export const Layout = {
   horizontalPadding: 20,
   radius: 22,
 } as const;
+
+/**
+ * The app draws its icons as Unicode glyphs rather than an icon library, so they inherit
+ * the text colour and font weight around them. Picked for rendering monochrome on web;
+ * checked against the alternatives (U+270F renders as a blob, U+270D as a colour emoji).
+ */
+export const Icons = {
+  addNote: '\u271A',
+  delete: '\u{1F5D1}',
+  edit: '\u270E',
+} as const;

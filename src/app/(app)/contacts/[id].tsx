@@ -4,8 +4,9 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { AppButton } from '@/components/app-button';
+import { IconButton } from '@/components/icon-button';
 import { Screen } from '@/components/screen';
-import { Colors } from '@/constants/theme';
+import { Colors, Icons } from '@/constants/theme';
 import { actionTypeLabel } from '@/features/actions/action-utils';
 import { useAuth } from '@/features/auth/auth-provider';
 import { contactLabel, contactValidationError } from '@/features/contacts/contact-utils';
@@ -110,12 +111,6 @@ export default function ContactTimelineScreen() {
           <Text style={styles.title}>{contact.name}</Text>
           <Text style={styles.copy}>{contactLabel(contact)}</Text>
         </View>
-        <AppButton
-          label="Add a note about this person"
-          onPress={() => router.push({ pathname: '/note/new', params: { contactId: contact.id } })}
-          variant="secondary"
-        />
-
         {editing ? (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Edit this person</Text>
@@ -169,9 +164,26 @@ export default function ContactTimelineScreen() {
             />
             <AppButton label="Cancel" onPress={() => setEditing(false)} variant="quiet" />
           </View>
-        ) : (
-          <View style={styles.manage}>
-            <AppButton label="Edit person" onPress={startEditing} variant="secondary" />
+        ) : confirmingDeletion ? (
+          <View style={styles.confirmCard}>
+            <Text style={styles.confirmTitle}>Delete {contact.name}?</Text>
+            <Text style={styles.confirmCopy}>
+              Notes you wrote stay, they just lose the link to this person.
+            </Text>
+            <View style={styles.confirmRow}>
+              <AppButton
+                label="Delete"
+                loading={deleteMutation.isPending}
+                onPress={() => deleteMutation.mutate()}
+                style={styles.confirmDelete}
+              />
+              <AppButton
+                label="Cancel"
+                onPress={() => setConfirmingDeletion(false)}
+                style={styles.confirmCancel}
+                variant="secondary"
+              />
+            </View>
             {deleteMutation.error ? (
               <Text accessibilityRole="alert" style={styles.error}>
                 {deleteMutation.error instanceof Error
@@ -179,31 +191,30 @@ export default function ContactTimelineScreen() {
                   : 'Unable to delete this person.'}
               </Text>
             ) : null}
-            {confirmingDeletion ? (
-              <>
-                <AppButton
-                  label="Delete permanently"
-                  loading={deleteMutation.isPending}
-                  onPress={() => deleteMutation.mutate()}
-                  style={styles.deleteButton}
-                />
-                <Text style={styles.deleteHint}>
-                  This removes {contact.name} from your people. Notes you wrote stay, they just lose
-                  the link to this person.
-                </Text>
-                <AppButton
-                  label="Keep this person"
-                  onPress={() => setConfirmingDeletion(false)}
-                  variant="quiet"
-                />
-              </>
-            ) : (
-              <AppButton
-                label="Delete person"
-                onPress={() => setConfirmingDeletion(true)}
-                variant="quiet"
+          </View>
+        ) : (
+          <View style={styles.actions}>
+            <IconButton
+              accessibilityLabel={`Add a note about ${contact.name}`}
+              icon={Icons.addNote}
+              label="Add note"
+              onPress={() =>
+                router.push({ pathname: '/note/new', params: { contactId: contact.id } })
+              }
+            />
+            <View style={styles.actionsRight}>
+              <IconButton
+                accessibilityLabel={`Edit ${contact.name}`}
+                icon={Icons.edit}
+                onPress={startEditing}
               />
-            )}
+              <IconButton
+                accessibilityLabel={`Delete ${contact.name}`}
+                icon={Icons.delete}
+                onPress={() => setConfirmingDeletion(true)}
+                tone="danger"
+              />
+            </View>
           </View>
         )}
         {timelineQuery.isPending ? <Text style={styles.copy}>Loading conversation…</Text> : null}
@@ -277,10 +288,22 @@ const styles = StyleSheet.create({
     minHeight: 50,
     paddingHorizontal: 14,
   },
-  manage: { gap: 10 },
+  actions: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
+  actionsRight: { flexDirection: 'row', gap: 10 },
+  confirmCard: {
+    backgroundColor: Colors.dangerSoft,
+    borderColor: Colors.danger,
+    borderRadius: 20,
+    borderWidth: 1,
+    gap: 10,
+    padding: 16,
+  },
+  confirmTitle: { color: Colors.ink, fontSize: 17, fontWeight: '900' },
+  confirmCopy: { color: Colors.muted, fontSize: 14, lineHeight: 20 },
+  confirmRow: { flexDirection: 'row', gap: 10 },
+  confirmDelete: { backgroundColor: Colors.danger, flex: 1 },
+  confirmCancel: { flex: 1 },
   error: { color: Colors.danger, fontSize: 14, lineHeight: 20 },
-  deleteButton: { backgroundColor: Colors.danger },
-  deleteHint: { color: Colors.danger, fontSize: 14, lineHeight: 20, textAlign: 'center' },
   empty: {
     backgroundColor: Colors.surface,
     borderColor: Colors.border,

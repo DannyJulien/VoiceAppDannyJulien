@@ -5,8 +5,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { AppButton } from '@/components/app-button';
 import { IconButton } from '@/components/icon-button';
+import { PencilIcon, PlusIcon, TrashIcon } from '@/components/icons';
 import { Screen } from '@/components/screen';
-import { Colors, Icons } from '@/constants/theme';
+import { Colors } from '@/constants/theme';
 import { actionTypeLabel } from '@/features/actions/action-utils';
 import { useAuth } from '@/features/auth/auth-provider';
 import { contactLabel, contactValidationError } from '@/features/contacts/contact-utils';
@@ -196,22 +197,22 @@ export default function ContactTimelineScreen() {
           <View style={styles.actions}>
             <IconButton
               accessibilityLabel={`Add a note about ${contact.name}`}
-              icon={Icons.addNote}
               label="Add note"
               onPress={() =>
                 router.push({ pathname: '/note/new', params: { contactId: contact.id } })
               }
+              renderIcon={(color, size) => <PlusIcon color={color} size={size} />}
             />
             <View style={styles.actionsRight}>
               <IconButton
                 accessibilityLabel={`Edit ${contact.name}`}
-                icon={Icons.edit}
                 onPress={startEditing}
+                renderIcon={(color, size) => <PencilIcon color={color} size={size} />}
               />
               <IconButton
                 accessibilityLabel={`Delete ${contact.name}`}
-                icon={Icons.delete}
                 onPress={() => setConfirmingDeletion(true)}
+                renderIcon={(color, size) => <TrashIcon color={color} size={size} />}
                 tone="danger"
               />
             </View>

@@ -7,6 +7,11 @@ import { AppButton } from '@/components/app-button';
 import { Screen } from '@/components/screen';
 import { Colors } from '@/constants/theme';
 import {
+  actionIcsFilename,
+  createActionIcsEvent,
+  type CalendarAction,
+} from '@/features/actions/action-calendar';
+import {
   actionTypeLabel,
   calendarMonthDays,
   formatActionWhen,
@@ -15,6 +20,7 @@ import {
 } from '@/features/actions/action-utils';
 import { getScheduledActions } from '@/features/actions/action-service';
 import { useAuth } from '@/features/auth/auth-provider';
+import { downloadIcs } from '@/features/share/share';
 
 const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -27,6 +33,7 @@ export default function CalendarScreen() {
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
   const [selectedDate, setSelectedDate] = useState(() => localDateKey(new Date()) ?? '');
+  const [calendarError, setCalendarError] = useState<string | null>(null);
   const actionsQuery = useQuery({
     queryKey: ['scheduled-actions', userId],
     queryFn: () => getScheduledActions(userId!),
@@ -51,6 +58,17 @@ export default function CalendarScreen() {
 
   function changeMonth(offset: number) {
     setMonthCursor((current) => new Date(current.getFullYear(), current.getMonth() + offset, 1));
+  }
+
+  function addToOwnCalendar(action: CalendarAction) {
+    try {
+      setCalendarError(null);
+      downloadIcs(actionIcsFilename(action), createActionIcsEvent(action));
+    } catch (error) {
+      setCalendarError(
+        error instanceof Error ? error.message : 'Unable to add this item to your calendar.',
+      );
+    }
   }
 
   return (
@@ -156,30 +174,43 @@ export default function CalendarScreen() {
             />
           </View>
         ) : null}
+        {calendarError ? (
+          <View accessibilityRole="alert" style={styles.errorCard}>
+            <Text style={styles.error}>{calendarError}</Text>
+          </View>
+        ) : null}
         <View style={styles.agendaList}>
           {selectedActions.map((action) => (
-            <Pressable
-              accessibilityLabel={`Open ${action.title}`}
-              accessibilityRole="button"
-              key={action.id}
-              onPress={() => router.push({ pathname: '/action/[id]', params: { id: action.id } })}
-              style={({ pressed }) => [styles.actionCard, pressed && styles.actionCardPressed]}
-            >
-              <View style={styles.timeBlock}>
-                <Text style={styles.time}>
-                  {formatActionWhen(action.scheduled_at).split(', ').at(-1)}
-                </Text>
-                <Text style={styles.type}>{actionTypeLabel(action.action_type)}</Text>
-              </View>
-              <View style={styles.actionCopy}>
-                <Text style={styles.actionTitle}>{action.title}</Text>
-                {action.summary ? (
-                  <Text numberOfLines={2} style={styles.actionSummary}>
-                    {action.summary}
+            <View key={action.id} style={styles.agendaItem}>
+              <Pressable
+                accessibilityLabel={`Open ${action.title}`}
+                accessibilityRole="button"
+                onPress={() => router.push({ pathname: '/action/[id]', params: { id: action.id } })}
+                style={({ pressed }) => [styles.actionCard, pressed && styles.actionCardPressed]}
+              >
+                <View style={styles.timeBlock}>
+                  <Text style={styles.time}>
+                    {formatActionWhen(action.scheduled_at).split(', ').at(-1)}
                   </Text>
-                ) : null}
-              </View>
-            </Pressable>
+                  <Text style={styles.type}>{actionTypeLabel(action.action_type)}</Text>
+                </View>
+                <View style={styles.actionCopy}>
+                  <Text style={styles.actionTitle}>{action.title}</Text>
+                  {action.summary ? (
+                    <Text numberOfLines={2} style={styles.actionSummary}>
+                      {action.summary}
+                    </Text>
+                  ) : null}
+                </View>
+              </Pressable>
+              <AppButton
+                accessibilityHint="Downloads an .ics file you can open in your own calendar app."
+                label="Add to my calendar"
+                onPress={() => addToOwnCalendar(action)}
+                style={styles.calendarButton}
+                variant="quiet"
+              />
+            </View>
           ))}
         </View>
       </ScrollView>
@@ -230,6 +261,8 @@ const styles = StyleSheet.create({
   agendaTitle: { color: Colors.ink, fontSize: 21, fontWeight: '900' },
   agendaDate: { color: Colors.muted, fontSize: 13, marginTop: 2 },
   agendaList: { gap: 10 },
+  agendaItem: { gap: 2 },
+  calendarButton: { alignSelf: 'flex-start', minHeight: 40, paddingHorizontal: 4 },
   actionCard: {
     backgroundColor: Colors.surface,
     borderColor: Colors.border,

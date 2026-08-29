@@ -35,6 +35,8 @@ const action: SavedAction = {
   clarification_question: null,
   project_id: null,
   category: 'inbox',
+  suggested_category: null,
+  suggested_project_name: null,
   created_at: contact.created_at,
   updated_at: contact.updated_at,
 };

@@ -1,6 +1,7 @@
 import type { ActionCategory, ActionStatus, ActionType, Database } from '@/types/database';
 
 import { actionTypeForIntent, type UnderstoodAction } from '@/features/actions/action-schema';
+import { findOrCreateProject } from '@/features/projects/project-service';
 import { getSupabaseClient } from '@/services/supabase/client';
 
 export type SavedAction = Database['public']['Tables']['actions']['Row'];
@@ -19,10 +20,17 @@ export type ManualNoteInput = {
   category: ActionCategory;
   contactId?: string | null;
   projectId?: string | null;
+  scheduledAt?: string | null;
   summary: string;
   title: string;
+  timezone?: string;
   userId: string;
 };
+
+export type PendingActionInput = Pick<
+  ActionReviewInput,
+  'action' | 'captureId' | 'timezone' | 'userId'
+>;
 
 export async function saveReviewedAction({
   action,
@@ -57,12 +65,78 @@ export async function saveReviewedAction({
   return data;
 }
 
+export async function createPendingAction({
+  action,
+  captureId,
+  timezone,
+  userId,
+}: PendingActionInput) {
+  const client = getSupabaseClient();
+  const { data: existing, error: existingError } = await client
+    .from('actions')
+    .select()
+    .eq('voice_capture_id', captureId)
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (existingError) throw existingError;
+  if (existing) return existing;
+
+  const { data, error } = await client
+    .from('actions')
+    .insert({
+      action_type: actionTypeForIntent(action.intent),
+      category: 'inbox',
+      clarification_question: action.clarificationQuestion,
+      confidence: action.confidence,
+      message_draft: action.messageDraft,
+      requires_clarification: action.requiresClarification,
+      scheduled_at: action.scheduledAt,
+      scheduled_timezone: action.scheduledAt ? timezone : null,
+      status: 'pending',
+      suggested_category: action.suggestedCategory,
+      suggested_project_name: action.suggestedProjectName,
+      summary: action.summary || null,
+      title: action.title,
+      user_id: userId,
+      voice_capture_id: captureId,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export type PendingApprovalInput = {
+  category?: ActionCategory;
+  projectName?: string | null;
+};
+
+export async function approvePendingAction(
+  action: SavedAction,
+  userId: string,
+  {
+    category = action.suggested_category ?? 'inbox',
+    projectName = action.suggested_project_name,
+  }: PendingApprovalInput = {},
+) {
+  const project = projectName?.trim() ? await findOrCreateProject(userId, projectName) : null;
+  return updateAction(action.id, userId, {
+    category,
+    project_id: project?.id ?? action.project_id,
+    status: 'approved',
+    suggested_category: null,
+    suggested_project_name: null,
+  });
+}
+
 export async function createManualNote({
   category,
   contactId = null,
   projectId = null,
+  scheduledAt = null,
   summary,
   title,
+  timezone = 'UTC',
   userId,
 }: ManualNoteInput) {
   const client = getSupabaseClient();
@@ -72,6 +146,8 @@ export async function createManualNote({
       action_type: 'note',
       category,
       project_id: projectId,
+      scheduled_at: scheduledAt,
+      scheduled_timezone: scheduledAt ? timezone : null,
       status: 'approved',
       summary: summary.trim() || null,
       title: title.trim(),
@@ -114,6 +190,18 @@ export async function getProjectActions(projectId: string, userId: string) {
     .eq('project_id', projectId)
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data;
+}
+
+export async function getScheduledActions(userId: string) {
+  const { data, error } = await getSupabaseClient()
+    .from('actions')
+    .select()
+    .eq('user_id', userId)
+    .not('scheduled_at', 'is', null)
+    .neq('status', 'cancelled')
+    .order('scheduled_at', { ascending: true });
   if (error) throw error;
   return data;
 }

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import type { ActionType } from '@/types/database';
+import type { ActionCategory, ActionType } from '@/types/database';
 
 export const actionTypeSchema = z.enum(['note', 'task', 'reminder', 'message']);
 export const actionIntentSchema = z.enum([
@@ -29,6 +29,7 @@ export const researchFreshnessSchema = z.enum([
   'historical',
   'not_time_sensitive',
 ]);
+export const actionCategorySchema = z.enum(['inbox', 'work', 'personal', 'meeting', 'idea']);
 
 export const understoodActionSchema = z.object({
   intent: actionIntentSchema,
@@ -50,12 +51,15 @@ export const understoodActionSchema = z.object({
   confidence: z.number().min(0).max(1),
   requiresClarification: z.boolean(),
   clarificationQuestion: z.string().trim().max(500).nullable(),
+  suggestedCategory: actionCategorySchema.nullable().default(null),
+  suggestedProjectName: z.string().trim().min(1).max(80).nullable().default(null),
 });
 
 export type UnderstoodAction = z.infer<typeof understoodActionSchema>;
 export type ActionIntent = z.infer<typeof actionIntentSchema>;
 export type ResearchGoal = z.infer<typeof researchGoalSchema>;
 export type ResearchFreshness = z.infer<typeof researchFreshnessSchema>;
+export type SuggestedCategory = ActionCategory | null;
 
 export function actionTypeForIntent(intent: ActionIntent): ActionType {
   const parsed = actionTypeSchema.safeParse(intent);

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -7,6 +7,7 @@ import { AppButton } from '@/components/app-button';
 import { Screen } from '@/components/screen';
 import { Colors } from '@/constants/theme';
 import {
+  approvePendingAction,
   deleteAction,
   getAction,
   getCaptureTranscript,
@@ -31,7 +32,9 @@ import {
   getActionRecipients,
   getContacts,
 } from '@/features/contacts/contact-service';
+import { categories } from '@/features/projects/project-utils';
 import { getResearchSessionsForAction, startResearch } from '@/features/research/research-service';
+import type { ActionCategory } from '@/types/database';
 
 function summaryPoints(value: string) {
   return value
@@ -54,6 +57,9 @@ export default function ActionDetailsScreen() {
   const [editedScheduledAt, setEditedScheduledAt] = useState<string | null>(null);
   const [editedMessageDraft, setEditedMessageDraft] = useState<string | null>(null);
   const [researchTopic, setResearchTopic] = useState('');
+  const [editingPlacement, setEditingPlacement] = useState(false);
+  const [reviewCategory, setReviewCategory] = useState<ActionCategory | null>(null);
+  const [reviewProjectName, setReviewProjectName] = useState<string | null>(null);
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [deliveryError, setDeliveryError] = useState<string | null>(null);
@@ -93,6 +99,9 @@ export default function ActionDetailsScreen() {
     recipientsQuery.data?.find((contact) => contact.id === selectedContactId) ??
     recipientsQuery.data?.[0] ??
     null;
+  const isPendingReview = action?.status === 'pending';
+  const selectedReviewCategory = reviewCategory ?? action?.suggested_category ?? 'inbox';
+  const selectedReviewProjectName = reviewProjectName ?? action?.suggested_project_name ?? '';
 
   function invalidateActionQueries() {
     if (!userId) return;
@@ -125,6 +134,23 @@ export default function ActionDetailsScreen() {
     mutationFn: () => {
       if (!userId) throw new Error('You need to be signed in.');
       return setActionStatus(id, userId, 'completed');
+    },
+    onSuccess: invalidateActionQueries,
+  });
+  const approveMutation = useMutation({
+    mutationFn: () => {
+      if (!userId || !action) throw new Error('This capture is unavailable.');
+      return approvePendingAction(action, userId, {
+        category: selectedReviewCategory,
+        projectName: selectedReviewProjectName || null,
+      });
+    },
+    onSuccess: invalidateActionQueries,
+  });
+  const dismissMutation = useMutation({
+    mutationFn: () => {
+      if (!userId) throw new Error('You need to be signed in.');
+      return setActionStatus(id, userId, 'cancelled');
     },
     onSuccess: invalidateActionQueries,
   });
@@ -231,6 +257,8 @@ export default function ActionDetailsScreen() {
   const mutationError =
     updateMutation.error ??
     completeMutation.error ??
+    approveMutation.error ??
+    dismissMutation.error ??
     deleteMutation.error ??
     researchMutation.error ??
     recipientMutation.error;
@@ -291,7 +319,7 @@ export default function ActionDetailsScreen() {
                 </>
               ) : null}
             </>
-          ) : (
+          ) : isPendingReview ? null : (
             <>
               <Text style={styles.summaryLabel}>SUMMARY</Text>
               {points.length ? (
@@ -335,26 +363,114 @@ export default function ActionDetailsScreen() {
           </View>
         ) : null}
 
-        {!editing ? (
+        {isPendingReview && !editing ? (
+          <View style={styles.reviewCard}>
+            <Text style={styles.cardTitle}>Ready when you are</Text>
+            <Text style={styles.cardCopy}>
+              This capture is safely in your Inbox. Approve it to save the AI suggestion, or make a
+              quick adjustment first.
+            </Text>
+            <View style={styles.suggestionRow}>
+              <Text style={styles.suggestionLabel}>CATEGORY</Text>
+              <Text style={styles.suggestionValue}>
+                {categories.find((item) => item.value === selectedReviewCategory)?.label ?? 'Inbox'}
+              </Text>
+            </View>
+            {selectedReviewProjectName ? (
+              <View style={styles.suggestionRow}>
+                <Text style={styles.suggestionLabel}>PROJECT</Text>
+                <Text style={styles.suggestionValue}>{selectedReviewProjectName}</Text>
+              </View>
+            ) : null}
+            {editingPlacement ? (
+              <View style={styles.placementEditor}>
+                <Text style={styles.fieldLabel}>Category</Text>
+                <ScrollView
+                  contentContainerStyle={styles.choices}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                >
+                  {categories.map((category) => {
+                    const selected = category.value === selectedReviewCategory;
+                    return (
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityState={{ selected }}
+                        key={category.value}
+                        onPress={() => setReviewCategory(category.value)}
+                        style={[
+                          styles.choice,
+                          selected && {
+                            backgroundColor: category.color,
+                            borderColor: category.color,
+                          },
+                        ]}
+                      >
+                        <Text style={[styles.choiceText, selected && styles.choiceTextSelected]}>
+                          {category.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+                <Text style={styles.fieldLabel}>Project (optional)</Text>
+                <TextInput
+                  accessibilityLabel="Suggested project"
+                  onChangeText={setReviewProjectName}
+                  placeholder="No project"
+                  placeholderTextColor={Colors.muted}
+                  style={styles.input}
+                  value={selectedReviewProjectName}
+                />
+              </View>
+            ) : (
+              <AppButton
+                label="Change destination"
+                onPress={() => setEditingPlacement(true)}
+                variant="quiet"
+              />
+            )}
+            <AppButton
+              label="Approve to timeline"
+              loading={approveMutation.isPending}
+              onPress={() => approveMutation.mutate()}
+            />
+            <AppButton label="Edit note first" onPress={edit} variant="secondary" />
+            <AppButton
+              label="Dismiss"
+              loading={dismissMutation.isPending}
+              onPress={() => dismissMutation.mutate()}
+              variant="quiet"
+            />
+          </View>
+        ) : null}
+
+        {!editing && !isPendingReview ? (
           <View style={styles.researchCard}>
             <Text style={styles.cardTitle}>Research this note</Text>
             <Text style={styles.cardCopy}>
-              Choose the exact question now, or leave the note title. Research remains linked here
-              after it is complete.
+              Use this saved note and its details as context. You never need to record it again.
             </Text>
-            <TextInput
-              accessibilityLabel="Research topic"
-              onChangeText={setResearchTopic}
-              placeholder={action.title}
-              placeholderTextColor={Colors.muted}
-              style={styles.input}
-              value={researchTopic}
-            />
             <AppButton
-              label="Research this note"
+              label="Research now"
               loading={researchMutation.isPending}
               onPress={() => researchMutation.mutate()}
             />
+            <AppButton
+              label={researchTopic ? 'Use note title instead' : 'Change question'}
+              onPress={() => setResearchTopic(researchTopic ? '' : action.title)}
+              variant="quiet"
+            />
+            {researchTopic ? (
+              <TextInput
+                accessibilityLabel="Research topic"
+                onChangeText={setResearchTopic}
+                placeholder={action.title}
+                placeholderTextColor={Colors.muted}
+                style={styles.input}
+                value={researchTopic}
+              />
+            ) : null}
             {researchQuery.isPending ? (
               <Text style={styles.cardCopy}>Checking past research…</Text>
             ) : null}
@@ -375,7 +491,7 @@ export default function ActionDetailsScreen() {
           </View>
         ) : null}
 
-        {!editing ? (
+        {!editing && !isPendingReview ? (
           <View style={styles.contactCard}>
             <Text style={styles.cardTitle}>Send to a contact</Text>
             <Text style={styles.cardCopy}>
@@ -570,6 +686,7 @@ const styles = StyleSheet.create({
   messageBox: { backgroundColor: Colors.accentSoft, borderRadius: 14, gap: 7, padding: 14 },
   messageText: { color: Colors.ink, fontSize: 16, lineHeight: 23 },
   researchCard: { backgroundColor: Colors.brandSoft, borderRadius: 16, gap: 10, padding: 16 },
+  reviewCard: { backgroundColor: Colors.brandSoft, borderRadius: 16, gap: 10, padding: 16 },
   contactCard: {
     backgroundColor: Colors.surface,
     borderColor: Colors.border,
@@ -584,6 +701,37 @@ const styles = StyleSheet.create({
   contactChoice: { minHeight: 42, paddingHorizontal: 13 },
   selectedContact: { minHeight: 42, paddingHorizontal: 13 },
   recipient: { color: Colors.ink, fontSize: 14, fontWeight: '700', lineHeight: 20 },
+  suggestionRow: {
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 13,
+    paddingVertical: 11,
+  },
+  suggestionLabel: { color: Colors.muted, fontSize: 11, fontWeight: '900', letterSpacing: 0.8 },
+  suggestionValue: {
+    color: Colors.ink,
+    flexShrink: 1,
+    fontSize: 14,
+    fontWeight: '800',
+    marginLeft: 14,
+  },
+  placementEditor: { gap: 8 },
+  choices: { gap: 8 },
+  choice: {
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderColor: Colors.border,
+    borderRadius: 99,
+    borderWidth: 1,
+    justifyContent: 'center',
+    minHeight: 40,
+    paddingHorizontal: 14,
+  },
+  choiceText: { color: Colors.ink, fontSize: 14, fontWeight: '800' },
+  choiceTextSelected: { color: Colors.surface },
   transcript: { backgroundColor: Colors.brandSoft, borderRadius: 16, gap: 7, padding: 16 },
   transcriptText: { color: Colors.ink, fontSize: 15, lineHeight: 23 },
   fieldLabel: { color: Colors.ink, fontSize: 14, fontWeight: '700', marginTop: 2 },

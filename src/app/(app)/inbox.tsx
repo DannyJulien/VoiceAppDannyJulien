@@ -35,25 +35,43 @@ export default function InboxScreen() {
     queryFn: () => getProjects(userId!),
     enabled: Boolean(userId),
   });
+  const actions = [...(actionsQuery.data ?? [])].sort((left, right) => {
+    if (left.status === 'pending' && right.status !== 'pending') return -1;
+    if (left.status !== 'pending' && right.status === 'pending') return 1;
+    return new Date(right.created_at).getTime() - new Date(left.created_at).getTime();
+  });
+  const pendingActions = actions.filter((action) => action.status === 'pending');
 
   return (
     <Screen>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.titleBlock}>
-          <Text style={styles.eyebrow}>YOUR STORY, IN ORDER</Text>
-          <Text style={styles.title}>Timeline</Text>
+          <Text style={styles.eyebrow}>SAVED FOR LATER</Text>
+          <Text style={styles.title}>Inbox</Text>
         </View>
         <Text style={styles.copy}>
-          Your notes, recordings and follow-ups — organized by when they happened.
+          New voice captures wait here safely until you are ready to approve them.
         </Text>
         <View style={styles.topActions}>
           <AppButton label="Write a note" onPress={() => router.push('/note/new')} />
           <AppButton
-            label="Projects"
-            onPress={() => router.push('/projects' as never)}
+            label="Calendar"
+            onPress={() => router.push('/calendar' as never)}
             variant="secondary"
           />
         </View>
+
+        {pendingActions.length ? (
+          <View style={styles.pendingNotice}>
+            <Text style={styles.pendingNoticeTitle}>
+              {pendingActions.length} {pendingActions.length === 1 ? 'capture is' : 'captures are'}{' '}
+              ready for your approval
+            </Text>
+            <Text style={styles.pendingNoticeCopy}>
+              Nothing was sent or filed automatically. Open one when it suits you.
+            </Text>
+          </View>
+        ) : null}
 
         <ScrollView
           contentContainerStyle={styles.filters}
@@ -96,7 +114,7 @@ export default function InboxScreen() {
           </View>
         ) : null}
         <View style={styles.list}>
-          {actionsQuery.data?.map((action) => (
+          {actions.map((action) => (
             <Pressable
               accessibilityLabel={`${actionTypeLabel(action.action_type)}: ${action.title}`}
               accessibilityRole="button"
@@ -107,9 +125,13 @@ export default function InboxScreen() {
             >
               <View style={styles.cardTopRow}>
                 <Text style={[styles.cardType, { color: categoryDetails(action.category).color }]}>
-                  {categoryDetails(action.category).label} · {actionTypeLabel(action.action_type)}
+                  {action.status === 'pending'
+                    ? 'NEEDS YOUR APPROVAL'
+                    : actionTypeLabel(action.action_type).toUpperCase()}
                 </Text>
-                <Text style={styles.cardStatus}>{statusLabel(action.status)}</Text>
+                <Text style={styles.cardStatus}>
+                  {action.status === 'pending' ? 'Review' : statusLabel(action.status)}
+                </Text>
               </View>
               <Text style={styles.cardTitle}>{action.title}</Text>
               <Text numberOfLines={2} style={styles.cardSummary}>
@@ -118,7 +140,9 @@ export default function InboxScreen() {
               <Text style={styles.cardWhen}>
                 {action.project_id
                   ? `${projectsQuery.data?.find((project) => project.id === action.project_id)?.name ?? 'Project'} · `
-                  : ''}
+                  : action.status !== 'pending'
+                    ? `${categoryDetails(action.category).label} · `
+                    : ''}
                 {formatActionWhen(action.created_at)}
               </Text>
             </Pressable>
@@ -143,6 +167,9 @@ const styles = StyleSheet.create({
   copy: { color: Colors.muted, fontSize: 16, lineHeight: 24 },
   filters: { gap: 8 },
   topActions: { flexDirection: 'row', gap: 10 },
+  pendingNotice: { backgroundColor: Colors.brandSoft, borderRadius: 18, gap: 4, padding: 16 },
+  pendingNoticeTitle: { color: Colors.ink, fontSize: 16, fontWeight: '900' },
+  pendingNoticeCopy: { color: Colors.muted, fontSize: 14, lineHeight: 20 },
   filter: { minHeight: 42, paddingHorizontal: 14 },
   activeFilter: { minHeight: 42, paddingHorizontal: 14 },
   list: { gap: 10 },

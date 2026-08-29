@@ -7,6 +7,7 @@ import { AppButton } from '@/components/app-button';
 import { Screen } from '@/components/screen';
 import { Colors } from '@/constants/theme';
 import { createManualNote, type SavedAction } from '@/features/actions/action-service';
+import { normalizedSchedule } from '@/features/actions/action-utils';
 import { useAuth } from '@/features/auth/auth-provider';
 import { getContacts } from '@/features/contacts/contact-service';
 import { getProjects } from '@/features/projects/project-service';
@@ -25,6 +26,7 @@ export default function NewNoteScreen() {
   const userId = session?.user.id;
   const [title, setTitle] = useState('');
   const [summary, setSummary] = useState('');
+  const [scheduledAt, setScheduledAt] = useState('');
   const [category, setCategory] = useState<ActionCategory>('inbox');
   const [projectId, setProjectId] = useState<string | null>(initialProjectId ?? null);
   const [contactId, setContactId] = useState<string | null>(initialContactId ?? null);
@@ -50,11 +52,26 @@ export default function NewNoteScreen() {
     },
   });
   const saveMutation = useMutation({
-    mutationFn: (shouldResearch: boolean) => {
+    mutationFn: ({
+      shouldResearch,
+      scheduled,
+    }: {
+      shouldResearch: boolean;
+      scheduled: string | null;
+    }) => {
       if (!userId) throw new Error('You need to be signed in.');
-      return createManualNote({ category, contactId, projectId, summary, title, userId });
+      return createManualNote({
+        category,
+        contactId,
+        projectId,
+        scheduledAt: scheduled,
+        summary,
+        title,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC',
+        userId,
+      });
     },
-    onSuccess: (action, shouldResearch) => {
+    onSuccess: (action, { shouldResearch }) => {
       setSavedAction(action);
       if (userId) queryClient.invalidateQueries({ queryKey: ['actions', userId] });
       if (shouldResearch) {
@@ -70,8 +87,13 @@ export default function NewNoteScreen() {
       setValidationError('Give this note a short title first.');
       return;
     }
+    const scheduled = normalizedSchedule(scheduledAt);
+    if (scheduled === undefined) {
+      setValidationError('Use a valid date and time, for example 2026-08-23 16:30.');
+      return;
+    }
     setValidationError(null);
-    saveMutation.mutate(shouldResearch);
+    saveMutation.mutate({ shouldResearch, scheduled });
   }
 
   return (
@@ -112,6 +134,16 @@ export default function NewNoteScreen() {
             style={[styles.input, styles.multilineInput]}
             textAlignVertical="top"
             value={summary}
+          />
+          <Text style={styles.label}>When (optional)</Text>
+          <TextInput
+            accessibilityHint="Example: 2026-08-23 16:30"
+            accessibilityLabel="Schedule"
+            onChangeText={setScheduledAt}
+            placeholder="2026-08-23 16:30"
+            placeholderTextColor={Colors.muted}
+            style={styles.input}
+            value={scheduledAt}
           />
         </View>
 

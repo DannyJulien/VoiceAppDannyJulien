@@ -6,9 +6,8 @@ import {
   useAudioRecorderState,
 } from 'expo-audio';
 import { useCallback, useEffect, useState } from 'react';
-import { FunctionsHttpError } from '@supabase/supabase-js';
 
-import { understoodActionSchema, type UnderstoodAction } from '@/features/actions/action-schema';
+import type { SavedAction } from '@/features/actions/action-service';
 import {
   discardPendingCaptures,
   getPendingCaptureCount,
@@ -17,31 +16,23 @@ import {
 } from '@/features/captures/capture-service';
 import { messageForCaptureError } from '@/features/captures/capture-utils';
 import { recordingPermissionError } from '@/features/captures/recording-permission';
-import { getSupabaseClient } from '@/services/supabase/client';
+import {
+  messageForUnderstandingError,
+  saveVoiceCaptureToInbox,
+} from '@/features/captures/understanding-service';
 
 type CapturePhase = 'idle' | 'recording' | 'uploading' | 'understanding' | 'uploaded' | 'error';
 
 export type { UnderstoodAction } from '@/features/actions/action-schema';
 
 const recordingOptions = { ...RecordingPresets.HIGH_QUALITY, directory: 'document' as const };
-const processCaptureFunction = 'process-captur';
-
-async function messageForProcessingError(error: unknown) {
-  if (error instanceof FunctionsHttpError) {
-    const payload = (await error.context.json().catch(() => null)) as { error?: unknown } | null;
-    if (typeof payload?.error === 'string') return payload.error;
-  }
-
-  return messageForCaptureError(error);
-}
-
 export function useVoiceCapture(userId: string | undefined) {
   const recorder = useAudioRecorder(recordingOptions);
   const recorderState = useAudioRecorderState(recorder, 250);
   const [phase, setPhase] = useState<CapturePhase>('idle');
   const [error, setError] = useState<string | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
-  const [action, setAction] = useState<UnderstoodAction | null>(null);
+  const [inboxAction, setInboxAction] = useState<SavedAction | null>(null);
   const [lastCaptureId, setLastCaptureId] = useState<string | null>(null);
 
   const refreshPendingCount = useCallback(async () => {
@@ -66,6 +57,7 @@ export function useVoiceCapture(userId: string | undefined) {
 
   const startRecording = useCallback(async () => {
     setError(null);
+    setInboxAction(null);
     const permission = await requestRecordingPermissionsAsync();
     if (!permission.granted) {
       setPhase('error');
@@ -84,28 +76,20 @@ export function useVoiceCapture(userId: string | undefined) {
     }
   }, [recorder]);
 
-  const processCapture = useCallback(async (captureId: string) => {
-    setPhase('understanding');
-    const { data, error: aiError } = await getSupabaseClient().functions.invoke(
-      processCaptureFunction,
-      {
-        body: {
-          captureId,
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC',
-        },
-      },
-    );
-
-    if (aiError || !data?.action) {
-      throw aiError ?? new Error('AI processing did not return an action.');
-    }
-
-    const parsedAction = understoodActionSchema.safeParse(data.action);
-    if (!parsedAction.success) throw new Error('AI returned an invalid action. Please try again.');
-
-    setAction(parsedAction.data);
-    setPhase('uploaded');
-  }, []);
+  const processCapture = useCallback(
+    async (captureId: string) => {
+      if (!userId) throw new Error('You need to be signed in.');
+      setPhase('understanding');
+      const savedAction = await saveVoiceCaptureToInbox({
+        captureId,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC',
+        userId,
+      });
+      setInboxAction(savedAction);
+      setPhase('uploaded');
+    },
+    [userId],
+  );
 
   const stopRecording = useCallback(async () => {
     if (!userId) return;
@@ -123,7 +107,7 @@ export function useVoiceCapture(userId: string | undefined) {
       await refreshPendingCount();
     } catch (uploadError) {
       setPhase('error');
-      setError(await messageForProcessingError(uploadError));
+      setError(await messageForUnderstandingError(uploadError));
       await refreshPendingCount();
     }
   }, [processCapture, recorder, refreshPendingCount, userId]);
@@ -136,7 +120,7 @@ export function useVoiceCapture(userId: string | undefined) {
       await processCapture(lastCaptureId);
     } catch (processingError) {
       setPhase('error');
-      setError(await messageForProcessingError(processingError));
+      setError(await messageForUnderstandingError(processingError));
     }
   }, [lastCaptureId, processCapture]);
 
@@ -164,7 +148,7 @@ export function useVoiceCapture(userId: string | undefined) {
       await refreshPendingCount();
     } catch (retryError) {
       setPhase('error');
-      setError(await messageForProcessingError(retryError));
+      setError(await messageForUnderstandingError(retryError));
       await refreshPendingCount();
     }
   }, [processCapture, refreshPendingCount, userId]);
@@ -177,19 +161,13 @@ export function useVoiceCapture(userId: string | undefined) {
     setPhase('idle');
   }, [userId]);
 
-  const takeActionForReview = useCallback(() => {
-    if (!action || !lastCaptureId) return null;
-    setAction(null);
-    return { action, captureId: lastCaptureId };
-  }, [action, lastCaptureId]);
-
   return {
-    action,
-    clearAction: () => setAction(null),
+    clearInboxAction: () => setInboxAction(null),
     discardPendingUploads,
     durationMillis: recorderState.durationMillis,
     error,
     isRecording: recorderState.isRecording,
+    inboxAction,
     pendingCount,
     phase,
     canRetryProcessing: lastCaptureId !== null && phase === 'error' && pendingCount === 0,
@@ -197,6 +175,5 @@ export function useVoiceCapture(userId: string | undefined) {
     retryUploads,
     startRecording,
     stopRecording,
-    takeActionForReview,
   };
 }

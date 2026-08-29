@@ -25,6 +25,8 @@ const actionSchema = {
     'confidence',
     'requiresClarification',
     'clarificationQuestion',
+    'suggestedCategory',
+    'suggestedProjectName',
   ],
   properties: {
     intent: {
@@ -69,6 +71,11 @@ const actionSchema = {
     confidence: { type: 'number', minimum: 0, maximum: 1 },
     requiresClarification: { type: 'boolean' },
     clarificationQuestion: { type: ['string', 'null'] },
+    suggestedCategory: {
+      type: ['string', 'null'],
+      enum: ['inbox', 'work', 'personal', 'meeting', 'idea', null],
+    },
+    suggestedProjectName: { type: ['string', 'null'] },
   },
 };
 
@@ -109,6 +116,8 @@ const understoodActionSchema = z.object({
   confidence: z.number().min(0).max(1),
   requiresClarification: z.boolean(),
   clarificationQuestion: z.string().trim().max(500).nullable(),
+  suggestedCategory: z.enum(['inbox', 'work', 'personal', 'meeting', 'idea']).nullable(),
+  suggestedProjectName: z.string().trim().min(1).max(80).nullable(),
 });
 
 function json(body: unknown, status = 200) {
@@ -220,47 +229,87 @@ Deno.serve(async (request) => {
 
     const payload = (await request.json().catch(() => null)) as {
       captureId?: string;
+      projectNames?: string[];
+      text?: string;
       timezone?: string;
     } | null;
-    if (!payload?.captureId || !/^[0-9a-f-]{36}$/i.test(payload.captureId)) {
-      return json({ error: 'A valid capture ID is required.' }, 400);
+    const manualText = typeof payload?.text === 'string' ? payload.text.trim() : null;
+    if (manualText && manualText.length > 10_000) {
+      return json({ error: 'Keep a typed capture under 10,000 characters.' }, 400);
+    }
+    if (!manualText && (!payload?.captureId || !/^[0-9a-f-]{36}$/i.test(payload.captureId))) {
+      return json({ error: 'A valid capture ID or typed note is required.' }, 400);
     }
 
     const admin = createClient(url, serviceRoleKey);
-    const { data: capture, error: captureError } = await admin
-      .from('voice_captures')
-      .select('id, audio_path')
-      .eq('id', payload.captureId)
-      .eq('user_id', auth.user.id)
-      .single();
-    if (captureError || !capture?.audio_path) return json({ error: 'Capture not found.' }, 404);
+    let captureId: string;
+    let transcript: string;
 
-    const { data: audio, error: downloadError } = await admin.storage
-      .from('voice-captures')
-      .download(capture.audio_path);
-    if (downloadError || !audio) return json({ error: 'Audio could not be retrieved.' }, 502);
-    if (audio.size > 25 * 1024 * 1024) {
-      return json({ error: 'Audio is too large to process. Keep recordings under 25 MB.' }, 413);
+    if (manualText) {
+      const { data: capture, error: captureError } = await admin
+        .from('voice_captures')
+        .insert({
+          processing_status: 'transcribed',
+          transcript: manualText,
+          user_id: auth.user.id,
+        })
+        .select('id')
+        .single();
+      if (captureError || !capture)
+        return json({ error: 'The typed note could not be saved.' }, 500);
+      captureId = capture.id;
+      transcript = manualText;
+    } else {
+      const { data: capture, error: captureError } = await admin
+        .from('voice_captures')
+        .select('id, audio_path')
+        .eq('id', payload!.captureId!)
+        .eq('user_id', auth.user.id)
+        .single();
+      if (captureError || !capture?.audio_path) return json({ error: 'Capture not found.' }, 404);
+
+      const { data: audio, error: downloadError } = await admin.storage
+        .from('voice-captures')
+        .download(capture.audio_path);
+      if (downloadError || !audio) return json({ error: 'Audio could not be retrieved.' }, 502);
+      if (audio.size > 25 * 1024 * 1024) {
+        return json({ error: 'Audio is too large to process. Keep recordings under 25 MB.' }, 413);
+      }
+
+      const transcriptionForm = new FormData();
+      transcriptionForm.append(
+        'model',
+        Deno.env.get('OPENAI_TRANSCRIPTION_MODEL') ?? 'gpt-4o-mini-transcribe',
+      );
+      transcriptionForm.append('file', await fileForTranscription(audio, capture.audio_path));
+      const transcriptionResult = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${openaiKey}` },
+        body: transcriptionForm,
+      });
+      if (!transcriptionResult.ok) return openAiFailure('Transcription', transcriptionResult);
+
+      const transcriptionPayload = (await transcriptionResult.json()) as { text?: unknown };
+      if (
+        typeof transcriptionPayload.text !== 'string' ||
+        transcriptionPayload.text.trim().length === 0
+      ) {
+        return json({ error: 'No speech was detected in the recording.' }, 422);
+      }
+      captureId = capture.id;
+      transcript = transcriptionPayload.text.trim();
     }
 
-    const transcriptionForm = new FormData();
-    transcriptionForm.append(
-      'model',
-      Deno.env.get('OPENAI_TRANSCRIPTION_MODEL') ?? 'gpt-4o-mini-transcribe',
-    );
-    transcriptionForm.append('file', await fileForTranscription(audio, capture.audio_path));
-    const transcriptionResult = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${openaiKey}` },
-      body: transcriptionForm,
-    });
-    if (!transcriptionResult.ok) return openAiFailure('Transcription', transcriptionResult);
-
-    const transcriptionPayload = (await transcriptionResult.json()) as { text?: unknown };
-    const transcript = transcriptionPayload.text;
-    if (typeof transcript !== 'string' || transcript.trim().length === 0) {
-      return json({ error: 'No speech was detected in the recording.' }, 422);
-    }
+    const projectNames = Array.isArray(payload.projectNames)
+      ? payload.projectNames
+          .filter((name): name is string => typeof name === 'string')
+          .map((name) => name.trim())
+          .filter(Boolean)
+          .slice(0, 80)
+      : [];
+    const knownProjects = projectNames.length
+      ? `Existing project names: ${projectNames.map((name) => JSON.stringify(name)).join(', ')}.`
+      : 'There are no existing projects yet.';
 
     const aiResult = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST',
@@ -269,7 +318,7 @@ Deno.serve(async (request) => {
         model:
           Deno.env.get('OPENAI_ACTION_MODEL') ?? Deno.env.get('OPENAI_MODEL') ?? 'gpt-4.1-mini',
         store: false,
-        instructions: `Turn one voice capture into one useful action or useful context. The user's timezone is ${payload.timezone ?? 'UTC'}. Never invent a critical time or a contact. Use requiresClarification with a question when key details are missing. Set couldBenefitFromResearch only when external facts, a question, an argument, a decision, or meeting preparation would genuinely improve the capture. A normal personal reminder does not need research. For a direct question or research request, use question or research_request intent.`,
+        instructions: `Turn one voice capture into one useful action or useful context. The user's timezone is ${payload.timezone ?? 'UTC'}. Never invent a critical time or a contact. Use requiresClarification with a question when key details are missing. Set couldBenefitFromResearch only when external facts, a question, an argument, a decision, or meeting preparation would genuinely improve the capture. A normal personal reminder does not need research. For a direct question or research request, use question or research_request intent. Suggest one category only when confident; otherwise use inbox. ${knownProjects} Set suggestedProjectName to an exact matching existing project name when clearly related. When no existing name fits but the capture clearly names a substantial ongoing project, propose a concise new project name. Otherwise use null. Never use a person's name or a generic one-off task as a project.`,
         input: transcript,
         text: {
           format: {
@@ -300,10 +349,10 @@ Deno.serve(async (request) => {
     const { error: updateError } = await admin
       .from('voice_captures')
       .update({ transcript, processing_status: 'transcribed' })
-      .eq('id', capture.id);
+      .eq('id', captureId);
     if (updateError) return json({ error: 'The transcript could not be saved.' }, 500);
 
-    return json({ captureId: capture.id, transcript, action: parsedAction.data });
+    return json({ captureId, transcript, action: parsedAction.data });
   } catch (error) {
     console.error(
       'process-capture failed unexpectedly',

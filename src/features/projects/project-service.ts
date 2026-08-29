@@ -1,6 +1,7 @@
 import type { Database } from '@/types/database';
 
 import { getSupabaseClient } from '@/services/supabase/client';
+import { normalizedProjectName, projectColors } from '@/features/projects/project-utils';
 
 export type SavedProject = Database['public']['Tables']['projects']['Row'];
 
@@ -22,6 +23,29 @@ export async function createProject(userId: string, name: string, color: string)
     .single();
   if (error) throw error;
   return data;
+}
+
+export async function findOrCreateProject(userId: string, name: string) {
+  const normalizedName = normalizedProjectName(name);
+  if (!normalizedName) return null;
+
+  const projects = await getProjects(userId);
+  const existing = projects.find(
+    (project) => normalizedProjectName(project.name) === normalizedName,
+  );
+  if (existing) return existing;
+
+  try {
+    return await createProject(userId, name, projectColors[0]);
+  } catch (error) {
+    // A second device may have created this project while the first was approving.
+    const refreshedProjects = await getProjects(userId);
+    const createdElsewhere = refreshedProjects.find(
+      (project) => normalizedProjectName(project.name) === normalizedName,
+    );
+    if (createdElsewhere) return createdElsewhere;
+    throw error;
+  }
 }
 
 export async function getProject(projectId: string, userId: string) {

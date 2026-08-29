@@ -9,7 +9,7 @@ Handled is an Expo/React Native MVP for turning an explicitly recorded voice tho
 The working voice flow remains intact:
 
 ```text
-VOICE → TRANSCRIPTION → INTENT → REVIEW → SAVE → INBOX
+VOICE OR TYPED TEXT → UNDERSTAND → SAVE TO INBOX → USER APPROVES → TIMELINE
 ```
 
 Research is an optional extension, never an automatic cost:
@@ -19,17 +19,29 @@ VOICE → UNDERSTAND → “Add reliable information?” → RESEARCH → SOURCE
 ```
 
 - Intent detection now recognizes notes, tasks, reminders, messages, questions, statements, and direct research requests. Every response is validated with Zod.
+- Voice captures and typed notes use the same AI understanding flow. Handle proposes a category, matches or proposes a project, and suggests people; nothing is filed or sent until the user approves it from the Inbox.
 - A user explicitly presses **Research** before the server calls OpenAI web search. The new Edge Function stores sources, findings, and their many-to-many citation links before a result is shown.
 - Research results offer a concise answer, findings with source links, talking points, counterpoints, an editable share message, copy/Web Share fallback, a meeting briefing, and universal ICS download.
 - Research, sources, findings, and meeting context are owner-scoped by RLS. The mobile/web client only receives the public Supabase URL and publishable key.
 - `npm run build:web` exports a responsive static web build to `dist/`; `npm run serve:web` serves it locally with `/health`.
+
+### Required collaboration rule
+
+Every contributor and coding agent must follow this issue-to-production workflow for any product change:
+
+1. Link the change to an existing GitHub issue, or create a focused issue first.
+2. Implement the complete acceptance criteria and run the relevant checks (`npm run lint`, `npm run typecheck`, `npm test`, and a web build when UI changes).
+3. Push the tested implementation to GitHub on a dedicated branch and merge it through the shared review flow.
+4. Only mark the GitHub issue as completed after the code is pushed, any required Supabase deployment is live, and the feature has been verified.
+
+Do not close an issue merely because work has started or code exists only locally.
 
 ### Required Supabase deployment
 
 The local implementation is complete, but the new database migration and Edge Function must be deployed to the existing Supabase project before users can press **Research**.
 
 1. Immediately revoke the OpenAI key that was previously present in `.env.example`, then create a replacement in OpenAI.
-2. Apply [20260823130000_research_and_meetings.sql](supabase/migrations/20260823130000_research_and_meetings.sql) after the existing Phase 1 migration.
+2. Apply [20260823130000_research_and_meetings.sql](supabase/migrations/20260823130000_research_and_meetings.sql), [20260827090000_projects_categories_and_timeline.sql](supabase/migrations/20260827090000_projects_categories_and_timeline.sql), and [20260829090000_inbox_project_suggestions.sql](supabase/migrations/20260829090000_inbox_project_suggestions.sql) in order.
 3. Configure these **Supabase Edge Function Secrets** (never Expo public variables):
 
    ```dotenv

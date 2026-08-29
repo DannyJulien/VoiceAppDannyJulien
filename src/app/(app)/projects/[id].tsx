@@ -3,6 +3,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 
 import { AppButton } from '@/components/app-button';
+import { useTabBarInset } from '@/components/mobile-navigation';
 import { Screen } from '@/components/screen';
 import { Colors } from '@/constants/theme';
 import { getProjectActions } from '@/features/actions/action-service';
@@ -12,6 +13,7 @@ import { getProject } from '@/features/projects/project-service';
 import { categoryDetails } from '@/features/projects/project-utils';
 
 export default function ProjectTimelineScreen() {
+  const tabBarInset = useTabBarInset();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session } = useAuth();
@@ -43,7 +45,7 @@ export default function ProjectTimelineScreen() {
 
   return (
     <Screen>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, tabBarInset]}>
         <AppButton
           label="‹ Projects"
           onPress={() => router.replace('/projects' as never)}

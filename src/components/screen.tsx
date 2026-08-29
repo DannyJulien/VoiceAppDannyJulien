@@ -8,9 +8,11 @@ type ScreenProps = PropsWithChildren<{
   contentStyle?: ViewStyle;
 }>;
 
+// Only the top edge is padded: the floating tab bar owns the bottom safe area,
+// and scrolling content pads itself with useTabBarInset().
 export function Screen({ children, contentStyle }: ScreenProps) {
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={[styles.content, contentStyle]}>{children}</View>
     </SafeAreaView>
   );

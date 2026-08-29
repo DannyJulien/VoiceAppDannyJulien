@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 
 import { AppButton } from '@/components/app-button';
+import { useTabBarInset } from '@/components/mobile-navigation';
 import { Screen } from '@/components/screen';
 import { Colors } from '@/constants/theme';
 import { type ActionFilter, getActions } from '@/features/actions/action-service';
@@ -21,6 +22,7 @@ const filters: { label: string; value: ActionFilter }[] = [
 ];
 
 export default function TimelineScreen() {
+  const tabBarInset = useTabBarInset();
   const router = useRouter();
   const { session } = useAuth();
   const [filter, setFilter] = useState<ActionFilter>('all');
@@ -40,7 +42,7 @@ export default function TimelineScreen() {
 
   return (
     <Screen>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, tabBarInset]}>
         <View style={styles.titleBlock}>
           <Text style={styles.eyebrow}>EVERYTHING YOU KEPT</Text>
           <Text style={styles.title}>Timeline</Text>

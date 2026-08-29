@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation, useQuery } from '@tanstack/react-query';
 
 import { AppButton } from '@/components/app-button';
+import { useTabBarInset } from '@/components/mobile-navigation';
 import { Screen } from '@/components/screen';
 import { Colors } from '@/constants/theme';
 import { normalizedSchedule } from '@/features/actions/action-utils';
@@ -14,6 +15,7 @@ import { downloadIcs } from '@/features/share/share';
 import { useAuth } from '@/features/auth/auth-provider';
 
 export default function AddToMeetingScreen() {
+  const tabBarInset = useTabBarInset();
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { session } = useAuth();
@@ -103,7 +105,7 @@ export default function AddToMeetingScreen() {
 
   return (
     <Screen>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={[styles.content, tabBarInset]} keyboardShouldPersistTaps="handled">
         <AppButton
           label="‹ Research"
           onPress={() => router.back()}

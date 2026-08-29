@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { AppButton } from '@/components/app-button';
+import { useTabBarInset } from '@/components/mobile-navigation';
 import { Screen } from '@/components/screen';
 import { Colors } from '@/constants/theme';
 import { filingReasonLabel } from '@/features/actions/filing-gate';
@@ -13,6 +14,7 @@ import { formatDuration } from '@/features/captures/capture-utils';
 import { useVoiceCapture } from '@/features/captures/use-voice-capture';
 
 export default function HomeScreen() {
+  const tabBarInset = useTabBarInset();
   const { session } = useAuth();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -56,7 +58,7 @@ export default function HomeScreen() {
 
   return (
     <Screen contentStyle={styles.content}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, tabBarInset]} showsVerticalScrollIndicator={false}>
         <View style={styles.topRow}>
           <View style={styles.brandRow}>
             <View style={styles.mark} />

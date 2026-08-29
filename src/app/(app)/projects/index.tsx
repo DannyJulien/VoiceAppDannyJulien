@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { AppButton } from '@/components/app-button';
+import { useTabBarInset } from '@/components/mobile-navigation';
 import { Screen } from '@/components/screen';
 import { Colors } from '@/constants/theme';
 import { getActions } from '@/features/actions/action-service';
@@ -12,6 +13,7 @@ import { createProject, getProjects } from '@/features/projects/project-service'
 import { projectColors } from '@/features/projects/project-utils';
 
 export default function ProjectsScreen() {
+  const tabBarInset = useTabBarInset();
   const router = useRouter();
   const queryClient = useQueryClient();
   const { session } = useAuth();
@@ -43,7 +45,7 @@ export default function ProjectsScreen() {
 
   return (
     <Screen>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={[styles.content, tabBarInset]} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
           <Text style={styles.eyebrow}>KEEP CONTEXT TOGETHER</Text>
           <Text style={styles.title}>Projects</Text>

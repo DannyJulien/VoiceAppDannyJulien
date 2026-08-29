@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { AppButton } from '@/components/app-button';
+import { useTabBarInset } from '@/components/mobile-navigation';
 import { Screen } from '@/components/screen';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/features/auth/auth-provider';
@@ -13,6 +14,7 @@ import {
 } from '@/features/captures/understanding-service';
 
 export default function NewNoteScreen() {
+  const tabBarInset = useTabBarInset();
   const router = useRouter();
   const queryClient = useQueryClient();
   const { session } = useAuth();
@@ -54,7 +56,7 @@ export default function NewNoteScreen() {
 
   return (
     <Screen>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={[styles.content, tabBarInset]} keyboardShouldPersistTaps="handled">
         <AppButton
           label="‹ Back"
           onPress={() => router.back()}

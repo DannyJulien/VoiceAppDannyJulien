@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { AppButton } from '@/components/app-button';
+import { useTabBarInset } from '@/components/mobile-navigation';
 import { Screen } from '@/components/screen';
 import { Colors } from '@/constants/theme';
 import { getActions } from '@/features/actions/action-service';
@@ -11,6 +12,7 @@ import { useAuth } from '@/features/auth/auth-provider';
 import { getProfile, updateProfile } from '@/features/auth/profile-service';
 
 export default function InboxScreen() {
+  const tabBarInset = useTabBarInset();
   const router = useRouter();
   const queryClient = useQueryClient();
   const { session } = useAuth();
@@ -34,7 +36,7 @@ export default function InboxScreen() {
 
   return (
     <Screen>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, tabBarInset]}>
         <AppButton
           label="‹ Back"
           onPress={() => (router.canGoBack() ? router.back() : router.replace('/home'))}

@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 
 import { AppButton } from '@/components/app-button';
+import { useTabBarInset } from '@/components/mobile-navigation';
 import { Screen } from '@/components/screen';
 import { Colors } from '@/constants/theme';
 import {
@@ -25,6 +26,7 @@ import { downloadIcs } from '@/features/share/share';
 const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export default function CalendarScreen() {
+  const tabBarInset = useTabBarInset();
   const router = useRouter();
   const { session } = useAuth();
   const userId = session?.user.id;
@@ -73,7 +75,7 @@ export default function CalendarScreen() {
 
   return (
     <Screen>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.content, tabBarInset]} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <Text style={styles.eyebrow}>YOUR SCHEDULE</Text>
           <Text style={styles.title}>Calendar</Text>

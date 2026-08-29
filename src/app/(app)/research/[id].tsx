@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { AppButton } from '@/components/app-button';
+import { useTabBarInset } from '@/components/mobile-navigation';
 import { Screen } from '@/components/screen';
 import { Colors } from '@/constants/theme';
 import { createTaskFromResearch, getResearchResult } from '@/features/research/research-service';
@@ -62,6 +63,7 @@ export default function ResearchResultScreen() {
 }
 
 function ResearchResultContent({ result, userId }: { result: ResearchResult; userId: string }) {
+  const tabBarInset = useTabBarInset();
   const router = useRouter();
   const queryClient = useQueryClient();
   const [shareMessage, setShareMessage] = useState(result.shareMessage);
@@ -100,7 +102,7 @@ function ResearchResultContent({ result, userId }: { result: ResearchResult; use
 
   return (
     <Screen>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={[styles.content, tabBarInset]} keyboardShouldPersistTaps="handled">
         <AppButton
           label="‹ Research"
           onPress={() => router.replace('/research')}

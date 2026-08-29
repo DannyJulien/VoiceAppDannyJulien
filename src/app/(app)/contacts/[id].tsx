@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AppButton } from '@/components/app-button';
 import { IconButton } from '@/components/icon-button';
 import { PencilIcon, PlusIcon, TrashIcon } from '@/components/icons';
+import { useTabBarInset } from '@/components/mobile-navigation';
 import { Screen } from '@/components/screen';
 import { Colors } from '@/constants/theme';
 import { actionTypeLabel } from '@/features/actions/action-utils';
@@ -20,6 +21,7 @@ import {
 import { categoryDetails } from '@/features/projects/project-utils';
 
 export default function ContactTimelineScreen() {
+  const tabBarInset = useTabBarInset();
   const router = useRouter();
   const queryClient = useQueryClient();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -100,7 +102,7 @@ export default function ContactTimelineScreen() {
 
   return (
     <Screen>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, tabBarInset]}>
         <AppButton
           label="‹ People"
           onPress={() => router.replace('/contacts')}

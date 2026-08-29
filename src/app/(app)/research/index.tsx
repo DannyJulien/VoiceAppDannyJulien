@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { AppButton } from '@/components/app-button';
+import { useTabBarInset } from '@/components/mobile-navigation';
 import { Screen } from '@/components/screen';
 import { Colors } from '@/constants/theme';
 import { type SavedAction, getActions } from '@/features/actions/action-service';
@@ -11,6 +12,7 @@ import { getResearchSessions, startResearch } from '@/features/research/research
 import { useAuth } from '@/features/auth/auth-provider';
 
 export default function ResearchListScreen() {
+  const tabBarInset = useTabBarInset();
   const router = useRouter();
   const queryClient = useQueryClient();
   const { session } = useAuth();
@@ -50,7 +52,7 @@ export default function ResearchListScreen() {
 
   return (
     <Screen>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, tabBarInset]}>
         <View style={styles.titleBlock}>
           <Text style={styles.eyebrow}>RELIABLE CONTEXT</Text>
           <Text style={styles.title}>Research</Text>

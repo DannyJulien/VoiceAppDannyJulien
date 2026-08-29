@@ -11,6 +11,7 @@ import {
   deleteAction,
   getAction,
   getCaptureTranscript,
+  sendBackToInbox,
   setActionStatus,
   suggestedPeopleFrom,
   updateAction,
@@ -153,6 +154,13 @@ export default function ActionDetailsScreen() {
       if (userId) queryClient.invalidateQueries({ queryKey: ['contacts', userId] });
     },
   });
+  const sendBackMutation = useMutation({
+    mutationFn: () => {
+      if (!userId || !action) throw new Error('This capture is unavailable.');
+      return sendBackToInbox(action, userId);
+    },
+    onSuccess: invalidateActionQueries,
+  });
   const dismissMutation = useMutation({
     mutationFn: () => {
       if (!userId) throw new Error('You need to be signed in.');
@@ -265,6 +273,7 @@ export default function ActionDetailsScreen() {
     updateMutation.error ??
     completeMutation.error ??
     approveMutation.error ??
+    sendBackMutation.error ??
     dismissMutation.error ??
     deleteMutation.error ??
     researchMutation.error ??
@@ -367,6 +376,22 @@ export default function ActionDetailsScreen() {
           <View style={styles.transcript}>
             <Text style={styles.metaLabel}>ORIGINAL VOICE NOTE</Text>
             <Text style={styles.transcriptText}>{transcriptQuery.data}</Text>
+          </View>
+        ) : null}
+
+        {action.auto_filed_at && action.status === 'approved' && !editing ? (
+          <View style={styles.reviewCard}>
+            <Text style={styles.cardTitle}>Filed for you</Text>
+            <Text style={styles.cardCopy}>
+              Handle was {Math.round((action.confidence ?? 0) * 100)}% sure and filed this without
+              asking. Not right? Send it back and approve it yourself.
+            </Text>
+            <AppButton
+              label="Send back to Inbox"
+              loading={sendBackMutation.isPending}
+              onPress={() => sendBackMutation.mutate()}
+              variant="secondary"
+            />
           </View>
         ) : null}
 

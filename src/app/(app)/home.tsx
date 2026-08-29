@@ -7,6 +7,7 @@ import { AppButton } from '@/components/app-button';
 import { Screen } from '@/components/screen';
 import { Colors } from '@/constants/theme';
 import { getActions } from '@/features/actions/action-service';
+import { filingReasonLabel } from '@/features/actions/filing-gate';
 import { signOut } from '@/features/auth/auth-service';
 import { useAuth } from '@/features/auth/auth-provider';
 import { formatDuration } from '@/features/captures/capture-utils';
@@ -25,6 +26,7 @@ export default function HomeScreen() {
     discardPendingUploads,
     durationMillis,
     error: captureError,
+    filingDecision,
     isRecording,
     inboxAction,
     pendingCount,
@@ -147,16 +149,28 @@ export default function HomeScreen() {
         {inboxAction ? (
           <View style={styles.resumeCard}>
             <View style={styles.resumeCopyBlock}>
-              <Text style={styles.resumeTitle}>Saved to your Inbox</Text>
+              <Text style={styles.resumeTitle}>
+                {filingDecision?.outcome === 'auto' ? 'Filed for you' : 'Saved to your Inbox'}
+              </Text>
               <Text numberOfLines={2} style={styles.resumeCopy}>
                 {inboxAction.title}
               </Text>
+              {filingDecision && filingDecision.outcome !== 'auto' ? (
+                <Text numberOfLines={2} style={styles.resumeCopy}>
+                  Waiting for you because {filingDecision.reasons.map(filingReasonLabel).join(', ')}
+                  .
+                </Text>
+              ) : null}
             </View>
             <AppButton
-              label="Open Inbox"
+              label={filingDecision?.outcome === 'auto' ? 'Open' : 'Open Inbox'}
               onPress={() => {
                 clearInboxAction();
-                router.push('/inbox');
+                if (filingDecision?.outcome === 'auto') {
+                  router.push({ pathname: '/action/[id]', params: { id: inboxAction.id } });
+                } else {
+                  router.push('/inbox');
+                }
               }}
               style={styles.resumeButton}
               variant="secondary"

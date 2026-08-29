@@ -1,7 +1,9 @@
 import type { ActionCategory, ActionStatus, ActionType, Database, Json } from '@/types/database';
 
 import { actionTypeForIntent, type UnderstoodAction } from '@/features/actions/action-schema';
+import type { FilingDecision } from '@/features/actions/filing-gate';
 import { createContact, getContacts } from '@/features/contacts/contact-service';
+import { normalizedContactName } from '@/features/contacts/contact-utils';
 import { findOrCreateProject } from '@/features/projects/project-service';
 import { getSupabaseClient } from '@/services/supabase/client';
 
@@ -80,12 +82,17 @@ export async function saveReviewedAction({
   return data;
 }
 
-export async function createPendingAction({
+/**
+ * Store an understood capture according to the confidence gate decision.
+ * Idempotent per capture: a retry never creates a second action.
+ */
+export async function fileUnderstoodAction({
   action,
   captureId,
+  decision,
   timezone,
   userId,
-}: PendingActionInput) {
+}: PendingActionInput & { decision: FilingDecision }) {
   const client = getSupabaseClient();
   const { data: existing, error: existingError } = await client
     .from('actions')
@@ -96,21 +103,27 @@ export async function createPendingAction({
   if (existingError) throw existingError;
   if (existing) return existing;
 
+  const autoFiled = decision.outcome === 'auto';
+  // Below the low bar nothing of the AI's placement is kept: the user gets the
+  // text with a title and decides everything else (Kern: never guess).
+  const keepSuggestions = decision.outcome !== 'raw';
   const { data, error } = await client
     .from('actions')
     .insert({
       action_type: actionTypeForIntent(action.intent),
-      category: 'inbox',
+      auto_filed_at: autoFiled ? new Date().toISOString() : null,
+      category: autoFiled ? (action.suggestedCategory ?? 'inbox') : 'inbox',
       clarification_question: action.clarificationQuestion,
       confidence: action.confidence,
       message_draft: action.messageDraft,
+      project_id: autoFiled ? decision.projectId : null,
       requires_clarification: action.requiresClarification,
       scheduled_at: action.scheduledAt,
       scheduled_timezone: action.scheduledAt ? timezone : null,
-      status: 'pending',
-      suggested_category: action.suggestedCategory,
-      suggested_project_name: action.suggestedProjectName,
-      suggested_people: action.people,
+      status: autoFiled ? 'approved' : 'pending',
+      suggested_category: keepSuggestions ? action.suggestedCategory : null,
+      suggested_project_name: keepSuggestions ? action.suggestedProjectName : null,
+      suggested_people: keepSuggestions ? action.people : [],
       summary: action.summary || null,
       title: action.title,
       user_id: userId,
@@ -119,7 +132,33 @@ export async function createPendingAction({
     .select()
     .single();
   if (error) throw error;
+
+  if (autoFiled && decision.contactIds.length) {
+    const rows = action.people.flatMap((person, index) => {
+      const personId = decision.contactIds[index];
+      return personId ? [{ action_id: data.id, person_id: personId, role: person.role }] : [];
+    });
+    const { error: peopleError } = await client
+      .from('action_people')
+      .upsert(rows, { onConflict: 'action_id,person_id,role', ignoreDuplicates: true });
+    if (peopleError) throw peopleError;
+  }
   return data;
+}
+
+/** Undo an automatic filing: the action goes back to the Inbox with its suggestions intact. */
+export async function sendBackToInbox(action: SavedAction, userId: string) {
+  const { error } = await getSupabaseClient()
+    .from('action_people')
+    .delete()
+    .eq('action_id', action.id);
+  if (error) throw error;
+  return updateAction(action.id, userId, {
+    auto_filed_at: null,
+    category: 'inbox',
+    project_id: null,
+    status: 'pending',
+  });
 }
 
 export type PendingApprovalInput = {
@@ -140,10 +179,9 @@ export async function approvePendingAction(
   const project = projectName?.trim() ? await findOrCreateProject(userId, projectName) : null;
   const contacts = await getContacts(userId);
   for (const person of people) {
-    const normalizedName = person.name.trim().replace(/\s+/g, ' ').toLocaleLowerCase();
+    const normalizedName = normalizedContactName(person.name);
     let contact = contacts.find(
-      (candidate) =>
-        candidate.name.trim().replace(/\s+/g, ' ').toLocaleLowerCase() === normalizedName,
+      (candidate) => normalizedContactName(candidate.name) === normalizedName,
     );
     if (!contact) {
       contact = await createContact(userId, { name: person.name });
@@ -158,6 +196,7 @@ export async function approvePendingAction(
     if (error) throw error;
   }
   return updateAction(action.id, userId, {
+    auto_filed_at: null,
     category,
     project_id: project?.id ?? action.project_id,
     status: 'approved',

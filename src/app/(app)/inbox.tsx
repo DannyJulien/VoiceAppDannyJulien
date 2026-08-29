@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { AppButton } from '@/components/app-button';
 import { Screen } from '@/components/screen';
@@ -9,6 +9,7 @@ import { Colors } from '@/constants/theme';
 import { type ActionFilter, getActions } from '@/features/actions/action-service';
 import { actionTypeLabel, formatActionWhen, statusLabel } from '@/features/actions/action-utils';
 import { useAuth } from '@/features/auth/auth-provider';
+import { getProfile, updateProfile } from '@/features/auth/profile-service';
 import { getProjects } from '@/features/projects/project-service';
 import { categoryDetails } from '@/features/projects/project-utils';
 
@@ -22,9 +23,19 @@ const filters: { label: string; value: ActionFilter }[] = [
 
 export default function InboxScreen() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { session } = useAuth();
   const [filter, setFilter] = useState<ActionFilter>('all');
   const userId = session?.user.id;
+  const profileQuery = useQuery({
+    queryKey: ['profile', userId],
+    queryFn: () => getProfile(userId!),
+    enabled: Boolean(userId),
+  });
+  const autoFileMutation = useMutation({
+    mutationFn: (enabled: boolean) => updateProfile(userId!, { auto_file_captures: enabled }),
+    onSuccess: (profile) => queryClient.setQueryData(['profile', userId], profile),
+  });
   const actionsQuery = useQuery({
     queryKey: ['actions', userId, filter],
     queryFn: () => getActions(userId!, filter),
@@ -50,8 +61,25 @@ export default function InboxScreen() {
           <Text style={styles.title}>Inbox</Text>
         </View>
         <Text style={styles.copy}>
-          New voice captures wait here safely until you are ready to approve them.
+          Clear captures are filed for you. Anything doubtful, or involving another person, waits
+          here until you approve it.
         </Text>
+        {profileQuery.data ? (
+          <View style={styles.settingRow}>
+            <View style={styles.settingCopy}>
+              <Text style={styles.settingTitle}>File confident captures automatically</Text>
+              <Text style={styles.settingHint}>
+                Off means every capture waits here for your approval.
+              </Text>
+            </View>
+            <Switch
+              accessibilityLabel="File confident captures automatically"
+              disabled={autoFileMutation.isPending}
+              onValueChange={(value) => autoFileMutation.mutate(value)}
+              value={profileQuery.data.auto_file_captures}
+            />
+          </View>
+        ) : null}
         <View style={styles.topActions}>
           <AppButton label="Write a note" onPress={() => router.push('/note/new')} />
           <AppButton
@@ -127,7 +155,9 @@ export default function InboxScreen() {
                 <Text style={[styles.cardType, { color: categoryDetails(action.category).color }]}>
                   {action.status === 'pending'
                     ? 'NEEDS YOUR APPROVAL'
-                    : actionTypeLabel(action.action_type).toUpperCase()}
+                    : action.auto_filed_at
+                      ? `${actionTypeLabel(action.action_type).toUpperCase()} · FILED FOR YOU`
+                      : actionTypeLabel(action.action_type).toUpperCase()}
                 </Text>
                 <Text style={styles.cardStatus}>
                   {action.status === 'pending' ? 'Review' : statusLabel(action.status)}
@@ -167,6 +197,19 @@ const styles = StyleSheet.create({
   copy: { color: Colors.muted, fontSize: 16, lineHeight: 24 },
   filters: { gap: 8 },
   topActions: { flexDirection: 'row', gap: 10 },
+  settingRow: {
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderColor: Colors.border,
+    borderRadius: 18,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 12,
+    padding: 16,
+  },
+  settingCopy: { flex: 1, gap: 2 },
+  settingTitle: { color: Colors.ink, fontSize: 15, fontWeight: '800' },
+  settingHint: { color: Colors.muted, fontSize: 13, lineHeight: 18 },
   pendingNotice: { backgroundColor: Colors.brandSoft, borderRadius: 18, gap: 4, padding: 16 },
   pendingNoticeTitle: { color: Colors.ink, fontSize: 16, fontWeight: '900' },
   pendingNoticeCopy: { color: Colors.muted, fontSize: 14, lineHeight: 20 },

@@ -13,6 +13,8 @@ const destinations = [
 
 // Space between the pill and the physical bottom edge when the device has no home indicator.
 const MIN_BOTTOM_GAP = 12;
+// The full home-indicator inset (~34pt) leaves the pill floating too high; pull it down this much.
+const INSET_OVERLAP = 12;
 // Rendered height of the pill itself (item padding + icon + label + bar padding).
 const BAR_HEIGHT = 60;
 // Breathing room between the last piece of content and the top of the pill.
@@ -20,8 +22,8 @@ const CONTENT_GAP = 16;
 
 function useBottomGap() {
   const insets = useSafeAreaInsets();
-  // On phones with a home indicator the inset (~34pt) already clears it; otherwise use a fixed gap.
-  return Math.max(insets.bottom, MIN_BOTTOM_GAP);
+  // Sit just above the home indicator; on devices without one fall back to a fixed gap.
+  return Math.max(insets.bottom - INSET_OVERLAP, MIN_BOTTOM_GAP);
 }
 
 /**

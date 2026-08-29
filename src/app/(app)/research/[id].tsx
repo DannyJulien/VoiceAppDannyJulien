@@ -102,7 +102,10 @@ function ResearchResultContent({ result, userId }: { result: ResearchResult; use
 
   return (
     <Screen>
-      <ScrollView contentContainerStyle={[styles.content, tabBarInset]} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={[styles.content, tabBarInset]}
+        keyboardShouldPersistTaps="handled"
+      >
         <AppButton
           label="‹ Research"
           onPress={() => router.replace('/research')}

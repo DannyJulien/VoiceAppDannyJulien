@@ -146,21 +146,6 @@ export async function fileUnderstoodAction({
   return data;
 }
 
-/** Undo an automatic filing: the action goes back to the Inbox with its suggestions intact. */
-export async function sendBackToInbox(action: SavedAction, userId: string) {
-  const { error } = await getSupabaseClient()
-    .from('action_people')
-    .delete()
-    .eq('action_id', action.id);
-  if (error) throw error;
-  return updateAction(action.id, userId, {
-    auto_filed_at: null,
-    category: 'inbox',
-    project_id: null,
-    status: 'pending',
-  });
-}
-
 export type PendingApprovalInput = {
   category?: ActionCategory;
   people?: SuggestedPerson[];

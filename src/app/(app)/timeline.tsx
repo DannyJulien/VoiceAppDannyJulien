@@ -100,9 +100,7 @@ export default function TimelineScreen() {
             >
               <View style={styles.cardTopRow}>
                 <Text style={[styles.cardType, { color: categoryDetails(action.category).color }]}>
-                  {action.auto_filed_at
-                    ? `${actionTypeLabel(action.action_type).toUpperCase()} · FILED FOR YOU`
-                    : actionTypeLabel(action.action_type).toUpperCase()}
+                  {actionTypeLabel(action.action_type).toUpperCase()}
                 </Text>
                 <Text style={styles.cardStatus}>{statusLabel(action.status)}</Text>
               </View>

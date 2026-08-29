@@ -1,6 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import { Redirect, Stack } from 'expo-router';
 
+import { InboxButton } from '@/components/inbox-button';
 import { LoadingScreen } from '@/components/loading-screen';
 import { MobileNavigation } from '@/components/mobile-navigation';
 import { useAuth } from '@/features/auth/auth-provider';
@@ -20,6 +21,7 @@ export default function AppLayout() {
     <View style={styles.root}>
       <View style={styles.stack}>
         <Stack screenOptions={{ headerShown: false, animation: 'fade' }} />
+        <InboxButton />
       </View>
       <MobileNavigation />
     </View>

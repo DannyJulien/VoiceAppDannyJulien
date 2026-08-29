@@ -175,7 +175,7 @@ export default function ActionDetailsScreen() {
     },
     onSuccess: () => {
       if (userId) queryClient.invalidateQueries({ queryKey: ['actions', userId] });
-      router.replace('/inbox');
+      router.replace('/timeline');
     },
   });
   const researchMutation = useMutation({
@@ -218,7 +218,7 @@ export default function ActionDetailsScreen() {
         <Text style={styles.copy}>
           It may have been removed or you no longer have access to it.
         </Text>
-        <AppButton label="Back to inbox" onPress={() => router.replace('/inbox')} />
+        <AppButton label="Back to timeline" onPress={() => router.replace('/timeline')} />
       </Screen>
     );
   }
@@ -283,8 +283,8 @@ export default function ActionDetailsScreen() {
     <Screen>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <AppButton
-          label="‹ Inbox"
-          onPress={() => router.replace('/inbox')}
+          label={isPendingReview ? '‹ Inbox' : '‹ Timeline'}
+          onPress={() => router.replace(isPendingReview ? '/inbox' : '/timeline')}
           style={styles.back}
           variant="quiet"
         />
@@ -294,83 +294,85 @@ export default function ActionDetailsScreen() {
           <Text style={styles.statusText}>{statusLabel(action.status)}</Text>
         </View>
 
-        <View style={styles.summaryCard}>
-          {editing ? (
-            <>
-              <Text style={styles.fieldLabel}>Title</Text>
-              <TextInput
-                accessibilityLabel="Action title"
-                onChangeText={setEditedTitle}
-                style={styles.input}
-                value={title}
-              />
-              <Text style={styles.fieldLabel}>Details</Text>
-              <TextInput
-                accessibilityLabel="Action details"
-                multiline
-                onChangeText={setEditedSummary}
-                style={[styles.input, styles.multilineInput]}
-                value={summary}
-              />
-              <Text style={styles.fieldLabel}>When (optional)</Text>
-              <TextInput
-                accessibilityHint="Example: 2026-08-23 16:30"
-                accessibilityLabel="Schedule"
-                onChangeText={setEditedScheduledAt}
-                placeholder="2026-08-23 16:30"
-                placeholderTextColor={Colors.muted}
-                style={styles.input}
-                value={scheduledAt}
-              />
-              {action.action_type === 'message' ? (
-                <>
-                  <Text style={styles.fieldLabel}>Message draft</Text>
-                  <TextInput
-                    accessibilityLabel="Message draft"
-                    multiline
-                    onChangeText={setEditedMessageDraft}
-                    style={[styles.input, styles.multilineInput]}
-                    value={messageDraft}
-                  />
-                </>
-              ) : null}
-            </>
-          ) : isPendingReview ? null : (
-            <>
-              <Text style={styles.summaryLabel}>SUMMARY</Text>
-              {points.length ? (
-                <View style={styles.points}>
-                  {points.map((point, index) => (
-                    <View key={`${point}-${index}`} style={styles.pointRow}>
-                      <View style={styles.pointDot} />
-                      <Text style={styles.pointText}>{point}</Text>
-                    </View>
-                  ))}
+        {editing || !isPendingReview ? (
+          <View style={styles.summaryCard}>
+            {editing ? (
+              <>
+                <Text style={styles.fieldLabel}>Title</Text>
+                <TextInput
+                  accessibilityLabel="Action title"
+                  onChangeText={setEditedTitle}
+                  style={styles.input}
+                  value={title}
+                />
+                <Text style={styles.fieldLabel}>Details</Text>
+                <TextInput
+                  accessibilityLabel="Action details"
+                  multiline
+                  onChangeText={setEditedSummary}
+                  style={[styles.input, styles.multilineInput]}
+                  value={summary}
+                />
+                <Text style={styles.fieldLabel}>When (optional)</Text>
+                <TextInput
+                  accessibilityHint="Example: 2026-08-23 16:30"
+                  accessibilityLabel="Schedule"
+                  onChangeText={setEditedScheduledAt}
+                  placeholder="2026-08-23 16:30"
+                  placeholderTextColor={Colors.muted}
+                  style={styles.input}
+                  value={scheduledAt}
+                />
+                {action.action_type === 'message' ? (
+                  <>
+                    <Text style={styles.fieldLabel}>Message draft</Text>
+                    <TextInput
+                      accessibilityLabel="Message draft"
+                      multiline
+                      onChangeText={setEditedMessageDraft}
+                      style={[styles.input, styles.multilineInput]}
+                      value={messageDraft}
+                    />
+                  </>
+                ) : null}
+              </>
+            ) : isPendingReview ? null : (
+              <>
+                <Text style={styles.summaryLabel}>SUMMARY</Text>
+                {points.length ? (
+                  <View style={styles.points}>
+                    {points.map((point, index) => (
+                      <View key={`${point}-${index}`} style={styles.pointRow}>
+                        <View style={styles.pointDot} />
+                        <Text style={styles.pointText}>{point}</Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : (
+                  <Text style={styles.emptySummary}>
+                    No extra details were captured for this note.
+                  </Text>
+                )}
+                <View style={styles.metaGrid}>
+                  <View style={styles.metaTile}>
+                    <Text style={styles.metaLabel}>WHEN</Text>
+                    <Text style={styles.metaValue}>{formatActionWhen(action.scheduled_at)}</Text>
+                  </View>
+                  <View style={styles.metaTile}>
+                    <Text style={styles.metaLabel}>SAVED</Text>
+                    <Text style={styles.metaValue}>{formatActionWhen(action.created_at)}</Text>
+                  </View>
                 </View>
-              ) : (
-                <Text style={styles.emptySummary}>
-                  No extra details were captured for this note.
-                </Text>
-              )}
-              <View style={styles.metaGrid}>
-                <View style={styles.metaTile}>
-                  <Text style={styles.metaLabel}>WHEN</Text>
-                  <Text style={styles.metaValue}>{formatActionWhen(action.scheduled_at)}</Text>
-                </View>
-                <View style={styles.metaTile}>
-                  <Text style={styles.metaLabel}>SAVED</Text>
-                  <Text style={styles.metaValue}>{formatActionWhen(action.created_at)}</Text>
-                </View>
-              </View>
-              {action.message_draft ? (
-                <View style={styles.messageBox}>
-                  <Text style={styles.metaLabel}>READY-TO-SEND MESSAGE</Text>
-                  <Text style={styles.messageText}>{action.message_draft}</Text>
-                </View>
-              ) : null}
-            </>
-          )}
-        </View>
+                {action.message_draft ? (
+                  <View style={styles.messageBox}>
+                    <Text style={styles.metaLabel}>READY-TO-SEND MESSAGE</Text>
+                    <Text style={styles.messageText}>{action.message_draft}</Text>
+                  </View>
+                ) : null}
+              </>
+            )}
+          </View>
+        ) : null}
 
         {transcriptQuery.data ? (
           <View style={styles.transcript}>

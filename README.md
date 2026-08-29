@@ -25,6 +25,17 @@ VOICE → UNDERSTAND → “Add reliable information?” → RESEARCH → SOURCE
 - Research, sources, findings, and meeting context are owner-scoped by RLS. The mobile/web client only receives the public Supabase URL and publishable key.
 - `npm run build:web` exports a responsive static web build to `dist/`; `npm run serve:web` serves it locally with `/health`.
 
+### Vercel web deployment
+
+`vercel.json` deploys the exported Expo web app as a static site: it runs `npm run build:web` and publishes `dist/`. In Vercel, connect the `DannyJulien/VoiceAppDannyJulien` GitHub repository and set only these build-time variables for **Production**, **Preview**, and **Development**:
+
+```text
+EXPO_PUBLIC_SUPABASE_URL
+EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+```
+
+Never add `OPENAI_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, or any other server secret to Vercel. Those remain in Supabase Edge Function secrets. After the Git connection is enabled, merges to `main` deploy production automatically and pull requests receive preview URLs.
+
 ### Required collaboration rule
 
 Every contributor and coding agent must follow this issue-to-production workflow for any product change:

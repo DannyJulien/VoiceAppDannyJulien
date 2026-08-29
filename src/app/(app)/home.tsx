@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { AppButton } from '@/components/app-button';
 import { Screen } from '@/components/screen';
 import { Colors } from '@/constants/theme';
-import { getActions } from '@/features/actions/action-service';
 import { filingReasonLabel } from '@/features/actions/filing-gate';
 import { signOut } from '@/features/auth/auth-service';
 import { useAuth } from '@/features/auth/auth-provider';
@@ -37,13 +36,6 @@ export default function HomeScreen() {
     stopRecording,
   } = voiceCapture;
   const isBusy = phase === 'uploading' || phase === 'understanding';
-  const pendingReviewsQuery = useQuery({
-    queryKey: ['actions', session?.user.id, 'all'],
-    queryFn: () => getActions(session!.user.id, 'all'),
-    enabled: Boolean(session?.user.id),
-  });
-  const pendingReviewCount =
-    pendingReviewsQuery.data?.filter((item) => item.status === 'pending').length ?? 0;
 
   useEffect(() => {
     if (!inboxAction || !session?.user.id) return;
@@ -136,7 +128,11 @@ export default function HomeScreen() {
             onPress={() => router.push('/note/new')}
             variant="secondary"
           />
-          <AppButton label="View timeline" onPress={() => router.push('/inbox')} variant="quiet" />
+          <AppButton
+            label="View timeline"
+            onPress={() => router.push('/timeline')}
+            variant="quiet"
+          />
         </View>
 
         <View style={styles.tipCard}>
@@ -175,16 +171,6 @@ export default function HomeScreen() {
               style={styles.resumeButton}
               variant="secondary"
             />
-          </View>
-        ) : null}
-
-        {!inboxAction && pendingReviewCount > 0 ? (
-          <View style={styles.inboxReminder}>
-            <Text style={styles.inboxReminderTitle}>
-              {pendingReviewCount} {pendingReviewCount === 1 ? 'capture needs' : 'captures need'}{' '}
-              your approval
-            </Text>
-            <AppButton label="Review Inbox" onPress={() => router.push('/inbox')} variant="quiet" />
           </View>
         ) : null}
 
@@ -229,7 +215,13 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   content: { paddingTop: 12 },
   scrollContent: { gap: 16, paddingBottom: 30, paddingTop: 8 },
-  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  // Right gutter keeps Sign out clear of the floating Inbox button.
+  topRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingRight: 100,
+  },
   brandRow: { flexDirection: 'row', alignItems: 'center', gap: 9 },
   mark: { width: 11, height: 11, borderRadius: 6, backgroundColor: Colors.brand },
   brand: { color: Colors.ink, fontSize: 18, fontWeight: '800' },
@@ -301,16 +293,6 @@ const styles = StyleSheet.create({
   resumeTitle: { color: Colors.ink, fontSize: 15, fontWeight: '900' },
   resumeCopy: { color: Colors.muted, fontSize: 14, lineHeight: 20 },
   resumeButton: { minHeight: 42, paddingHorizontal: 13 },
-  inboxReminder: {
-    alignItems: 'center',
-    backgroundColor: Colors.accentSoft,
-    borderRadius: 18,
-    flexDirection: 'row',
-    gap: 10,
-    justifyContent: 'space-between',
-    padding: 14,
-  },
-  inboxReminderTitle: { color: Colors.ink, flex: 1, fontSize: 14, fontWeight: '800' },
   retryCard: { backgroundColor: Colors.dangerSoft, borderRadius: 18, gap: 8, padding: 18 },
   retryTitle: { color: Colors.ink, fontSize: 16, fontWeight: '800' },
   retryCopy: { color: Colors.muted, fontSize: 14, lineHeight: 20 },

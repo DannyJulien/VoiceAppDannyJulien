@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { AppButton } from '@/components/app-button';
+import { useTabBarInset } from '@/components/mobile-navigation';
 import { Screen } from '@/components/screen';
 import { Colors } from '@/constants/theme';
 import {
@@ -48,6 +49,7 @@ function summaryPoints(value: string) {
 }
 
 export default function ActionDetailsScreen() {
+  const tabBarInset = useTabBarInset();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const queryClient = useQueryClient();
@@ -287,7 +289,7 @@ export default function ActionDetailsScreen() {
 
   return (
     <Screen>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={[styles.content, tabBarInset]} keyboardShouldPersistTaps="handled">
         <AppButton
           label={isPendingReview ? '‹ Inbox' : '‹ Timeline'}
           onPress={() => router.replace(isPendingReview ? '/inbox' : '/timeline')}

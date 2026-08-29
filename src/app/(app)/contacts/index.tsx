@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { AppButton } from '@/components/app-button';
+import { useTabBarInset } from '@/components/mobile-navigation';
 import { Screen } from '@/components/screen';
 import { Colors } from '@/constants/theme';
 import { contactLabel, contactValidationError } from '@/features/contacts/contact-utils';
@@ -11,6 +12,7 @@ import { createContact, getContacts } from '@/features/contacts/contact-service'
 import { useAuth } from '@/features/auth/auth-provider';
 
 export default function ContactsScreen() {
+  const tabBarInset = useTabBarInset();
   const router = useRouter();
   const queryClient = useQueryClient();
   const { session } = useAuth();
@@ -49,7 +51,7 @@ export default function ContactsScreen() {
 
   return (
     <Screen>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={[styles.content, tabBarInset]} keyboardShouldPersistTaps="handled">
         <View style={styles.titleBlock}>
           <Text style={styles.eyebrow}>YOUR PEOPLE</Text>
           <Text style={styles.title}>People</Text>

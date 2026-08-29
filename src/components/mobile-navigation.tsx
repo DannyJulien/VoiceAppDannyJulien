@@ -13,6 +13,25 @@ const destinations = [
 
 // Space between the pill and the physical bottom edge when the device has no home indicator.
 const MIN_BOTTOM_GAP = 12;
+// Rendered height of the pill itself (item padding + icon + label + bar padding).
+const BAR_HEIGHT = 60;
+// Breathing room between the last piece of content and the top of the pill.
+const CONTENT_GAP = 16;
+
+function useBottomGap() {
+  const insets = useSafeAreaInsets();
+  // On phones with a home indicator the inset (~34pt) already clears it; otherwise use a fixed gap.
+  return Math.max(insets.bottom, MIN_BOTTOM_GAP);
+}
+
+/**
+ * The tab bar floats over the screen, so scrolling content needs this much bottom padding
+ * to be able to scroll fully above the pill. Spread into a ScrollView's contentContainerStyle.
+ */
+export function useTabBarInset() {
+  const bottomGap = useBottomGap();
+  return { paddingBottom: bottomGap + BAR_HEIGHT + CONTENT_GAP };
+}
 
 function isCurrent(pathname: string, destination: (typeof destinations)[number]['path']) {
   if (destination === '/home') return pathname === '/home' || pathname === '/';
@@ -22,12 +41,11 @@ function isCurrent(pathname: string, destination: (typeof destinations)[number][
 export function MobileNavigation() {
   const pathname = usePathname();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
-  // On phones with a home indicator the inset (~34pt) already clears it; otherwise use a fixed gap.
-  const bottomGap = Math.max(insets.bottom, MIN_BOTTOM_GAP);
+  const bottomGap = useBottomGap();
 
   return (
-    <View style={[styles.wrapper, { paddingBottom: bottomGap }]}>
+    // box-none: the transparent gutter around the pill lets touches reach the content beneath.
+    <View pointerEvents="box-none" style={[styles.wrapper, { paddingBottom: bottomGap }]}>
       <View style={styles.bar}>
         {destinations.map((destination) => {
           const selected = isCurrent(pathname, destination.path);
@@ -62,9 +80,12 @@ export function MobileNavigation() {
 
 const styles = StyleSheet.create({
   wrapper: {
-    backgroundColor: Colors.canvas,
+    // Overlay the screen content instead of reserving a strip below it.
+    bottom: 0,
+    left: 0,
+    position: 'absolute',
+    right: 0,
     paddingHorizontal: 20,
-    paddingTop: 8,
   },
   bar: {
     alignItems: 'center',

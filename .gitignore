@@ -47,3 +47,6 @@ example
 # Local Mac mini service state
 deploy/mac-mini/logs/
 deploy/mac-mini/handled-web.pid
+
+# Supabase CLI link state (per machine)
+supabase/.temp/

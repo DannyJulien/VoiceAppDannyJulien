@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
@@ -8,7 +8,6 @@ import { useTabBarInset } from '@/components/mobile-navigation';
 import { Screen } from '@/components/screen';
 import { Colors } from '@/constants/theme';
 import { filingReasonLabel } from '@/features/actions/filing-gate';
-import { signOut } from '@/features/auth/auth-service';
 import { useAuth } from '@/features/auth/auth-provider';
 import { formatDuration } from '@/features/captures/capture-utils';
 import { useVoiceCapture } from '@/features/captures/use-voice-capture';
@@ -18,8 +17,6 @@ export default function HomeScreen() {
   const { session } = useAuth();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [isSigningOut, setIsSigningOut] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const voiceCapture = useVoiceCapture(session?.user.id);
   const {
     canRetryProcessing,
@@ -44,18 +41,6 @@ export default function HomeScreen() {
     void queryClient.invalidateQueries({ queryKey: ['actions', session.user.id] });
   }, [inboxAction, queryClient, session?.user.id]);
 
-  async function onSignOut() {
-    setError(null);
-    setIsSigningOut(true);
-    try {
-      await signOut();
-    } catch (signOutError) {
-      setError(signOutError instanceof Error ? signOutError.message : 'Unable to sign out.');
-    } finally {
-      setIsSigningOut(false);
-    }
-  }
-
   return (
     <Screen contentStyle={styles.content}>
       <ScrollView contentContainerStyle={[styles.scrollContent, tabBarInset]} showsVerticalScrollIndicator={false}>
@@ -64,15 +49,6 @@ export default function HomeScreen() {
             <View style={styles.mark} />
             <Text style={styles.brand}>Handled</Text>
           </View>
-          <Pressable
-            accessibilityLabel="Sign out"
-            accessibilityRole="button"
-            disabled={isSigningOut}
-            onPress={onSignOut}
-            style={({ pressed }) => [styles.signOut, pressed && styles.signOutPressed]}
-          >
-            <Text style={styles.signOutLabel}>{isSigningOut ? 'Signing out…' : 'Sign out'}</Text>
-          </Pressable>
         </View>
 
         <View style={styles.hero}>
@@ -199,32 +175,25 @@ export default function HomeScreen() {
             {captureError}
           </Text>
         ) : null}
-        {error ? (
-          <Text accessibilityRole="alert" style={styles.error}>
-            {error}
-          </Text>
-        ) : null}
       </ScrollView>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { paddingTop: 12 },
-  scrollContent: { gap: 16, paddingBottom: 30, paddingTop: 8 },
-  // Right gutter keeps Sign out clear of the floating Inbox button.
+  content: { paddingTop: 8 },
+  scrollContent: { gap: 16, paddingBottom: 30, paddingTop: 0 },
+  // Keeps the Handled mark clear of the shared Inbox and Settings controls.
   topRow: {
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingRight: 100,
+    minHeight: 40,
+    paddingRight: 140,
   },
   brandRow: { flexDirection: 'row', alignItems: 'center', gap: 9 },
   mark: { width: 11, height: 11, borderRadius: 6, backgroundColor: Colors.brand },
   brand: { color: Colors.ink, fontSize: 18, fontWeight: '800' },
-  signOut: { borderRadius: 12, paddingHorizontal: 10, paddingVertical: 8 },
-  signOutPressed: { backgroundColor: Colors.brandSoft },
-  signOutLabel: { color: Colors.brand, fontSize: 13, fontWeight: '800' },
   hero: {
     backgroundColor: Colors.brand,
     borderRadius: 26,

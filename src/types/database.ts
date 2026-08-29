@@ -91,6 +91,7 @@ export type Database = {
           category: ActionCategory;
           suggested_category: ActionCategory | null;
           suggested_project_name: string | null;
+          suggested_people: Json;
           created_at: string;
           updated_at: string;
         };
@@ -112,6 +113,7 @@ export type Database = {
           category?: ActionCategory;
           suggested_category?: ActionCategory | null;
           suggested_project_name?: string | null;
+          suggested_people?: Json;
         };
         Update: {
           voice_capture_id?: string | null;
@@ -128,6 +130,7 @@ export type Database = {
           category?: ActionCategory;
           suggested_category?: ActionCategory | null;
           suggested_project_name?: string | null;
+          suggested_people?: Json;
         };
         Relationships: [];
       };

@@ -12,6 +12,7 @@ import {
   getAction,
   getCaptureTranscript,
   setActionStatus,
+  suggestedPeopleFrom,
   updateAction,
 } from '@/features/actions/action-service';
 import {
@@ -60,6 +61,7 @@ export default function ActionDetailsScreen() {
   const [editingPlacement, setEditingPlacement] = useState(false);
   const [reviewCategory, setReviewCategory] = useState<ActionCategory | null>(null);
   const [reviewProjectName, setReviewProjectName] = useState<string | null>(null);
+  const [includeSuggestedPeople, setIncludeSuggestedPeople] = useState(true);
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [deliveryError, setDeliveryError] = useState<string | null>(null);
@@ -142,10 +144,14 @@ export default function ActionDetailsScreen() {
       if (!userId || !action) throw new Error('This capture is unavailable.');
       return approvePendingAction(action, userId, {
         category: selectedReviewCategory,
+        people: includeSuggestedPeople ? suggestedPeople : [],
         projectName: selectedReviewProjectName || null,
       });
     },
-    onSuccess: invalidateActionQueries,
+    onSuccess: () => {
+      invalidateActionQueries();
+      if (userId) queryClient.invalidateQueries({ queryKey: ['contacts', userId] });
+    },
   });
   const dismissMutation = useMutation({
     mutationFn: () => {
@@ -210,6 +216,7 @@ export default function ActionDetailsScreen() {
   }
 
   const points = summaryPoints(action.summary ?? '');
+  const suggestedPeople = suggestedPeopleFrom(action.suggested_people);
 
   function edit() {
     if (!action) return;
@@ -381,6 +388,23 @@ export default function ActionDetailsScreen() {
                 <Text style={styles.suggestionLabel}>PROJECT</Text>
                 <Text style={styles.suggestionValue}>{selectedReviewProjectName}</Text>
               </View>
+            ) : null}
+            {suggestedPeople.length ? (
+              <>
+                <View style={styles.suggestionRow}>
+                  <Text style={styles.suggestionLabel}>PEOPLE</Text>
+                  <Text style={styles.suggestionValue}>
+                    {includeSuggestedPeople
+                      ? suggestedPeople.map((person) => person.name).join(', ')
+                      : 'Will not be added'}
+                  </Text>
+                </View>
+                <AppButton
+                  label={includeSuggestedPeople ? 'Do not add people' : 'Add suggested people'}
+                  onPress={() => setIncludeSuggestedPeople((current) => !current)}
+                  variant="quiet"
+                />
+              </>
             ) : null}
             {editingPlacement ? (
               <View style={styles.placementEditor}>

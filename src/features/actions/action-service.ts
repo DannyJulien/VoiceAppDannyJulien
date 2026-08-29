@@ -1,6 +1,7 @@
-import type { ActionCategory, ActionStatus, ActionType, Database } from '@/types/database';
+import type { ActionCategory, ActionStatus, ActionType, Database, Json } from '@/types/database';
 
 import { actionTypeForIntent, type UnderstoodAction } from '@/features/actions/action-schema';
+import { createContact, getContacts } from '@/features/contacts/contact-service';
 import { findOrCreateProject } from '@/features/projects/project-service';
 import { getSupabaseClient } from '@/services/supabase/client';
 
@@ -31,6 +32,20 @@ export type PendingActionInput = Pick<
   ActionReviewInput,
   'action' | 'captureId' | 'timezone' | 'userId'
 >;
+export type SuggestedPerson = { name: string; role: 'recipient' | 'mentioned' };
+
+export function suggestedPeopleFrom(value: Json): SuggestedPerson[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((person): person is SuggestedPerson => {
+    if (!person || typeof person !== 'object' || Array.isArray(person)) return false;
+    const candidate = person as { name?: unknown; role?: unknown };
+    return (
+      typeof candidate.name === 'string' &&
+      candidate.name.trim().length > 0 &&
+      (candidate.role === 'recipient' || candidate.role === 'mentioned')
+    );
+  });
+}
 
 export async function saveReviewedAction({
   action,
@@ -95,6 +110,7 @@ export async function createPendingAction({
       status: 'pending',
       suggested_category: action.suggestedCategory,
       suggested_project_name: action.suggestedProjectName,
+      suggested_people: action.people,
       summary: action.summary || null,
       title: action.title,
       user_id: userId,
@@ -108,6 +124,7 @@ export async function createPendingAction({
 
 export type PendingApprovalInput = {
   category?: ActionCategory;
+  people?: SuggestedPerson[];
   projectName?: string | null;
 };
 
@@ -116,16 +133,37 @@ export async function approvePendingAction(
   userId: string,
   {
     category = action.suggested_category ?? 'inbox',
+    people = suggestedPeopleFrom(action.suggested_people),
     projectName = action.suggested_project_name,
   }: PendingApprovalInput = {},
 ) {
   const project = projectName?.trim() ? await findOrCreateProject(userId, projectName) : null;
+  const contacts = await getContacts(userId);
+  for (const person of people) {
+    const normalizedName = person.name.trim().replace(/\s+/g, ' ').toLocaleLowerCase();
+    let contact = contacts.find(
+      (candidate) =>
+        candidate.name.trim().replace(/\s+/g, ' ').toLocaleLowerCase() === normalizedName,
+    );
+    if (!contact) {
+      contact = await createContact(userId, { name: person.name });
+      contacts.push(contact);
+    }
+    const { error } = await getSupabaseClient()
+      .from('action_people')
+      .upsert(
+        { action_id: action.id, person_id: contact.id, role: person.role },
+        { onConflict: 'action_id,person_id,role', ignoreDuplicates: true },
+      );
+    if (error) throw error;
+  }
   return updateAction(action.id, userId, {
     category,
     project_id: project?.id ?? action.project_id,
     status: 'approved',
     suggested_category: null,
     suggested_project_name: null,
+    suggested_people: [],
   });
 }
 

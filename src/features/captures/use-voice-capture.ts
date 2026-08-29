@@ -6,10 +6,8 @@ import {
   useAudioRecorderState,
 } from 'expo-audio';
 import { useCallback, useEffect, useState } from 'react';
-import { FunctionsHttpError } from '@supabase/supabase-js';
 
-import { createPendingAction, type SavedAction } from '@/features/actions/action-service';
-import { understoodActionSchema, type UnderstoodAction } from '@/features/actions/action-schema';
+import type { SavedAction } from '@/features/actions/action-service';
 import {
   discardPendingCaptures,
   getPendingCaptureCount,
@@ -18,25 +16,16 @@ import {
 } from '@/features/captures/capture-service';
 import { messageForCaptureError } from '@/features/captures/capture-utils';
 import { recordingPermissionError } from '@/features/captures/recording-permission';
-import { getProjects } from '@/features/projects/project-service';
-import { getSupabaseClient } from '@/services/supabase/client';
+import {
+  messageForUnderstandingError,
+  saveVoiceCaptureToInbox,
+} from '@/features/captures/understanding-service';
 
 type CapturePhase = 'idle' | 'recording' | 'uploading' | 'understanding' | 'uploaded' | 'error';
 
 export type { UnderstoodAction } from '@/features/actions/action-schema';
 
 const recordingOptions = { ...RecordingPresets.HIGH_QUALITY, directory: 'document' as const };
-const processCaptureFunction = 'process-captur';
-
-async function messageForProcessingError(error: unknown) {
-  if (error instanceof FunctionsHttpError) {
-    const payload = (await error.context.json().catch(() => null)) as { error?: unknown } | null;
-    if (typeof payload?.error === 'string') return payload.error;
-  }
-
-  return messageForCaptureError(error);
-}
-
 export function useVoiceCapture(userId: string | undefined) {
   const recorder = useAudioRecorder(recordingOptions);
   const recorderState = useAudioRecorderState(recorder, 250);
@@ -91,28 +80,7 @@ export function useVoiceCapture(userId: string | undefined) {
     async (captureId: string) => {
       if (!userId) throw new Error('You need to be signed in.');
       setPhase('understanding');
-      const projects = await getProjects(userId);
-      const { data, error: aiError } = await getSupabaseClient().functions.invoke(
-        processCaptureFunction,
-        {
-          body: {
-            captureId,
-            projectNames: projects.map((project) => project.name),
-            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC',
-          },
-        },
-      );
-
-      if (aiError || !data?.action) {
-        throw aiError ?? new Error('AI processing did not return an action.');
-      }
-
-      const parsedAction = understoodActionSchema.safeParse(data.action);
-      if (!parsedAction.success)
-        throw new Error('AI returned an invalid action. Please try again.');
-
-      const savedAction = await createPendingAction({
-        action: parsedAction.data,
+      const savedAction = await saveVoiceCaptureToInbox({
         captureId,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC',
         userId,
@@ -139,7 +107,7 @@ export function useVoiceCapture(userId: string | undefined) {
       await refreshPendingCount();
     } catch (uploadError) {
       setPhase('error');
-      setError(await messageForProcessingError(uploadError));
+      setError(await messageForUnderstandingError(uploadError));
       await refreshPendingCount();
     }
   }, [processCapture, recorder, refreshPendingCount, userId]);
@@ -152,7 +120,7 @@ export function useVoiceCapture(userId: string | undefined) {
       await processCapture(lastCaptureId);
     } catch (processingError) {
       setPhase('error');
-      setError(await messageForProcessingError(processingError));
+      setError(await messageForUnderstandingError(processingError));
     }
   }, [lastCaptureId, processCapture]);
 
@@ -180,7 +148,7 @@ export function useVoiceCapture(userId: string | undefined) {
       await refreshPendingCount();
     } catch (retryError) {
       setPhase('error');
-      setError(await messageForProcessingError(retryError));
+      setError(await messageForUnderstandingError(retryError));
       await refreshPendingCount();
     }
   }, [processCapture, refreshPendingCount, userId]);

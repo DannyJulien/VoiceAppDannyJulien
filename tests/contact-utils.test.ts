@@ -37,6 +37,7 @@ const action: SavedAction = {
   category: 'inbox',
   suggested_category: null,
   suggested_project_name: null,
+  suggested_people: [],
   created_at: contact.created_at,
   updated_at: contact.updated_at,
 };

@@ -230,46 +230,74 @@ Deno.serve(async (request) => {
     const payload = (await request.json().catch(() => null)) as {
       captureId?: string;
       projectNames?: string[];
+      text?: string;
       timezone?: string;
     } | null;
-    if (!payload?.captureId || !/^[0-9a-f-]{36}$/i.test(payload.captureId)) {
-      return json({ error: 'A valid capture ID is required.' }, 400);
+    const manualText = typeof payload?.text === 'string' ? payload.text.trim() : null;
+    if (manualText && manualText.length > 10_000) {
+      return json({ error: 'Keep a typed capture under 10,000 characters.' }, 400);
+    }
+    if (!manualText && (!payload?.captureId || !/^[0-9a-f-]{36}$/i.test(payload.captureId))) {
+      return json({ error: 'A valid capture ID or typed note is required.' }, 400);
     }
 
     const admin = createClient(url, serviceRoleKey);
-    const { data: capture, error: captureError } = await admin
-      .from('voice_captures')
-      .select('id, audio_path')
-      .eq('id', payload.captureId)
-      .eq('user_id', auth.user.id)
-      .single();
-    if (captureError || !capture?.audio_path) return json({ error: 'Capture not found.' }, 404);
+    let captureId: string;
+    let transcript: string;
 
-    const { data: audio, error: downloadError } = await admin.storage
-      .from('voice-captures')
-      .download(capture.audio_path);
-    if (downloadError || !audio) return json({ error: 'Audio could not be retrieved.' }, 502);
-    if (audio.size > 25 * 1024 * 1024) {
-      return json({ error: 'Audio is too large to process. Keep recordings under 25 MB.' }, 413);
-    }
+    if (manualText) {
+      const { data: capture, error: captureError } = await admin
+        .from('voice_captures')
+        .insert({
+          processing_status: 'transcribed',
+          transcript: manualText,
+          user_id: auth.user.id,
+        })
+        .select('id')
+        .single();
+      if (captureError || !capture)
+        return json({ error: 'The typed note could not be saved.' }, 500);
+      captureId = capture.id;
+      transcript = manualText;
+    } else {
+      const { data: capture, error: captureError } = await admin
+        .from('voice_captures')
+        .select('id, audio_path')
+        .eq('id', payload!.captureId!)
+        .eq('user_id', auth.user.id)
+        .single();
+      if (captureError || !capture?.audio_path) return json({ error: 'Capture not found.' }, 404);
 
-    const transcriptionForm = new FormData();
-    transcriptionForm.append(
-      'model',
-      Deno.env.get('OPENAI_TRANSCRIPTION_MODEL') ?? 'gpt-4o-mini-transcribe',
-    );
-    transcriptionForm.append('file', await fileForTranscription(audio, capture.audio_path));
-    const transcriptionResult = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${openaiKey}` },
-      body: transcriptionForm,
-    });
-    if (!transcriptionResult.ok) return openAiFailure('Transcription', transcriptionResult);
+      const { data: audio, error: downloadError } = await admin.storage
+        .from('voice-captures')
+        .download(capture.audio_path);
+      if (downloadError || !audio) return json({ error: 'Audio could not be retrieved.' }, 502);
+      if (audio.size > 25 * 1024 * 1024) {
+        return json({ error: 'Audio is too large to process. Keep recordings under 25 MB.' }, 413);
+      }
 
-    const transcriptionPayload = (await transcriptionResult.json()) as { text?: unknown };
-    const transcript = transcriptionPayload.text;
-    if (typeof transcript !== 'string' || transcript.trim().length === 0) {
-      return json({ error: 'No speech was detected in the recording.' }, 422);
+      const transcriptionForm = new FormData();
+      transcriptionForm.append(
+        'model',
+        Deno.env.get('OPENAI_TRANSCRIPTION_MODEL') ?? 'gpt-4o-mini-transcribe',
+      );
+      transcriptionForm.append('file', await fileForTranscription(audio, capture.audio_path));
+      const transcriptionResult = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${openaiKey}` },
+        body: transcriptionForm,
+      });
+      if (!transcriptionResult.ok) return openAiFailure('Transcription', transcriptionResult);
+
+      const transcriptionPayload = (await transcriptionResult.json()) as { text?: unknown };
+      if (
+        typeof transcriptionPayload.text !== 'string' ||
+        transcriptionPayload.text.trim().length === 0
+      ) {
+        return json({ error: 'No speech was detected in the recording.' }, 422);
+      }
+      captureId = capture.id;
+      transcript = transcriptionPayload.text.trim();
     }
 
     const projectNames = Array.isArray(payload.projectNames)
@@ -321,10 +349,10 @@ Deno.serve(async (request) => {
     const { error: updateError } = await admin
       .from('voice_captures')
       .update({ transcript, processing_status: 'transcribed' })
-      .eq('id', capture.id);
+      .eq('id', captureId);
     if (updateError) return json({ error: 'The transcript could not be saved.' }, 500);
 
-    return json({ captureId: capture.id, transcript, action: parsedAction.data });
+    return json({ captureId, transcript, action: parsedAction.data });
   } catch (error) {
     console.error(
       'process-capture failed unexpectedly',

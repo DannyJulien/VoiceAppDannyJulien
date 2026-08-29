@@ -9,7 +9,9 @@ alter table public.actions
     check (
       suggested_project_name is null
       or char_length(trim(suggested_project_name)) between 1 and 80
-    );
+    ),
+  add column suggested_people jsonb not null default '[]'::jsonb
+    check (jsonb_typeof(suggested_people) = 'array');
 
 -- One capture represents one actionable Inbox item. This also makes retrying
 -- processing safe: the client can find the original item instead of duplicating it.

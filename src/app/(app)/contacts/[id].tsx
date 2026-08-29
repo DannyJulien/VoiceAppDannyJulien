@@ -1,21 +1,35 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { AppButton } from '@/components/app-button';
 import { Screen } from '@/components/screen';
 import { Colors } from '@/constants/theme';
 import { actionTypeLabel } from '@/features/actions/action-utils';
 import { useAuth } from '@/features/auth/auth-provider';
-import { contactLabel } from '@/features/contacts/contact-utils';
-import { getContact, getContactTimeline } from '@/features/contacts/contact-service';
+import { contactLabel, contactValidationError } from '@/features/contacts/contact-utils';
+import {
+  deleteContact,
+  getContact,
+  getContactTimeline,
+  updateContact,
+} from '@/features/contacts/contact-service';
 import { categoryDetails } from '@/features/projects/project-utils';
 
 export default function ContactTimelineScreen() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session } = useAuth();
   const userId = session?.user.id;
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [company, setCompany] = useState('');
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const [confirmingDeletion, setConfirmingDeletion] = useState(false);
   const contactQuery = useQuery({
     queryKey: ['contact', id, userId],
     queryFn: () => getContact(id, userId!),
@@ -27,6 +41,47 @@ export default function ContactTimelineScreen() {
     enabled: Boolean(id && userId),
   });
   const contact = contactQuery.data;
+  const updateMutation = useMutation({
+    mutationFn: () => {
+      if (!userId) throw new Error('You need to be signed in.');
+      return updateContact(id, userId, { company, email, name, phone });
+    },
+    onSuccess: () => {
+      setEditing(false);
+      setValidationError(null);
+      queryClient.invalidateQueries({ queryKey: ['contact', id, userId] });
+      queryClient.invalidateQueries({ queryKey: ['contacts', userId] });
+    },
+  });
+  const deleteMutation = useMutation({
+    mutationFn: () => {
+      if (!userId) throw new Error('You need to be signed in.');
+      return deleteContact(id, userId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contacts', userId] });
+      router.replace('/contacts');
+    },
+  });
+
+  /** Copies the saved person into the form so the fields start from what is stored. */
+  function startEditing() {
+    if (!contact) return;
+    setName(contact.name);
+    setEmail(contact.email ?? '');
+    setPhone(contact.phone ?? '');
+    setCompany(contact.company ?? '');
+    setValidationError(null);
+    setEditing(true);
+  }
+
+  function savePerson() {
+    const error = contactValidationError({ email, name, phone });
+    setValidationError(error);
+    if (error) return;
+    updateMutation.mutate();
+  }
+
   if (contactQuery.isPending)
     return (
       <Screen contentStyle={styles.center}>
@@ -60,6 +115,97 @@ export default function ContactTimelineScreen() {
           onPress={() => router.push({ pathname: '/note/new', params: { contactId: contact.id } })}
           variant="secondary"
         />
+
+        {editing ? (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Edit this person</Text>
+            <TextInput
+              accessibilityLabel="Contact name"
+              onChangeText={setName}
+              placeholder="Name"
+              placeholderTextColor={Colors.muted}
+              style={styles.input}
+              value={name}
+            />
+            <TextInput
+              accessibilityLabel="Contact email"
+              autoCapitalize="none"
+              keyboardType="email-address"
+              onChangeText={setEmail}
+              placeholder="Email (optional if phone is present)"
+              placeholderTextColor={Colors.muted}
+              style={styles.input}
+              value={email}
+            />
+            <TextInput
+              accessibilityLabel="Contact phone"
+              keyboardType="phone-pad"
+              onChangeText={setPhone}
+              placeholder="Phone, e.g. +32470123456 (for WhatsApp)"
+              placeholderTextColor={Colors.muted}
+              style={styles.input}
+              value={phone}
+            />
+            <TextInput
+              accessibilityLabel="Contact company"
+              onChangeText={setCompany}
+              placeholder="Company (optional)"
+              placeholderTextColor={Colors.muted}
+              style={styles.input}
+              value={company}
+            />
+            {validationError ? <Text style={styles.error}>{validationError}</Text> : null}
+            {updateMutation.error ? (
+              <Text accessibilityRole="alert" style={styles.error}>
+                {updateMutation.error instanceof Error
+                  ? updateMutation.error.message
+                  : 'Unable to save this person.'}
+              </Text>
+            ) : null}
+            <AppButton
+              label="Save changes"
+              loading={updateMutation.isPending}
+              onPress={savePerson}
+            />
+            <AppButton label="Cancel" onPress={() => setEditing(false)} variant="quiet" />
+          </View>
+        ) : (
+          <View style={styles.manage}>
+            <AppButton label="Edit person" onPress={startEditing} variant="secondary" />
+            {deleteMutation.error ? (
+              <Text accessibilityRole="alert" style={styles.error}>
+                {deleteMutation.error instanceof Error
+                  ? deleteMutation.error.message
+                  : 'Unable to delete this person.'}
+              </Text>
+            ) : null}
+            {confirmingDeletion ? (
+              <>
+                <AppButton
+                  label="Delete permanently"
+                  loading={deleteMutation.isPending}
+                  onPress={() => deleteMutation.mutate()}
+                  style={styles.deleteButton}
+                />
+                <Text style={styles.deleteHint}>
+                  This removes {contact.name} from your people. Notes you wrote stay, they just lose
+                  the link to this person.
+                </Text>
+                <AppButton
+                  label="Keep this person"
+                  onPress={() => setConfirmingDeletion(false)}
+                  variant="quiet"
+                />
+              </>
+            ) : (
+              <AppButton
+                label="Delete person"
+                onPress={() => setConfirmingDeletion(true)}
+                variant="quiet"
+              />
+            )}
+          </View>
+        )}
         {timelineQuery.isPending ? <Text style={styles.copy}>Loading conversation…</Text> : null}
         {timelineQuery.data?.length === 0 ? (
           <View style={styles.empty}>
@@ -112,6 +258,29 @@ const styles = StyleSheet.create({
   eyebrow: { color: Colors.brand, fontSize: 12, fontWeight: '900', letterSpacing: 1.1 },
   title: { color: Colors.ink, fontSize: 32, fontWeight: '900', letterSpacing: -1, lineHeight: 40 },
   copy: { color: Colors.muted, fontSize: 16, lineHeight: 23 },
+  card: {
+    backgroundColor: Colors.surface,
+    borderColor: Colors.border,
+    borderRadius: 22,
+    borderWidth: 1,
+    gap: 10,
+    padding: 18,
+  },
+  cardTitle: { color: Colors.ink, fontSize: 18, fontWeight: '800', marginBottom: 2 },
+  input: {
+    backgroundColor: Colors.canvas,
+    borderColor: Colors.border,
+    borderRadius: 14,
+    borderWidth: 1,
+    color: Colors.ink,
+    fontSize: 16,
+    minHeight: 50,
+    paddingHorizontal: 14,
+  },
+  manage: { gap: 10 },
+  error: { color: Colors.danger, fontSize: 14, lineHeight: 20 },
+  deleteButton: { backgroundColor: Colors.danger },
+  deleteHint: { color: Colors.danger, fontSize: 14, lineHeight: 20, textAlign: 'center' },
   empty: {
     backgroundColor: Colors.surface,
     borderColor: Colors.border,

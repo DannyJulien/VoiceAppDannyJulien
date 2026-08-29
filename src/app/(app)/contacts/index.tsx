@@ -6,7 +6,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AppButton } from '@/components/app-button';
 import { Screen } from '@/components/screen';
 import { Colors } from '@/constants/theme';
-import { contactLabel } from '@/features/contacts/contact-utils';
+import { contactLabel, contactValidationError } from '@/features/contacts/contact-utils';
 import { createContact, getContacts } from '@/features/contacts/contact-service';
 import { useAuth } from '@/features/auth/auth-provider';
 
@@ -41,15 +41,9 @@ export default function ContactsScreen() {
   });
 
   function saveContact() {
-    if (!name.trim()) {
-      setValidationError('Add a name before saving this contact.');
-      return;
-    }
-    if (!email.trim() && !phone.trim()) {
-      setValidationError('Add an email address or phone number.');
-      return;
-    }
-    setValidationError(null);
+    const error = contactValidationError({ email, name, phone });
+    setValidationError(error);
+    if (error) return;
     createMutation.mutate();
   }
 
@@ -138,7 +132,7 @@ export default function ContactsScreen() {
         <View style={styles.list}>
           {contactsQuery.data?.map((contact) => (
             <Pressable
-              accessibilityLabel={`Open timeline for ${contact.name}`}
+              accessibilityLabel={`Open ${contact.name}`}
               accessibilityRole="button"
               key={contact.id}
               onPress={() =>
@@ -148,7 +142,7 @@ export default function ContactsScreen() {
             >
               <Text style={styles.contactName}>{contact.name}</Text>
               <Text style={styles.contactDetails}>{contactLabel(contact)}</Text>
-              <Text style={styles.timelineLink}>View conversation timeline ›</Text>
+              <Text style={styles.timelineLink}>Timeline, edit or delete ›</Text>
             </Pressable>
           ))}
         </View>

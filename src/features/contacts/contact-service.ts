@@ -67,6 +67,33 @@ export async function createContact(userId: string, input: ContactInput) {
   return data;
 }
 
+export async function updateContact(contactId: string, userId: string, input: ContactInput) {
+  const { data, error } = await getSupabaseClient()
+    .from('people')
+    .update({
+      company: input.company?.trim() || null,
+      email: input.email?.trim() || null,
+      name: input.name.trim(),
+      phone: input.phone?.trim() || null,
+    })
+    .eq('id', contactId)
+    .eq('user_id', userId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+/** Removes the person. Their links to notes cascade away; the notes themselves stay. */
+export async function deleteContact(contactId: string, userId: string) {
+  const { error } = await getSupabaseClient()
+    .from('people')
+    .delete()
+    .eq('id', contactId)
+    .eq('user_id', userId);
+  if (error) throw error;
+}
+
 export async function getActionRecipients(actionId: string, userId: string) {
   const client = getSupabaseClient();
   const { data: links, error: linkError } = await client

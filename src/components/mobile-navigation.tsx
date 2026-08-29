@@ -63,7 +63,7 @@ export function MobileNavigation() {
 const styles = StyleSheet.create({
   wrapper: {
     backgroundColor: Colors.canvas,
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingTop: 8,
   },
   bar: {
@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     maxWidth: Layout.contentMaxWidth,
     paddingHorizontal: 8,
-    paddingVertical: 8,
+    paddingVertical: 6,
     width: '100%',
     // Soft lift so the pill reads as floating above the page.
     shadowColor: '#0F172A',
@@ -90,7 +90,7 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 2,
     paddingHorizontal: 4,
-    paddingVertical: 8,
+    paddingVertical: 6,
   },
   itemSelected: { backgroundColor: 'rgba(255,255,255,0.12)' },
   pressed: { opacity: 0.72 },

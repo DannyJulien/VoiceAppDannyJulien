@@ -2,7 +2,7 @@ import { type PropsWithChildren } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Screen } from '@/components/screen';
-import { Colors } from '@/constants/theme';
+import { type AppColors, useTheme } from '@/features/theme/theme-provider';
 
 type AuthScreenProps = PropsWithChildren<{
   eyebrow: string;
@@ -11,6 +11,8 @@ type AuthScreenProps = PropsWithChildren<{
 }>;
 
 export function AuthScreen({ eyebrow, title, description, children }: AuthScreenProps) {
+  const colors = useTheme();
+  const styles = createStyles(colors);
   return (
     <Screen contentStyle={styles.content}>
       <View style={styles.header}>
@@ -27,19 +29,19 @@ export function AuthScreen({ eyebrow, title, description, children }: AuthScreen
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   content: { justifyContent: 'center', gap: 34 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  mark: { width: 12, height: 12, borderRadius: 6, backgroundColor: Colors.brand },
-  brand: { color: Colors.ink, fontSize: 18, fontWeight: '800', letterSpacing: -0.4 },
+  mark: { width: 12, height: 12, borderRadius: 6, backgroundColor: colors.brand },
+  brand: { color: colors.ink, fontSize: 18, fontWeight: '800', letterSpacing: -0.4 },
   copy: { gap: 10 },
-  eyebrow: { color: Colors.brand, fontSize: 13, fontWeight: '800', letterSpacing: 1.2 },
+  eyebrow: { color: colors.brand, fontSize: 13, fontWeight: '800', letterSpacing: 1.2 },
   title: {
-    color: Colors.ink,
+    color: colors.ink,
     fontSize: 38,
     lineHeight: 43,
     fontWeight: '800',
     letterSpacing: -1.2,
   },
-  description: { color: Colors.muted, fontSize: 16, lineHeight: 24 },
+  description: { color: colors.muted, fontSize: 16, lineHeight: 24 },
 });

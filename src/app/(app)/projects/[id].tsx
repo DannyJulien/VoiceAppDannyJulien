@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { AppButton } from '@/components/app-button';
 import { useTabBarInset } from '@/components/mobile-navigation';
 import { Screen } from '@/components/screen';
-import { Colors } from '@/constants/theme';
+import { type AppColors, useTheme } from '@/features/theme/theme-provider';
 import { getProjectActions } from '@/features/actions/action-service';
 import { actionTypeLabel } from '@/features/actions/action-utils';
 import { useAuth } from '@/features/auth/auth-provider';
@@ -13,6 +13,8 @@ import { getProject } from '@/features/projects/project-service';
 import { categoryDetails } from '@/features/projects/project-utils';
 
 export default function ProjectTimelineScreen() {
+  const colors = useTheme();
+  const styles = createStyles(colors);
   const tabBarInset = useTabBarInset();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -105,27 +107,27 @@ export default function ProjectTimelineScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   content: { gap: 18, paddingBottom: 32, paddingTop: 16 },
   center: { gap: 14, justifyContent: 'center' },
   back: { alignSelf: 'flex-start', minHeight: 36, paddingHorizontal: 0 },
   hero: { gap: 6 },
   mark: { borderRadius: 6, height: 12, width: 42 },
-  title: { color: Colors.ink, fontSize: 32, fontWeight: '900', letterSpacing: -1, lineHeight: 40 },
-  copy: { color: Colors.muted, fontSize: 16, lineHeight: 23 },
+  title: { color: colors.ink, fontSize: 32, fontWeight: '900', letterSpacing: -1, lineHeight: 40 },
+  copy: { color: colors.muted, fontSize: 16, lineHeight: 23 },
   empty: {
-    backgroundColor: Colors.surface,
-    borderColor: Colors.border,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: 20,
     borderWidth: 1,
     gap: 8,
     padding: 20,
   },
-  emptyTitle: { color: Colors.ink, fontSize: 19, fontWeight: '900' },
+  emptyTitle: { color: colors.ink, fontSize: 19, fontWeight: '900' },
   timeline: { gap: 2 },
   eventRow: { flexDirection: 'row', gap: 12 },
   dot: {
-    borderColor: Colors.canvas,
+    borderColor: colors.canvas,
     borderRadius: 8,
     borderWidth: 4,
     height: 16,
@@ -133,8 +135,8 @@ const styles = StyleSheet.create({
     width: 16,
   },
   event: {
-    backgroundColor: Colors.surface,
-    borderColor: Colors.border,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: 18,
     borderWidth: 1,
     flex: 1,
@@ -143,8 +145,8 @@ const styles = StyleSheet.create({
     padding: 15,
   },
   category: { fontSize: 12, fontWeight: '900', letterSpacing: 0.6 },
-  eventTitle: { color: Colors.ink, fontSize: 17, fontWeight: '900', lineHeight: 23 },
-  eventCopy: { color: Colors.muted, fontSize: 14, lineHeight: 20 },
-  date: { color: Colors.muted, fontSize: 12 },
+  eventTitle: { color: colors.ink, fontSize: 17, fontWeight: '900', lineHeight: 23 },
+  eventCopy: { color: colors.muted, fontSize: 14, lineHeight: 20 },
+  date: { color: colors.muted, fontSize: 12 },
   open: { alignSelf: 'flex-start', minHeight: 32, paddingHorizontal: 0 },
 });

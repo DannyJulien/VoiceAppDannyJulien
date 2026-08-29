@@ -6,13 +6,15 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AppButton } from '@/components/app-button';
 import { useTabBarInset } from '@/components/mobile-navigation';
 import { Screen } from '@/components/screen';
-import { Colors } from '@/constants/theme';
+import { type AppColors, useTheme } from '@/features/theme/theme-provider';
 import { getActions } from '@/features/actions/action-service';
 import { useAuth } from '@/features/auth/auth-provider';
 import { createProject, getProjects } from '@/features/projects/project-service';
 import { projectColors } from '@/features/projects/project-utils';
 
 export default function ProjectsScreen() {
+  const colors = useTheme();
+  const styles = createStyles(colors);
   const tabBarInset = useTabBarInset();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -59,7 +61,7 @@ export default function ProjectsScreen() {
             accessibilityLabel="Project name"
             onChangeText={setName}
             placeholder="e.g. New website"
-            placeholderTextColor={Colors.muted}
+            placeholderTextColor={colors.muted}
             style={styles.input}
             value={name}
           />
@@ -130,39 +132,39 @@ export default function ProjectsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   content: { gap: 18, paddingBottom: 32, paddingTop: 24 },
   header: { gap: 5 },
-  eyebrow: { color: Colors.brand, fontSize: 12, fontWeight: '900', letterSpacing: 1.1 },
+  eyebrow: { color: colors.brand, fontSize: 12, fontWeight: '900', letterSpacing: 1.1 },
   title: {
-    color: Colors.ink,
+    color: colors.ink,
     fontSize: 34,
     fontWeight: '900',
     letterSpacing: -1.1,
     lineHeight: 40,
   },
-  copy: { color: Colors.muted, fontSize: 16, lineHeight: 23 },
-  createCard: { backgroundColor: Colors.brandSoft, borderRadius: 22, gap: 12, padding: 17 },
-  cardTitle: { color: Colors.ink, fontSize: 18, fontWeight: '900' },
+  copy: { color: colors.muted, fontSize: 16, lineHeight: 23 },
+  createCard: { backgroundColor: colors.brandSoft, borderRadius: 22, gap: 12, padding: 17 },
+  cardTitle: { color: colors.ink, fontSize: 18, fontWeight: '900' },
   input: {
-    backgroundColor: Colors.surface,
-    borderColor: Colors.border,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: 14,
     borderWidth: 1,
-    color: Colors.ink,
+    color: colors.ink,
     fontSize: 16,
     minHeight: 52,
     paddingHorizontal: 14,
   },
   colorRow: { flexDirection: 'row', gap: 12 },
   color: { borderColor: 'transparent', borderRadius: 16, borderWidth: 3, height: 32, width: 32 },
-  colorSelected: { borderColor: Colors.ink },
-  listTitle: { color: Colors.ink, fontSize: 19, fontWeight: '900' },
+  colorSelected: { borderColor: colors.ink },
+  listTitle: { color: colors.ink, fontSize: 19, fontWeight: '900' },
   list: { gap: 10 },
   projectCard: {
     alignItems: 'center',
-    backgroundColor: Colors.surface,
-    borderColor: Colors.border,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: 19,
     borderWidth: 1,
     flexDirection: 'row',
@@ -172,8 +174,8 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.8 },
   projectMark: { borderRadius: 8, height: 16, width: 16 },
   projectCopy: { flex: 1, gap: 3 },
-  projectName: { color: Colors.ink, fontSize: 17, fontWeight: '900' },
-  projectMeta: { color: Colors.muted, fontSize: 14 },
-  arrow: { color: Colors.muted, fontSize: 28, lineHeight: 28 },
-  error: { color: Colors.danger, fontSize: 14, lineHeight: 20 },
+  projectName: { color: colors.ink, fontSize: 17, fontWeight: '900' },
+  projectMeta: { color: colors.muted, fontSize: 14 },
+  arrow: { color: colors.muted, fontSize: 28, lineHeight: 28 },
+  error: { color: colors.danger, fontSize: 14, lineHeight: 20 },
 });

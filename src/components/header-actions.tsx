@@ -3,9 +3,8 @@ import { usePathname, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { IconButton } from '@/components/icon-button';
-import { SettingsIcon } from '@/components/icons';
-import { Colors, Layout } from '@/constants/theme';
+import { Layout } from '@/constants/theme';
+import { type AppColors, useTheme } from '@/features/theme/theme-provider';
 import { getActions } from '@/features/actions/action-service';
 import { useAuth } from '@/features/auth/auth-provider';
 
@@ -14,6 +13,8 @@ import { useAuth } from '@/features/auth/auth-provider';
  * Keeping Settings here avoids adding a sixth item to the mobile navigation pill.
  */
 export function HeaderActions() {
+  const colors = useTheme();
+  const styles = createStyles(colors);
   const pathname = usePathname();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -27,6 +28,7 @@ export function HeaderActions() {
     actionsQuery.data?.filter((action) => action.status === 'pending').length ?? 0;
   const isInbox = pathname === '/inbox';
   const isSettings = pathname === '/settings';
+  const accountInitial = session?.user.email?.trim().charAt(0).toUpperCase() || 'U';
 
   return (
     <View pointerEvents="box-none" style={[styles.layer, { top: insets.top + 8 }]}>
@@ -52,19 +54,21 @@ export function HeaderActions() {
           </Pressable>
         ) : null}
         {!isSettings ? (
-          <IconButton
-            accessibilityLabel="Open settings"
+          <Pressable
+            accessibilityLabel="Open account settings"
+            accessibilityRole="button"
             onPress={() => router.push('/settings')}
-            renderIcon={(color, size) => <SettingsIcon color={color} size={size} />}
-            style={styles.settingsButton}
-          />
+            style={({ pressed }) => [styles.accountButton, pressed && styles.pressed]}
+          >
+            <Text style={styles.accountInitial}>{accountInitial}</Text>
+          </Pressable>
         ) : null}
       </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   layer: { left: 0, position: 'absolute', right: 0, zIndex: 10 },
   row: {
     alignItems: 'center',
@@ -78,8 +82,8 @@ const styles = StyleSheet.create({
   },
   inboxButton: {
     alignItems: 'center',
-    backgroundColor: Colors.surface,
-    borderColor: Colors.border,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: 999,
     borderWidth: 1,
     elevation: 3,
@@ -87,19 +91,34 @@ const styles = StyleSheet.create({
     gap: 6,
     minHeight: 40,
     paddingHorizontal: 13,
-    shadowColor: Colors.ink,
+    shadowColor: colors.ink,
     shadowOffset: { height: 2, width: 0 },
     shadowOpacity: 0.12,
     shadowRadius: 6,
   },
-  settingsButton: { borderRadius: 999, elevation: 3, height: 40, width: 40 },
+  accountButton: {
+    alignItems: 'center',
+    backgroundColor: colors.brand,
+    borderColor: colors.surface,
+    borderRadius: 20,
+    borderWidth: 2,
+    elevation: 3,
+    height: 40,
+    justifyContent: 'center',
+    shadowColor: colors.ink,
+    shadowOffset: { height: 2, width: 0 },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    width: 40,
+  },
+  accountInitial: { color: colors.surface, fontSize: 15, fontWeight: '900' },
   pressed: { opacity: 0.8 },
-  inboxIcon: { color: Colors.brand, fontSize: 16, fontWeight: '900' },
-  inboxLabel: { color: Colors.ink, fontSize: 13, fontWeight: '800' },
+  inboxIcon: { color: colors.brand, fontSize: 16, fontWeight: '900' },
+  inboxLabel: { color: colors.ink, fontSize: 13, fontWeight: '800' },
   badge: {
     alignItems: 'center',
-    backgroundColor: Colors.danger,
-    borderColor: Colors.surface,
+    backgroundColor: colors.danger,
+    borderColor: colors.surface,
     borderRadius: 10,
     borderWidth: 2,
     justifyContent: 'center',
@@ -109,5 +128,5 @@ const styles = StyleSheet.create({
     right: -8,
     top: -8,
   },
-  badgeText: { color: Colors.surface, fontSize: 10, fontWeight: '900', lineHeight: 14 },
+  badgeText: { color: colors.surface, fontSize: 10, fontWeight: '900', lineHeight: 14 },
 });

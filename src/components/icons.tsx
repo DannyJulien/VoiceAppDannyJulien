@@ -1,4 +1,4 @@
-import Svg, { Circle, Line, Path, Polyline } from 'react-native-svg';
+import Svg, { Line, Path, Polyline } from 'react-native-svg';
 
 /**
  * Line icons drawn from Feather (https://feathericons.com, MIT). Feather's 24x24 grid and
@@ -25,7 +25,6 @@ function IconFrame({ children, size }: { children: React.ReactNode; size: number
     </Svg>
   );
 }
-
 export function PlusIcon({ color, size = 20 }: IconProps) {
   return (
     <IconFrame size={size}>
@@ -55,19 +54,6 @@ export function TrashIcon({ color, size = 20 }: IconProps) {
       />
       <Line stroke={color} x1={10} x2={10} y1={11} y2={17} {...stroke} />
       <Line stroke={color} x1={14} x2={14} y1={11} y2={17} {...stroke} />
-    </IconFrame>
-  );
-}
-
-export function SettingsIcon({ color, size = 20 }: IconProps) {
-  return (
-    <IconFrame size={size}>
-      <Circle cx={12} cy={12} r={3} stroke={color} {...stroke} />
-      <Path
-        d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06-2.12 2.12-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V20h-3v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06-2.12-2.12.06-.06A1.65 1.65 0 0 0 7.12 15a1.65 1.65 0 0 0-1.51-1H5.5v-3h.11a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06L8.85 6l.06.06a1.65 1.65 0 0 0 1.82.33 1.65 1.65 0 0 0 1-1.51V4.8h3v.08a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33L17.61 6l2.12 2.12-.06.06a1.65 1.65 0 0 0-.33 1.82 1.65 1.65 0 0 0 1.51 1h.11v3h-.11a1.65 1.65 0 0 0-1.45 1Z"
-        stroke={color}
-        {...stroke}
-      />
     </IconFrame>
   );
 }

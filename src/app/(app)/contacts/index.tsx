@@ -6,12 +6,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AppButton } from '@/components/app-button';
 import { useTabBarInset } from '@/components/mobile-navigation';
 import { Screen } from '@/components/screen';
-import { Colors } from '@/constants/theme';
+import { type AppColors, useTheme } from '@/features/theme/theme-provider';
 import { contactLabel, contactValidationError } from '@/features/contacts/contact-utils';
 import { createContact, getContacts } from '@/features/contacts/contact-service';
 import { useAuth } from '@/features/auth/auth-provider';
 
 export default function ContactsScreen() {
+  const colors = useTheme();
+  const styles = createStyles(colors);
   const tabBarInset = useTabBarInset();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -66,7 +68,7 @@ export default function ContactsScreen() {
             accessibilityLabel="Contact name"
             onChangeText={setName}
             placeholder="Name"
-            placeholderTextColor={Colors.muted}
+            placeholderTextColor={colors.muted}
             style={styles.input}
             value={name}
           />
@@ -76,7 +78,7 @@ export default function ContactsScreen() {
             keyboardType="email-address"
             onChangeText={setEmail}
             placeholder="Email (optional if phone is present)"
-            placeholderTextColor={Colors.muted}
+            placeholderTextColor={colors.muted}
             style={styles.input}
             value={email}
           />
@@ -85,7 +87,7 @@ export default function ContactsScreen() {
             keyboardType="phone-pad"
             onChangeText={setPhone}
             placeholder="Phone, e.g. +32470123456 (for WhatsApp)"
-            placeholderTextColor={Colors.muted}
+            placeholderTextColor={colors.muted}
             style={styles.input}
             value={phone}
           />
@@ -93,7 +95,7 @@ export default function ContactsScreen() {
             accessibilityLabel="Contact company"
             onChangeText={setCompany}
             placeholder="Company (optional)"
-            placeholderTextColor={Colors.muted}
+            placeholderTextColor={colors.muted}
             style={styles.input}
             value={company}
           />
@@ -153,51 +155,51 @@ export default function ContactsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   content: { gap: 18, paddingBottom: 30, paddingTop: 24 },
   titleBlock: { gap: 5 },
-  eyebrow: { color: Colors.brand, fontSize: 13, fontWeight: '800', letterSpacing: 1.1 },
+  eyebrow: { color: colors.brand, fontSize: 13, fontWeight: '800', letterSpacing: 1.1 },
   title: {
-    color: Colors.ink,
+    color: colors.ink,
     fontSize: 34,
     fontWeight: '900',
     letterSpacing: -1.1,
     lineHeight: 40,
   },
-  copy: { color: Colors.muted, fontSize: 16, lineHeight: 24 },
+  copy: { color: colors.muted, fontSize: 16, lineHeight: 24 },
   card: {
-    backgroundColor: Colors.surface,
-    borderColor: Colors.border,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: 22,
     borderWidth: 1,
     gap: 10,
     padding: 18,
   },
-  cardTitle: { color: Colors.ink, fontSize: 18, fontWeight: '800', marginBottom: 2 },
+  cardTitle: { color: colors.ink, fontSize: 18, fontWeight: '800', marginBottom: 2 },
   input: {
-    backgroundColor: Colors.canvas,
-    borderColor: Colors.border,
+    backgroundColor: colors.canvas,
+    borderColor: colors.border,
     borderRadius: 14,
     borderWidth: 1,
-    color: Colors.ink,
+    color: colors.ink,
     fontSize: 16,
     minHeight: 50,
     paddingHorizontal: 14,
   },
-  listTitle: { color: Colors.ink, fontSize: 19, fontWeight: '900', marginTop: 4 },
+  listTitle: { color: colors.ink, fontSize: 19, fontWeight: '900', marginTop: 4 },
   list: { gap: 9 },
   contactCard: {
-    backgroundColor: Colors.surface,
-    borderColor: Colors.border,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: 18,
     borderWidth: 1,
     gap: 4,
     padding: 15,
   },
-  contactName: { color: Colors.ink, fontSize: 17, fontWeight: '800' },
-  contactDetails: { color: Colors.muted, fontSize: 14, lineHeight: 20 },
-  timelineLink: { color: Colors.brand, fontSize: 13, fontWeight: '800', marginTop: 4 },
+  contactName: { color: colors.ink, fontSize: 17, fontWeight: '800' },
+  contactDetails: { color: colors.muted, fontSize: 14, lineHeight: 20 },
+  timelineLink: { color: colors.brand, fontSize: 13, fontWeight: '800', marginTop: 4 },
   pressed: { opacity: 0.8 },
-  error: { color: Colors.danger, fontSize: 14, lineHeight: 20 },
+  error: { color: colors.danger, fontSize: 14, lineHeight: 20 },
   errorCard: { gap: 10 },
 });

@@ -1,6 +1,6 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, type ViewStyle } from 'react-native';
 
-import { Colors } from '@/constants/theme';
+import { type AppColors, useTheme } from '@/features/theme/theme-provider';
 
 type AppButtonProps = {
   label: string;
@@ -21,6 +21,8 @@ export function AppButton({
   style,
   accessibilityHint,
 }: AppButtonProps) {
+  const colors = useTheme();
+  const styles = createStyles(colors);
   const isDisabled = disabled || loading;
   const isPrimary = variant === 'primary';
 
@@ -42,7 +44,7 @@ export function AppButton({
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={isPrimary ? Colors.surface : Colors.brand} />
+        <ActivityIndicator color={isPrimary ? colors.surface : colors.brand} />
       ) : (
         <Text style={[styles.label, isPrimary ? styles.primaryLabel : styles.secondaryLabel]}>
           {label}
@@ -52,7 +54,7 @@ export function AppButton({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   base: {
     minHeight: 50,
     justifyContent: 'center',
@@ -60,12 +62,12 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingHorizontal: 18,
   },
-  primary: { backgroundColor: Colors.brand, boxShadow: `0px 4px 10px ${Colors.brand}2E` },
-  secondary: { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border },
+  primary: { backgroundColor: colors.brand, boxShadow: `0px 4px 10px ${colors.brand}2E` },
+  secondary: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
   quiet: { backgroundColor: 'transparent' },
   pressed: { opacity: 0.86 },
   disabled: { opacity: 0.48 },
   label: { fontSize: 15, fontWeight: '800' },
-  primaryLabel: { color: Colors.surface },
-  secondaryLabel: { color: Colors.brand },
+  primaryLabel: { color: colors.surface },
+  secondaryLabel: { color: colors.brand },
 });

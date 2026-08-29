@@ -6,12 +6,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AppButton } from '@/components/app-button';
 import { useTabBarInset } from '@/components/mobile-navigation';
 import { Screen } from '@/components/screen';
-import { Colors } from '@/constants/theme';
+import { type AppColors, useThemePreference } from '@/features/theme/theme-provider';
 import { signOut } from '@/features/auth/auth-service';
 import { useAuth } from '@/features/auth/auth-provider';
 import { getProfile, updateProfile } from '@/features/auth/profile-service';
 
 export default function SettingsScreen() {
+  const { colors, mode, setMode } = useThemePreference();
+  const styles = createStyles(colors);
   const tabBarInset = useTabBarInset();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -59,6 +61,24 @@ export default function SettingsScreen() {
         </View>
 
         <View style={styles.card}>
+          <Text style={styles.cardTitle}>Appearance</Text>
+          <View style={styles.settingRow}>
+            <View style={styles.settingCopy}>
+              <Text style={styles.settingTitle}>Night mode</Text>
+              <Text style={styles.settingHint}>Use the darker palette across Handle on this device.</Text>
+            </View>
+            <Switch
+              accessibilityLabel="Night mode"
+              accessibilityHint="Switches Handle between the light and dark interface"
+              onValueChange={(enabled) => setMode(enabled ? 'dark' : 'light')}
+              thumbColor={mode === 'dark' ? colors.brand : colors.surface}
+              trackColor={{ false: colors.border, true: colors.brand }}
+              value={mode === 'dark'}
+            />
+          </View>
+        </View>
+
+        <View style={styles.card}>
           <Text style={styles.cardTitle}>Capture preferences</Text>
           {profileQuery.isPending ? <Text style={styles.copy}>Loading your preference…</Text> : null}
           {profileQuery.error ? (
@@ -84,6 +104,7 @@ export default function SettingsScreen() {
                 accessibilityHint="Controls whether Handle files high-confidence captures without review"
                 disabled={autoFileMutation.isPending}
                 onValueChange={(value) => autoFileMutation.mutate(value)}
+                trackColor={{ false: colors.border, true: colors.brand }}
                 value={profileQuery.data.auto_file_captures}
               />
             </View>
@@ -120,35 +141,35 @@ export default function SettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   content: { gap: 18, paddingBottom: 30, paddingTop: 16 },
   back: { alignSelf: 'flex-start', minHeight: 36, paddingHorizontal: 0 },
   titleBlock: { gap: 5 },
-  eyebrow: { color: Colors.brand, fontSize: 12, fontWeight: '900', letterSpacing: 1.1 },
+  eyebrow: { color: colors.brand, fontSize: 12, fontWeight: '900', letterSpacing: 1.1 },
   title: {
-    color: Colors.ink,
+    color: colors.ink,
     fontSize: 34,
     fontWeight: '900',
     letterSpacing: -1.1,
     lineHeight: 40,
   },
-  copy: { color: Colors.muted, fontSize: 15, lineHeight: 22 },
+  copy: { color: colors.muted, fontSize: 15, lineHeight: 22 },
   card: {
-    backgroundColor: Colors.surface,
-    borderColor: Colors.border,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: 20,
     borderWidth: 1,
     gap: 12,
     padding: 18,
   },
-  signOutCard: { backgroundColor: Colors.dangerSoft, borderRadius: 20, gap: 12, padding: 18 },
-  cardTitle: { color: Colors.ink, fontSize: 18, fontWeight: '900' },
-  fieldLabel: { color: Colors.muted, fontSize: 11, fontWeight: '900', letterSpacing: 0.8 },
-  email: { color: Colors.ink, fontSize: 16, fontWeight: '700' },
+  signOutCard: { backgroundColor: colors.dangerSoft, borderRadius: 20, gap: 12, padding: 18 },
+  cardTitle: { color: colors.ink, fontSize: 18, fontWeight: '900' },
+  fieldLabel: { color: colors.muted, fontSize: 11, fontWeight: '900', letterSpacing: 0.8 },
+  email: { color: colors.ink, fontSize: 16, fontWeight: '700' },
   settingRow: { alignItems: 'center', flexDirection: 'row', gap: 12 },
   settingCopy: { flex: 1, gap: 3 },
-  settingTitle: { color: Colors.ink, fontSize: 16, fontWeight: '800' },
-  settingHint: { color: Colors.muted, fontSize: 13, lineHeight: 19 },
-  errorCard: { backgroundColor: Colors.dangerSoft, borderRadius: 14, gap: 10, padding: 12 },
-  error: { color: Colors.danger, fontSize: 14, lineHeight: 20 },
+  settingTitle: { color: colors.ink, fontSize: 16, fontWeight: '800' },
+  settingHint: { color: colors.muted, fontSize: 13, lineHeight: 19 },
+  errorCard: { backgroundColor: colors.dangerSoft, borderRadius: 14, gap: 10, padding: 12 },
+  error: { color: colors.danger, fontSize: 14, lineHeight: 20 },
 });

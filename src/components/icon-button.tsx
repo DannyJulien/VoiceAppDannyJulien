@@ -1,7 +1,7 @@
 import type { ReactElement } from 'react';
 import { Pressable, StyleSheet, Text, type ViewStyle } from 'react-native';
 
-import { Colors } from '@/constants/theme';
+import { type AppColors, useTheme } from '@/features/theme/theme-provider';
 
 type IconButtonProps = {
   /** Called with the resolved colour, so the icon always matches the button's tone. */
@@ -31,8 +31,10 @@ export function IconButton({
   disabled = false,
   style,
 }: IconButtonProps) {
+  const colors = useTheme();
+  const styles = createStyles(colors);
   const isDanger = tone === 'danger';
-  const color = isDanger ? Colors.danger : Colors.brand;
+  const color = isDanger ? colors.danger : colors.brand;
 
   return (
     <Pressable
@@ -56,11 +58,11 @@ export function IconButton({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   base: {
     alignItems: 'center',
-    backgroundColor: Colors.surface,
-    borderColor: Colors.border,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderWidth: 1,
     flexDirection: 'row',
     gap: 8,
@@ -68,7 +70,7 @@ const styles = StyleSheet.create({
   },
   square: { borderRadius: 14, height: 44, width: 44 },
   pill: { borderRadius: 999, minHeight: 44, paddingHorizontal: 16 },
-  danger: { backgroundColor: Colors.dangerSoft, borderColor: '#FBD3CE' },
+  danger: { backgroundColor: colors.dangerSoft, borderColor: '#FBD3CE' },
   pressed: { opacity: 0.8 },
   disabled: { opacity: 0.48 },
   label: { fontSize: 15, fontWeight: '800' },

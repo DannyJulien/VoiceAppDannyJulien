@@ -6,7 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import { AppButton } from '@/components/app-button';
 import { useTabBarInset } from '@/components/mobile-navigation';
 import { Screen } from '@/components/screen';
-import { Colors } from '@/constants/theme';
+import { type AppColors, useTheme } from '@/features/theme/theme-provider';
 import {
   actionIcsFilename,
   createActionIcsEvent,
@@ -26,6 +26,8 @@ import { downloadIcs } from '@/features/share/share';
 const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export default function CalendarScreen() {
+  const colors = useTheme();
+  const styles = createStyles(colors);
   const tabBarInset = useTabBarInset();
   const router = useRouter();
   const { session } = useAuth();
@@ -220,31 +222,31 @@ export default function CalendarScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   content: { gap: 18, paddingBottom: 32, paddingTop: 24 },
   header: { gap: 5 },
-  eyebrow: { color: Colors.brand, fontSize: 12, fontWeight: '900', letterSpacing: 1.1 },
+  eyebrow: { color: colors.brand, fontSize: 12, fontWeight: '900', letterSpacing: 1.1 },
   title: {
-    color: Colors.ink,
+    color: colors.ink,
     fontSize: 34,
     fontWeight: '900',
     letterSpacing: -1.1,
     lineHeight: 40,
   },
-  copy: { color: Colors.muted, fontSize: 15, lineHeight: 22 },
+  copy: { color: colors.muted, fontSize: 15, lineHeight: 22 },
   monthCard: {
-    backgroundColor: Colors.surface,
-    borderColor: Colors.border,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: 22,
     borderWidth: 1,
     gap: 12,
     padding: 14,
   },
   monthHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
-  monthTitle: { color: Colors.ink, fontSize: 18, fontWeight: '900' },
+  monthTitle: { color: colors.ink, fontSize: 18, fontWeight: '900' },
   monthButton: { minHeight: 36, minWidth: 40, paddingHorizontal: 0 },
   weekdays: { flexDirection: 'row' },
-  weekday: { color: Colors.muted, flex: 1, fontSize: 11, fontWeight: '900', textAlign: 'center' },
+  weekday: { color: colors.muted, flex: 1, fontSize: 11, fontWeight: '900', textAlign: 'center' },
   dayGrid: { flexDirection: 'row', flexWrap: 'wrap' },
   dayCell: {
     alignItems: 'center',
@@ -253,21 +255,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: '14.2857%',
   },
-  dayCellSelected: { backgroundColor: Colors.brand },
+  dayCellSelected: { backgroundColor: colors.brand },
   dayCellPressed: { opacity: 0.76 },
-  dayNumber: { color: Colors.ink, fontSize: 14, fontWeight: '800' },
-  dayNumberSelected: { color: Colors.surface },
-  dayBadge: { backgroundColor: Colors.accent, borderRadius: 3, height: 6, marginTop: 3, width: 6 },
+  dayNumber: { color: colors.ink, fontSize: 14, fontWeight: '800' },
+  dayNumberSelected: { color: colors.surface },
+  dayBadge: { backgroundColor: colors.accent, borderRadius: 3, height: 6, marginTop: 3, width: 6 },
   dayBadgeSelected: { backgroundColor: '#FDE68A' },
   agendaHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
-  agendaTitle: { color: Colors.ink, fontSize: 21, fontWeight: '900' },
-  agendaDate: { color: Colors.muted, fontSize: 13, marginTop: 2 },
+  agendaTitle: { color: colors.ink, fontSize: 21, fontWeight: '900' },
+  agendaDate: { color: colors.muted, fontSize: 13, marginTop: 2 },
   agendaList: { gap: 10 },
   agendaItem: { gap: 2 },
   calendarButton: { alignSelf: 'flex-start', minHeight: 40, paddingHorizontal: 4 },
   actionCard: {
-    backgroundColor: Colors.surface,
-    borderColor: Colors.border,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: 18,
     borderWidth: 1,
     flexDirection: 'row',
@@ -276,13 +278,13 @@ const styles = StyleSheet.create({
   },
   actionCardPressed: { opacity: 0.8, transform: [{ scale: 0.99 }] },
   timeBlock: { alignItems: 'flex-start', gap: 4, minWidth: 70 },
-  time: { color: Colors.brand, fontSize: 13, fontWeight: '900' },
-  type: { color: Colors.muted, fontSize: 11, fontWeight: '800' },
+  time: { color: colors.brand, fontSize: 13, fontWeight: '900' },
+  type: { color: colors.muted, fontSize: 11, fontWeight: '800' },
   actionCopy: { flex: 1, gap: 3 },
-  actionTitle: { color: Colors.ink, fontSize: 16, fontWeight: '900', lineHeight: 22 },
-  actionSummary: { color: Colors.muted, fontSize: 13, lineHeight: 19 },
-  empty: { backgroundColor: Colors.accentSoft, borderRadius: 18, gap: 10, padding: 18 },
-  emptyTitle: { color: Colors.ink, fontSize: 17, fontWeight: '900' },
-  errorCard: { backgroundColor: Colors.dangerSoft, borderRadius: 16, gap: 10, padding: 14 },
-  error: { color: Colors.danger, fontSize: 14, lineHeight: 20 },
+  actionTitle: { color: colors.ink, fontSize: 16, fontWeight: '900', lineHeight: 22 },
+  actionSummary: { color: colors.muted, fontSize: 13, lineHeight: 19 },
+  empty: { backgroundColor: colors.accentSoft, borderRadius: 18, gap: 10, padding: 18 },
+  emptyTitle: { color: colors.ink, fontSize: 17, fontWeight: '900' },
+  errorCard: { backgroundColor: colors.dangerSoft, borderRadius: 16, gap: 10, padding: 14 },
+  error: { color: colors.danger, fontSize: 14, lineHeight: 20 },
 });

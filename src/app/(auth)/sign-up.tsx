@@ -6,7 +6,7 @@ import { AppButton } from '@/components/app-button';
 import { AuthScreen } from '@/components/auth/auth-screen';
 import { ConfigurationNotice } from '@/components/auth/configuration-notice';
 import { FormTextField } from '@/components/form-text-field';
-import { Colors } from '@/constants/theme';
+import { type AppColors, useTheme } from '@/features/theme/theme-provider';
 import { signUp } from '@/features/auth/auth-service';
 import { getFieldErrors, signUpSchema, type SignUpValues } from '@/features/auth/validation';
 import { isSupabaseConfigured } from '@/services/supabase/config';
@@ -14,6 +14,8 @@ import { isSupabaseConfigured } from '@/services/supabase/config';
 const emptyValues: SignUpValues = { displayName: '', email: '', password: '', confirmPassword: '' };
 
 export default function SignUpScreen() {
+  const colors = useTheme();
+  const styles = createStyles(colors);
   const [values, setValues] = useState(emptyValues);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -124,13 +126,13 @@ export default function SignUpScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   flex: { flex: 1 },
   form: { gap: 16 },
-  error: { color: Colors.danger, fontSize: 14, lineHeight: 20 },
-  success: { backgroundColor: Colors.brandSoft, borderRadius: 14, padding: 15, gap: 5 },
-  successTitle: { color: Colors.ink, fontSize: 16, fontWeight: '800' },
-  successCopy: { color: Colors.muted, fontSize: 14, lineHeight: 20 },
-  footer: { color: Colors.muted, fontSize: 15, textAlign: 'center' },
-  link: { color: Colors.brand, fontWeight: '800' },
+  error: { color: colors.danger, fontSize: 14, lineHeight: 20 },
+  success: { backgroundColor: colors.brandSoft, borderRadius: 14, padding: 15, gap: 5 },
+  successTitle: { color: colors.ink, fontSize: 16, fontWeight: '800' },
+  successCopy: { color: colors.muted, fontSize: 14, lineHeight: 20 },
+  footer: { color: colors.muted, fontSize: 15, textAlign: 'center' },
+  link: { color: colors.brand, fontWeight: '800' },
 });

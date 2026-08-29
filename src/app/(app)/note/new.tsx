@@ -9,7 +9,7 @@ import { Colors } from '@/constants/theme';
 import { useAuth } from '@/features/auth/auth-provider';
 import {
   messageForUnderstandingError,
-  saveTypedCaptureToInbox,
+  saveTypedCapture,
 } from '@/features/captures/understanding-service';
 
 export default function NewNoteScreen() {
@@ -24,7 +24,7 @@ export default function NewNoteScreen() {
     mutationFn: async () => {
       if (!userId) throw new Error('You need to be signed in.');
       try {
-        return await saveTypedCaptureToInbox({
+        return await saveTypedCapture({
           text: text.trim(),
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC',
           userId,
@@ -33,9 +33,13 @@ export default function NewNoteScreen() {
         throw new Error(await messageForUnderstandingError(error));
       }
     },
-    onSuccess: () => {
+    onSuccess: ({ action, decision }) => {
       if (userId) queryClient.invalidateQueries({ queryKey: ['actions', userId] });
-      router.replace('/inbox');
+      if (decision.outcome === 'auto') {
+        router.replace({ pathname: '/action/[id]', params: { id: action.id } });
+      } else {
+        router.replace('/inbox');
+      }
     },
   });
 
@@ -61,8 +65,8 @@ export default function NewNoteScreen() {
           <Text style={styles.eyebrow}>TYPE A THOUGHT</Text>
           <Text style={styles.title}>What’s on your mind?</Text>
           <Text style={styles.copy}>
-            Write naturally. Handle will understand the note, suggest the right project and people,
-            and save it in your Inbox for approval.
+            Write naturally. Handle will understand the note and file it when it is sure. Anything
+            unclear, or involving another person, waits in your Inbox for approval.
           </Text>
         </View>
 

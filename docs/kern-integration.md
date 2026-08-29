@@ -109,6 +109,7 @@ Each decision: the question, the options in user terms, what each costs function
 - **B. Kern as is.** Confident results are filed without asking; doubtful ones wait in an inbox; everything can be undone. Cost: Handled's promise "nothing is saved until you approve" is gone; an undo and a "what got filed today" list become mandatory, not nice-to-have.
 - **C. Hybrid.** File automatically when the result is a plain note, task or idea and the AI is confident. Always ask first when the result involves another person, a message to send, a specific time, or when the AI itself says something is unclear. Cost: one more rule to explain; otherwise the plumbing of B.
 - **Recommendation: C.** It keeps the guarantee where it matters (nothing reaches a third party or your calendar unreviewed) and gives Kern's speed for the bulk of captures. Make it a per-user switch later.
+- **Decided 2026-08-29 (issue #7): C, shipped.** Kern's thresholds (0.75 / 0.45) and its "never create a container on a guess" rule; a scheduled time does *not* force review (a clear "remind me Friday" files itself). Per-user switch on the Inbox screen, "Send back to Inbox" as the undo. No activity feed yet — auto-filed items are labelled in the Inbox list instead.
 
 ### D2 — One way to sort thoughts
 
@@ -192,7 +193,7 @@ Each step is usable on its own; nothing is half-built in between.
 6. **Export a project brief** (D8).
 7. **Typed text is a thought** (D6).
 8. **Instant capture, background filing, automatic retry** (D9).
-9. **The AI is the gate, with undo** (D1) — inbox for doubtful results, "filed today" list. Behind a per-user switch so nobody's flow changes until both opt in.
+9. **The AI is the gate, with undo** (D1) — inbox for doubtful results, "filed today" list. Behind a per-user switch so nobody's flow changes until both opt in. *Shipped early, issue #7; the "filed today" list is still open.*
 10. **The AI knows your projects** (D5) — matching, proposed projects, one-tap create & link.
 11. **Today screen, floating capture, To-dos / Library tabs** (D7, stages 2–3).
 12. **Import Kern's data** (D11). Later: other recorders, notifications.

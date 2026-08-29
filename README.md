@@ -53,7 +53,7 @@ Do not close an issue merely because work has started or code exists only locall
 The local implementation is complete, but the new database migration and Edge Function must be deployed to the existing Supabase project before users can press **Research**.
 
 1. Immediately revoke the OpenAI key that was previously present in `.env.example`, then create a replacement in OpenAI.
-2. Apply [20260823130000_research_and_meetings.sql](supabase/migrations/20260823130000_research_and_meetings.sql), [20260827090000_projects_categories_and_timeline.sql](supabase/migrations/20260827090000_projects_categories_and_timeline.sql), and [20260829090000_inbox_project_suggestions.sql](supabase/migrations/20260829090000_inbox_project_suggestions.sql) in order.
+2. Apply the migrations in `supabase/migrations/` in order. The Supabase CLI is a dev dependency: once per machine run `npx supabase login` (in a real terminal, it opens the browser) and `npx supabase link --project-ref <ref>`, then `npx supabase db push --linked` from `main` applies whatever is missing and `npx supabase migration list --linked` shows local vs. remote state. All migrations up to `20260830090000_confidence_gate.sql` are live as of 2026-08-29.
 3. Configure these **Supabase Edge Function Secrets** (never Expo public variables):
 
    ```dotenv

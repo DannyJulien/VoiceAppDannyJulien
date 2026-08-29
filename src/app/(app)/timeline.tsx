@@ -48,15 +48,6 @@ export default function TimelineScreen() {
         <Text style={styles.copy}>
           Notes, tasks, reminders and messages you approved, or Handle filed for you.
         </Text>
-        <View style={styles.topActions}>
-          <AppButton label="Write a note" onPress={() => router.push('/note/new')} />
-          <AppButton
-            label="Calendar"
-            onPress={() => router.push('/calendar' as never)}
-            variant="secondary"
-          />
-        </View>
-
         <ScrollView
           contentContainerStyle={styles.filters}
           horizontal
@@ -109,9 +100,7 @@ export default function TimelineScreen() {
             >
               <View style={styles.cardTopRow}>
                 <Text style={[styles.cardType, { color: categoryDetails(action.category).color }]}>
-                  {action.auto_filed_at
-                    ? `${actionTypeLabel(action.action_type).toUpperCase()} · FILED FOR YOU`
-                    : actionTypeLabel(action.action_type).toUpperCase()}
+                  {actionTypeLabel(action.action_type).toUpperCase()}
                 </Text>
                 <Text style={styles.cardStatus}>{statusLabel(action.status)}</Text>
               </View>
@@ -146,7 +135,6 @@ const styles = StyleSheet.create({
   },
   copy: { color: Colors.muted, fontSize: 16, lineHeight: 24 },
   filters: { gap: 8 },
-  topActions: { flexDirection: 'row', gap: 10 },
   filter: { minHeight: 42, paddingHorizontal: 14 },
   list: { gap: 10 },
   actionCard: {

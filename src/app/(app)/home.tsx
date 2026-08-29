@@ -128,11 +128,6 @@ export default function HomeScreen() {
             onPress={() => router.push('/note/new')}
             variant="secondary"
           />
-          <AppButton
-            label="View timeline"
-            onPress={() => router.push('/timeline')}
-            variant="quiet"
-          />
         </View>
 
         <View style={styles.tipCard}>

@@ -7,7 +7,6 @@ import {
 } from 'expo-audio';
 import { useCallback, useEffect, useState } from 'react';
 
-import type { SavedAction } from '@/features/actions/action-service';
 import {
   discardPendingCaptures,
   getPendingCaptureCount,
@@ -17,8 +16,9 @@ import {
 import { messageForCaptureError } from '@/features/captures/capture-utils';
 import { recordingPermissionError } from '@/features/captures/recording-permission';
 import {
+  type FiledCapture,
   messageForUnderstandingError,
-  saveVoiceCaptureToInbox,
+  saveVoiceCapture,
 } from '@/features/captures/understanding-service';
 
 type CapturePhase = 'idle' | 'recording' | 'uploading' | 'understanding' | 'uploaded' | 'error';
@@ -32,7 +32,7 @@ export function useVoiceCapture(userId: string | undefined) {
   const [phase, setPhase] = useState<CapturePhase>('idle');
   const [error, setError] = useState<string | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
-  const [inboxAction, setInboxAction] = useState<SavedAction | null>(null);
+  const [filedCapture, setFiledCapture] = useState<FiledCapture | null>(null);
   const [lastCaptureId, setLastCaptureId] = useState<string | null>(null);
 
   const refreshPendingCount = useCallback(async () => {
@@ -57,7 +57,7 @@ export function useVoiceCapture(userId: string | undefined) {
 
   const startRecording = useCallback(async () => {
     setError(null);
-    setInboxAction(null);
+    setFiledCapture(null);
     const permission = await requestRecordingPermissionsAsync();
     if (!permission.granted) {
       setPhase('error');
@@ -80,12 +80,12 @@ export function useVoiceCapture(userId: string | undefined) {
     async (captureId: string) => {
       if (!userId) throw new Error('You need to be signed in.');
       setPhase('understanding');
-      const savedAction = await saveVoiceCaptureToInbox({
+      const filed = await saveVoiceCapture({
         captureId,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC',
         userId,
       });
-      setInboxAction(savedAction);
+      setFiledCapture(filed);
       setPhase('uploaded');
     },
     [userId],
@@ -162,12 +162,13 @@ export function useVoiceCapture(userId: string | undefined) {
   }, [userId]);
 
   return {
-    clearInboxAction: () => setInboxAction(null),
+    clearInboxAction: () => setFiledCapture(null),
     discardPendingUploads,
     durationMillis: recorderState.durationMillis,
     error,
     isRecording: recorderState.isRecording,
-    inboxAction,
+    filingDecision: filedCapture?.decision ?? null,
+    inboxAction: filedCapture?.action ?? null,
     pendingCount,
     phase,
     canRetryProcessing: lastCaptureId !== null && phase === 'error' && pendingCount === 0,

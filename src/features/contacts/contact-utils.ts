@@ -7,6 +7,10 @@ export function actionMessage(action: SavedAction) {
   return action.message_draft?.trim() || action.summary?.trim() || action.title;
 }
 
+export function normalizedContactName(name: string) {
+  return name.trim().replace(/\s+/g, ' ').toLocaleLowerCase();
+}
+
 export function contactLabel(contact: SavedContact) {
   const details = [contact.company, contact.email ?? contact.phone].filter(Boolean).join(' · ');
   return details ? `${contact.name} · ${details}` : contact.name;

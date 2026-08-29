@@ -34,6 +34,7 @@ export type Database = {
           email: string;
           display_name: string | null;
           preferred_language: PreferredLanguage;
+          auto_file_captures: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -42,10 +43,12 @@ export type Database = {
           email: string;
           display_name?: string | null;
           preferred_language?: PreferredLanguage;
+          auto_file_captures?: boolean;
         };
         Update: {
           display_name?: string | null;
           preferred_language?: PreferredLanguage;
+          auto_file_captures?: boolean;
         };
         Relationships: [];
       };
@@ -92,6 +95,7 @@ export type Database = {
           suggested_category: ActionCategory | null;
           suggested_project_name: string | null;
           suggested_people: Json;
+          auto_filed_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -114,6 +118,7 @@ export type Database = {
           suggested_category?: ActionCategory | null;
           suggested_project_name?: string | null;
           suggested_people?: Json;
+          auto_filed_at?: string | null;
         };
         Update: {
           voice_capture_id?: string | null;
@@ -131,6 +136,7 @@ export type Database = {
           suggested_category?: ActionCategory | null;
           suggested_project_name?: string | null;
           suggested_people?: Json;
+          auto_filed_at?: string | null;
         };
         Relationships: [];
       };

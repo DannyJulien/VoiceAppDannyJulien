@@ -1,8 +1,11 @@
 import { FunctionsHttpError } from '@supabase/supabase-js';
 
-import { createPendingAction, type SavedAction } from '@/features/actions/action-service';
+import { fileUnderstoodAction, type SavedAction } from '@/features/actions/action-service';
 import { understoodActionSchema } from '@/features/actions/action-schema';
+import { decideFiling, type FilingDecision } from '@/features/actions/filing-gate';
+import { getProfile } from '@/features/auth/profile-service';
 import { messageForCaptureError } from '@/features/captures/capture-utils';
+import { getContacts } from '@/features/contacts/contact-service';
 import { getProjects } from '@/features/projects/project-service';
 import { getSupabaseClient } from '@/services/supabase/client';
 
@@ -14,6 +17,8 @@ type UnderstandingInput = {
   timezone: string;
   userId: string;
 };
+
+export type FiledCapture = { action: SavedAction; decision: FilingDecision };
 
 async function understand({ captureId, text, timezone, userId }: UnderstandingInput) {
   const projects = await getProjects(userId);
@@ -31,25 +36,38 @@ async function understand({ captureId, text, timezone, userId }: UnderstandingIn
 
   const action = understoodActionSchema.safeParse(data.action);
   if (!action.success) throw new Error('AI returned an invalid action. Please try again.');
-  return { action: action.data, captureId: data.captureId };
+  return { action: action.data, captureId: data.captureId, projects };
 }
 
-export async function saveVoiceCaptureToInbox({
-  captureId,
-  timezone,
-  userId,
-}: Omit<UnderstandingInput, 'text'>): Promise<SavedAction> {
-  const understood = await understand({ captureId, timezone, userId });
-  return createPendingAction({ ...understood, timezone, userId });
+async function fileCapture(input: UnderstandingInput): Promise<FiledCapture> {
+  const { action, captureId, projects } = await understand(input);
+  const [profile, contacts] = await Promise.all([
+    getProfile(input.userId),
+    getContacts(input.userId),
+  ]);
+  const decision = decideFiling(action, {
+    autoFileEnabled: profile.auto_file_captures,
+    contacts,
+    projects,
+  });
+  const saved = await fileUnderstoodAction({
+    action,
+    captureId,
+    decision,
+    timezone: input.timezone,
+    userId: input.userId,
+  });
+  return { action: saved, decision };
 }
 
-export async function saveTypedCaptureToInbox({
-  text,
-  timezone,
-  userId,
-}: Required<Pick<UnderstandingInput, 'text' | 'timezone' | 'userId'>>): Promise<SavedAction> {
-  const understood = await understand({ text, timezone, userId });
-  return createPendingAction({ ...understood, timezone, userId });
+export function saveVoiceCapture(input: Omit<UnderstandingInput, 'text'>) {
+  return fileCapture(input);
+}
+
+export function saveTypedCapture(
+  input: Required<Pick<UnderstandingInput, 'text' | 'timezone' | 'userId'>>,
+) {
+  return fileCapture(input);
 }
 
 export async function messageForUnderstandingError(error: unknown) {

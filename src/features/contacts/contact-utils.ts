@@ -11,6 +11,18 @@ export function normalizedContactName(name: string) {
   return name.trim().replace(/\s+/g, ' ').toLocaleLowerCase();
 }
 
+export type ContactFields = { name: string; email: string; phone: string; company: string };
+
+/**
+ * Shared by the add form and the edit form: a person needs a name plus at least one way to
+ * reach them. Returns the message to show, or null when the input is good.
+ */
+export function contactValidationError(fields: Pick<ContactFields, 'email' | 'name' | 'phone'>) {
+  if (!fields.name.trim()) return 'Add a name before saving this contact.';
+  if (!fields.email.trim() && !fields.phone.trim()) return 'Add an email address or phone number.';
+  return null;
+}
+
 export function contactLabel(contact: SavedContact) {
   const details = [contact.company, contact.email ?? contact.phone].filter(Boolean).join(' · ');
   return details ? `${contact.name} · ${details}` : contact.name;

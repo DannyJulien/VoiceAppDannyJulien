@@ -2,6 +2,7 @@ import { describe, expect, it } from '@jest/globals';
 
 import {
   actionMessage,
+  contactValidationError,
   mailtoUrl,
   type SavedContact,
   whatsAppUrl,
@@ -63,5 +64,29 @@ describe('contact delivery helpers', () => {
       'https://wa.me/32470123456?text=Hello%20Maya',
     );
     expect(() => whatsAppUrl('0470123456', 'Hello Maya')).toThrow('international phone number');
+  });
+});
+
+describe('contactValidationError', () => {
+  it('requires a name', () => {
+    expect(contactValidationError({ email: 'maya@example.com', name: '  ', phone: '' })).toBe(
+      'Add a name before saving this contact.',
+    );
+  });
+
+  it('requires an email address or a phone number', () => {
+    expect(contactValidationError({ email: '', name: 'Maya', phone: '  ' })).toBe(
+      'Add an email address or phone number.',
+    );
+  });
+
+  it('accepts a name with only a phone number', () => {
+    expect(contactValidationError({ email: '', name: 'Maya', phone: '+32470123456' })).toBeNull();
+  });
+
+  it('accepts a name with only an email address', () => {
+    expect(
+      contactValidationError({ email: 'maya@example.com', name: 'Maya', phone: '' }),
+    ).toBeNull();
   });
 });

@@ -48,5 +48,9 @@ example
 deploy/mac-mini/logs/
 deploy/mac-mini/handled-web.pid
 
+.vercel
+.env*
+!.env.example
+
 # Supabase CLI link state (per machine)
 supabase/.temp/

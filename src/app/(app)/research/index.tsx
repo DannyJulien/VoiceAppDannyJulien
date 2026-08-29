@@ -53,7 +53,7 @@ export default function ResearchListScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.titleBlock}>
           <Text style={styles.eyebrow}>RELIABLE CONTEXT</Text>
-          <Text style={styles.title}>Research, when you need it.</Text>
+          <Text style={styles.title}>Research</Text>
         </View>
         <Text style={styles.copy}>
           Ask about any saved note. Your original note always stays safe, even if research is
@@ -115,7 +115,7 @@ export default function ResearchListScreen() {
               />
               <AppButton
                 label="Go to inbox"
-                onPress={() => router.replace('/inbox')}
+                onPress={() => router.replace('/timeline')}
                 variant="quiet"
               />
             </View>

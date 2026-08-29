@@ -41,8 +41,16 @@ export default function ResearchResultScreen() {
         </Text>
         <View style={styles.recoveryActions}>
           <AppButton label="Try again" onPress={() => resultQuery.refetch()} />
-          <AppButton label="Back to research" onPress={() => router.replace('/research')} variant="secondary" />
-          <AppButton label="Go to inbox" onPress={() => router.replace('/inbox')} variant="quiet" />
+          <AppButton
+            label="Back to research"
+            onPress={() => router.replace('/research')}
+            variant="secondary"
+          />
+          <AppButton
+            label="Go to timeline"
+            onPress={() => router.replace('/timeline')}
+            variant="quiet"
+          />
         </View>
       </Screen>
     );
@@ -63,7 +71,7 @@ function ResearchResultContent({ result, userId }: { result: ResearchResult; use
     mutationFn: () => createTaskFromResearch(result, userId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['actions', userId] });
-      router.push('/inbox');
+      router.push('/timeline');
     },
   });
   const sourceById = new Map(result.sources.map((source) => [source.id, source]));
@@ -214,11 +222,7 @@ function ResearchResultContent({ result, userId }: { result: ResearchResult; use
             onPress={() => taskMutation.mutate()}
             variant="secondary"
           />
-          <AppButton
-            label="Save"
-            onPress={() => router.replace('/research')}
-            variant="quiet"
-          />
+          <AppButton label="Save" onPress={() => router.replace('/research')} variant="quiet" />
         </View>
       </ScrollView>
     </Screen>

@@ -16,6 +16,7 @@ import {
   suggestedPeopleFrom,
   updateAction,
 } from '@/features/actions/action-service';
+import { actionIcsFilename, createActionIcsEvent } from '@/features/actions/action-calendar';
 import {
   actionTypeLabel,
   formatActionWhen,
@@ -36,6 +37,7 @@ import {
 } from '@/features/contacts/contact-service';
 import { categories } from '@/features/projects/project-utils';
 import { getResearchSessionsForAction, startResearch } from '@/features/research/research-service';
+import { downloadIcs } from '@/features/share/share';
 import type { ActionCategory } from '@/types/database';
 
 function summaryPoints(value: string) {
@@ -58,6 +60,7 @@ export default function ActionDetailsScreen() {
   const [editedSummary, setEditedSummary] = useState<string | null>(null);
   const [editedScheduledAt, setEditedScheduledAt] = useState<string | null>(null);
   const [editedMessageDraft, setEditedMessageDraft] = useState<string | null>(null);
+  const [calendarError, setCalendarError] = useState<string | null>(null);
   const [researchTopic, setResearchTopic] = useState('');
   const [editingPlacement, setEditingPlacement] = useState(false);
   const [reviewCategory, setReviewCategory] = useState<ActionCategory | null>(null);
@@ -236,6 +239,18 @@ export default function ActionDetailsScreen() {
     setEditing(true);
   }
 
+  function addToOwnCalendar() {
+    if (!action) return;
+    try {
+      setCalendarError(null);
+      downloadIcs(actionIcsFilename(action), createActionIcsEvent(action));
+    } catch (error) {
+      setCalendarError(
+        error instanceof Error ? error.message : 'Unable to add this item to your calendar.',
+      );
+    }
+  }
+
   function saveEdit() {
     if (!title.trim()) {
       setValidationError('Add a short title before saving.');
@@ -363,6 +378,19 @@ export default function ActionDetailsScreen() {
                     <Text style={styles.metaValue}>{formatActionWhen(action.created_at)}</Text>
                   </View>
                 </View>
+                {action.scheduled_at ? (
+                  <AppButton
+                    accessibilityHint="Downloads an .ics file you can open in your own calendar app."
+                    label="Add to my calendar"
+                    onPress={addToOwnCalendar}
+                    variant="secondary"
+                  />
+                ) : null}
+                {calendarError ? (
+                  <Text accessibilityRole="alert" style={styles.error}>
+                    {calendarError}
+                  </Text>
+                ) : null}
                 {action.message_draft ? (
                   <View style={styles.messageBox}>
                     <Text style={styles.metaLabel}>READY-TO-SEND MESSAGE</Text>

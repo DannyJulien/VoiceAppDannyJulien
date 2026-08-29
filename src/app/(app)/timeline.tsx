@@ -48,15 +48,6 @@ export default function TimelineScreen() {
         <Text style={styles.copy}>
           Notes, tasks, reminders and messages you approved, or Handle filed for you.
         </Text>
-        <View style={styles.topActions}>
-          <AppButton label="Write a note" onPress={() => router.push('/note/new')} />
-          <AppButton
-            label="Calendar"
-            onPress={() => router.push('/calendar' as never)}
-            variant="secondary"
-          />
-        </View>
-
         <ScrollView
           contentContainerStyle={styles.filters}
           horizontal
@@ -146,7 +137,6 @@ const styles = StyleSheet.create({
   },
   copy: { color: Colors.muted, fontSize: 16, lineHeight: 24 },
   filters: { gap: 8 },
-  topActions: { flexDirection: 'row', gap: 10 },
   filter: { minHeight: 42, paddingHorizontal: 14 },
   list: { gap: 10 },
   actionCard: {

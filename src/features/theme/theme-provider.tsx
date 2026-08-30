@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SystemUI from 'expo-system-ui';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type PropsWithChildren } from 'react';
 
 export type ThemeMode = 'light' | 'dark';
@@ -83,6 +84,12 @@ export function ThemeProvider({ children }: PropsWithChildren) {
       mounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    // The root view sits behind the top safe area on native. Keep it in sync with
+    // the active palette so no static light strip appears above a dark screen.
+    void SystemUI.setBackgroundColorAsync(palettes[mode].canvas).catch(() => undefined);
+  }, [mode]);
 
   const setMode = useCallback((nextMode: ThemeMode) => {
     setModeState(nextMode);

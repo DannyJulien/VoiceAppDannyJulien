@@ -8,6 +8,7 @@ type IconButtonProps = {
   renderIcon: (color: string, size: number) => ReactElement;
   /** Spoken name of the control. Always required, because the icon alone says nothing. */
   accessibilityLabel: string;
+  accessibilityHint?: string;
   onPress: () => void;
   /** Optional visible text next to the icon, for actions a symbol cannot carry alone. */
   label?: string;
@@ -25,6 +26,7 @@ const ICON_SIZE = 20;
 export function IconButton({
   renderIcon,
   accessibilityLabel,
+  accessibilityHint,
   onPress,
   label,
   tone = 'neutral',
@@ -39,6 +41,7 @@ export function IconButton({
   return (
     <Pressable
       accessibilityLabel={accessibilityLabel}
+      accessibilityHint={accessibilityHint}
       accessibilityRole="button"
       accessibilityState={{ disabled }}
       disabled={disabled}
@@ -58,20 +61,21 @@ export function IconButton({
   );
 }
 
-const createStyles = (colors: AppColors) => StyleSheet.create({
-  base: {
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: 8,
-    justifyContent: 'center',
-  },
-  square: { borderRadius: 14, height: 44, width: 44 },
-  pill: { borderRadius: 999, minHeight: 44, paddingHorizontal: 16 },
-  danger: { backgroundColor: colors.dangerSoft, borderColor: '#FBD3CE' },
-  pressed: { opacity: 0.8 },
-  disabled: { opacity: 0.48 },
-  label: { fontSize: 15, fontWeight: '800' },
-});
+const createStyles = (colors: AppColors) =>
+  StyleSheet.create({
+    base: {
+      alignItems: 'center',
+      backgroundColor: colors.surface,
+      borderColor: colors.border,
+      borderWidth: 1,
+      flexDirection: 'row',
+      gap: 8,
+      justifyContent: 'center',
+    },
+    square: { borderRadius: 14, height: 44, width: 44 },
+    pill: { borderRadius: 999, minHeight: 44, paddingHorizontal: 16 },
+    danger: { backgroundColor: colors.dangerSoft, borderColor: '#FBD3CE' },
+    pressed: { opacity: 0.8 },
+    disabled: { opacity: 0.48 },
+    label: { fontSize: 15, fontWeight: '800' },
+  });

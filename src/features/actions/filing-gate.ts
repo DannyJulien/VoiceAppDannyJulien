@@ -39,6 +39,19 @@ export type FilingContext = {
   contacts: { id: string; name: string }[];
 };
 
+/**
+ * A project chosen directly by the user always wins over an AI suggestion.
+ * The action can still wait in the Inbox for review, but it must not vanish
+ * from the timeline the user deliberately opened.
+ */
+export function projectIdForFiling(
+  decision: FilingDecision,
+  explicitlyChosenProjectId?: string | null,
+) {
+  if (explicitlyChosenProjectId) return explicitlyChosenProjectId;
+  return decision.outcome === 'auto' ? decision.projectId : null;
+}
+
 export function decideFiling(action: UnderstoodAction, context: FilingContext): FilingDecision {
   const reasons: FilingReason[] = [];
   let projectId: string | null = null;

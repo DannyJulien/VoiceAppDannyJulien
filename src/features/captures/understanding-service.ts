@@ -13,6 +13,7 @@ const processCaptureFunction = 'process-captur';
 
 type UnderstandingInput = {
   captureId?: string;
+  projectId?: string | null;
   text?: string;
   timezone: string;
   userId: string;
@@ -54,6 +55,7 @@ async function fileCapture(input: UnderstandingInput): Promise<FiledCapture> {
     action,
     captureId,
     decision,
+    projectId: input.projectId,
     timezone: input.timezone,
     userId: input.userId,
   });
@@ -65,7 +67,8 @@ export function saveVoiceCapture(input: Omit<UnderstandingInput, 'text'>) {
 }
 
 export function saveTypedCapture(
-  input: Required<Pick<UnderstandingInput, 'text' | 'timezone' | 'userId'>>,
+  input: Required<Pick<UnderstandingInput, 'text' | 'timezone' | 'userId'>> &
+    Pick<UnderstandingInput, 'projectId'>,
 ) {
   return fileCapture(input);
 }

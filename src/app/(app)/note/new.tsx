@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { AppButton } from '@/components/app-button';
@@ -18,6 +18,7 @@ export default function NewNoteScreen() {
   const styles = createStyles(colors);
   const tabBarInset = useTabBarInset();
   const router = useRouter();
+  const { projectId } = useLocalSearchParams<{ projectId?: string }>();
   const queryClient = useQueryClient();
   const { session } = useAuth();
   const userId = session?.user.id;
@@ -32,13 +33,24 @@ export default function NewNoteScreen() {
           text: text.trim(),
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC',
           userId,
+          projectId,
         });
       } catch (error) {
         throw new Error(await messageForUnderstandingError(error));
       }
     },
     onSuccess: ({ action, decision }) => {
-      if (userId) queryClient.invalidateQueries({ queryKey: ['actions', userId] });
+      if (userId) {
+        queryClient.invalidateQueries({ queryKey: ['actions', userId] });
+        queryClient.invalidateQueries({ queryKey: ['projects', userId] });
+        if (projectId) {
+          queryClient.invalidateQueries({ queryKey: ['project-actions', projectId, userId] });
+        }
+      }
+      if (projectId) {
+        router.replace({ pathname: '/projects/[id]', params: { id: projectId } });
+        return;
+      }
       if (decision.outcome === 'auto') {
         router.replace({ pathname: '/action/[id]', params: { id: action.id } });
       } else {
@@ -58,7 +70,10 @@ export default function NewNoteScreen() {
 
   return (
     <Screen>
-      <ScrollView contentContainerStyle={[styles.content, tabBarInset]} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={[styles.content, tabBarInset]}
+        keyboardShouldPersistTaps="handled"
+      >
         <AppButton
           label="‹ Back"
           onPress={() => router.back()}
@@ -72,6 +87,11 @@ export default function NewNoteScreen() {
             Write naturally. Handle will understand the note and file it when it is sure. Anything
             unclear, or involving another person, waits in your Inbox for approval.
           </Text>
+          {projectId ? (
+            <Text style={styles.projectHint}>
+              This note will stay in the project timeline you selected.
+            </Text>
+          ) : null}
         </View>
 
         <TextInput
@@ -109,29 +129,31 @@ export default function NewNoteScreen() {
   );
 }
 
-const createStyles = (colors: AppColors) => StyleSheet.create({
-  content: { gap: 18, paddingBottom: 32, paddingTop: 16 },
-  back: { alignSelf: 'flex-start', minHeight: 36, paddingHorizontal: 0 },
-  header: { gap: 5 },
-  eyebrow: { color: colors.brand, fontSize: 12, fontWeight: '900', letterSpacing: 1.1 },
-  title: {
-    color: colors.ink,
-    fontSize: 32,
-    fontWeight: '900',
-    letterSpacing: -1.1,
-    lineHeight: 39,
-  },
-  copy: { color: colors.muted, fontSize: 16, lineHeight: 23 },
-  input: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 22,
-    borderWidth: 1,
-    color: colors.ink,
-    fontSize: 17,
-    lineHeight: 25,
-    minHeight: 250,
-    padding: 18,
-  },
-  error: { color: colors.danger, fontSize: 14, lineHeight: 20 },
-});
+const createStyles = (colors: AppColors) =>
+  StyleSheet.create({
+    content: { gap: 18, paddingBottom: 32, paddingTop: 16 },
+    back: { alignSelf: 'flex-start', minHeight: 36, paddingHorizontal: 0 },
+    header: { gap: 5 },
+    eyebrow: { color: colors.brand, fontSize: 12, fontWeight: '900', letterSpacing: 1.1 },
+    title: {
+      color: colors.ink,
+      fontSize: 32,
+      fontWeight: '900',
+      letterSpacing: -1.1,
+      lineHeight: 39,
+    },
+    copy: { color: colors.muted, fontSize: 16, lineHeight: 23 },
+    projectHint: { color: colors.brand, fontSize: 14, fontWeight: '700', lineHeight: 20 },
+    input: {
+      backgroundColor: colors.surface,
+      borderColor: colors.border,
+      borderRadius: 22,
+      borderWidth: 1,
+      color: colors.ink,
+      fontSize: 17,
+      lineHeight: 25,
+      minHeight: 250,
+      padding: 18,
+    },
+    error: { color: colors.danger, fontSize: 14, lineHeight: 20 },
+  });

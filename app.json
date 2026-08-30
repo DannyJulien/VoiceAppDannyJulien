@@ -8,7 +8,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "handled",
     "userInterfaceStyle": "automatic",
-    "backgroundColor": "#F7F8F5",
+    "backgroundColor": "#F7F8FC",
     "ios": {
       "icon": "./assets/expo.icon"
     },
@@ -32,7 +32,7 @@
       "display": "standalone",
       "orientation": "portrait",
       "themeColor": "#24725D",
-      "backgroundColor": "#F7F8F5",
+      "backgroundColor": "#F7F8FC",
       "description": "Say it. Understand it. Back it up. Use it."
     },
     "plugins": [

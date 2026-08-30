@@ -145,6 +145,7 @@ export type Database = {
           id: string;
           user_id: string;
           name: string;
+          summary: string;
           color: string;
           created_at: string;
           updated_at: string;
@@ -153,10 +154,12 @@ export type Database = {
           id?: string;
           user_id?: string;
           name: string;
+          summary?: string;
           color?: string;
         };
         Update: {
           name?: string;
+          summary?: string;
           color?: string;
         };
         Relationships: [];

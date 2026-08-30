@@ -10,7 +10,7 @@ import { type AppColors, useTheme } from '@/features/theme/theme-provider';
 import { getActions } from '@/features/actions/action-service';
 import { useAuth } from '@/features/auth/auth-provider';
 import { createProject, getProjects } from '@/features/projects/project-service';
-import { projectColors } from '@/features/projects/project-utils';
+import { maxProjectSummaryLength, projectColors } from '@/features/projects/project-utils';
 
 export default function ProjectsScreen() {
   const colors = useTheme();
@@ -21,6 +21,7 @@ export default function ProjectsScreen() {
   const { session } = useAuth();
   const userId = session?.user.id;
   const [name, setName] = useState('');
+  const [summary, setSummary] = useState('');
   const [color, setColor] = useState(projectColors[0]);
   const projectsQuery = useQuery({
     queryKey: ['projects', userId],
@@ -36,10 +37,11 @@ export default function ProjectsScreen() {
     mutationFn: () => {
       if (!userId) throw new Error('You need to be signed in.');
       if (!name.trim()) throw new Error('Give the project a name first.');
-      return createProject(userId, name, color);
+      return createProject(userId, name, color, summary);
     },
     onSuccess: (project) => {
       setName('');
+      setSummary('');
       if (userId) queryClient.invalidateQueries({ queryKey: ['projects', userId] });
       router.push({ pathname: '/projects/[id]', params: { id: project.id } });
     },
@@ -47,7 +49,10 @@ export default function ProjectsScreen() {
 
   return (
     <Screen>
-      <ScrollView contentContainerStyle={[styles.content, tabBarInset]} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={[styles.content, tabBarInset]}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.header}>
           <Text style={styles.eyebrow}>KEEP CONTEXT TOGETHER</Text>
           <Text style={styles.title}>Projects</Text>
@@ -64,6 +69,18 @@ export default function ProjectsScreen() {
             placeholderTextColor={colors.muted}
             style={styles.input}
             value={name}
+          />
+          <Text style={styles.fieldLabel}>Project context (optional)</Text>
+          <TextInput
+            accessibilityHint="A short description helps file related notes in the right project."
+            accessibilityLabel="Project summary"
+            maxLength={maxProjectSummaryLength}
+            multiline
+            onChangeText={setSummary}
+            placeholder="What is this project about?"
+            placeholderTextColor={colors.muted}
+            style={[styles.input, styles.summaryInput]}
+            value={summary}
           />
           <View style={styles.colorRow}>
             {projectColors.map((candidate) => (
@@ -121,6 +138,11 @@ export default function ProjectsScreen() {
                   <Text style={styles.projectMeta}>
                     {count} {count === 1 ? 'item' : 'items'} in timeline
                   </Text>
+                  {project.summary ? (
+                    <Text numberOfLines={2} style={styles.projectSummary}>
+                      {project.summary}
+                    </Text>
+                  ) : null}
                 </View>
                 <Text style={styles.arrow}>›</Text>
               </Pressable>
@@ -132,50 +154,54 @@ export default function ProjectsScreen() {
   );
 }
 
-const createStyles = (colors: AppColors) => StyleSheet.create({
-  content: { gap: 18, paddingBottom: 32, paddingTop: 24 },
-  header: { gap: 5 },
-  eyebrow: { color: colors.brand, fontSize: 12, fontWeight: '900', letterSpacing: 1.1 },
-  title: {
-    color: colors.ink,
-    fontSize: 34,
-    fontWeight: '900',
-    letterSpacing: -1.1,
-    lineHeight: 40,
-  },
-  copy: { color: colors.muted, fontSize: 16, lineHeight: 23 },
-  createCard: { backgroundColor: colors.brandSoft, borderRadius: 22, gap: 12, padding: 17 },
-  cardTitle: { color: colors.ink, fontSize: 18, fontWeight: '900' },
-  input: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 14,
-    borderWidth: 1,
-    color: colors.ink,
-    fontSize: 16,
-    minHeight: 52,
-    paddingHorizontal: 14,
-  },
-  colorRow: { flexDirection: 'row', gap: 12 },
-  color: { borderColor: 'transparent', borderRadius: 16, borderWidth: 3, height: 32, width: 32 },
-  colorSelected: { borderColor: colors.ink },
-  listTitle: { color: colors.ink, fontSize: 19, fontWeight: '900' },
-  list: { gap: 10 },
-  projectCard: {
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 19,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: 13,
-    padding: 16,
-  },
-  pressed: { opacity: 0.8 },
-  projectMark: { borderRadius: 8, height: 16, width: 16 },
-  projectCopy: { flex: 1, gap: 3 },
-  projectName: { color: colors.ink, fontSize: 17, fontWeight: '900' },
-  projectMeta: { color: colors.muted, fontSize: 14 },
-  arrow: { color: colors.muted, fontSize: 28, lineHeight: 28 },
-  error: { color: colors.danger, fontSize: 14, lineHeight: 20 },
-});
+const createStyles = (colors: AppColors) =>
+  StyleSheet.create({
+    content: { gap: 18, paddingBottom: 32, paddingTop: 24 },
+    header: { gap: 5 },
+    eyebrow: { color: colors.brand, fontSize: 12, fontWeight: '900', letterSpacing: 1.1 },
+    title: {
+      color: colors.ink,
+      fontSize: 34,
+      fontWeight: '900',
+      letterSpacing: -1.1,
+      lineHeight: 40,
+    },
+    copy: { color: colors.muted, fontSize: 16, lineHeight: 23 },
+    createCard: { backgroundColor: colors.brandSoft, borderRadius: 22, gap: 12, padding: 17 },
+    cardTitle: { color: colors.ink, fontSize: 18, fontWeight: '900' },
+    fieldLabel: { color: colors.ink, fontSize: 14, fontWeight: '800' },
+    input: {
+      backgroundColor: colors.surface,
+      borderColor: colors.border,
+      borderRadius: 14,
+      borderWidth: 1,
+      color: colors.ink,
+      fontSize: 16,
+      minHeight: 52,
+      paddingHorizontal: 14,
+    },
+    summaryInput: { minHeight: 86, paddingTop: 13, textAlignVertical: 'top' },
+    colorRow: { flexDirection: 'row', gap: 12 },
+    color: { borderColor: 'transparent', borderRadius: 16, borderWidth: 3, height: 32, width: 32 },
+    colorSelected: { borderColor: colors.ink },
+    listTitle: { color: colors.ink, fontSize: 19, fontWeight: '900' },
+    list: { gap: 10 },
+    projectCard: {
+      alignItems: 'center',
+      backgroundColor: colors.surface,
+      borderColor: colors.border,
+      borderRadius: 19,
+      borderWidth: 1,
+      flexDirection: 'row',
+      gap: 13,
+      padding: 16,
+    },
+    pressed: { opacity: 0.8 },
+    projectMark: { borderRadius: 8, height: 16, width: 16 },
+    projectCopy: { flex: 1, gap: 3 },
+    projectName: { color: colors.ink, fontSize: 17, fontWeight: '900' },
+    projectMeta: { color: colors.muted, fontSize: 14 },
+    projectSummary: { color: colors.muted, fontSize: 13, lineHeight: 19 },
+    arrow: { color: colors.muted, fontSize: 28, lineHeight: 28 },
+    error: { color: colors.danger, fontSize: 14, lineHeight: 20 },
+  });

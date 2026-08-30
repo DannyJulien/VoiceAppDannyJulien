@@ -25,7 +25,7 @@ async function understand({ captureId, text, timezone, userId }: UnderstandingIn
   const { data, error } = await getSupabaseClient().functions.invoke(processCaptureFunction, {
     body: {
       captureId,
-      projectNames: projects.map((project) => project.name),
+      projects: projects.map((project) => ({ name: project.name, summary: project.summary })),
       text,
       timezone,
     },

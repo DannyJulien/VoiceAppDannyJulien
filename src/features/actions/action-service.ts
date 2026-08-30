@@ -1,7 +1,7 @@
 import type { ActionCategory, ActionStatus, ActionType, Database, Json } from '@/types/database';
 
 import { actionTypeForIntent, type UnderstoodAction } from '@/features/actions/action-schema';
-import type { FilingDecision } from '@/features/actions/filing-gate';
+import { projectIdForFiling, type FilingDecision } from '@/features/actions/filing-gate';
 import { createContact, getContacts } from '@/features/contacts/contact-service';
 import { normalizedContactName } from '@/features/contacts/contact-utils';
 import { findOrCreateProject } from '@/features/projects/project-service';
@@ -32,7 +32,7 @@ export type ManualNoteInput = {
 
 export type PendingActionInput = Pick<
   ActionReviewInput,
-  'action' | 'captureId' | 'timezone' | 'userId'
+  'action' | 'captureId' | 'projectId' | 'timezone' | 'userId'
 >;
 export type SuggestedPerson = { name: string; role: 'recipient' | 'mentioned' };
 
@@ -90,6 +90,7 @@ export async function fileUnderstoodAction({
   action,
   captureId,
   decision,
+  projectId,
   timezone,
   userId,
 }: PendingActionInput & { decision: FilingDecision }) {
@@ -116,7 +117,7 @@ export async function fileUnderstoodAction({
       clarification_question: action.clarificationQuestion,
       confidence: action.confidence,
       message_draft: action.messageDraft,
-      project_id: autoFiled ? decision.projectId : null,
+      project_id: projectIdForFiling(decision, projectId),
       requires_clarification: action.requiresClarification,
       scheduled_at: action.scheduledAt,
       scheduled_timezone: action.scheduledAt ? timezone : null,

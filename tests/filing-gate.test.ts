@@ -5,6 +5,7 @@ import {
   CONFIDENCE_HIGH,
   CONFIDENCE_LOW,
   decideFiling,
+  projectIdForFiling,
   type FilingContext,
 } from '@/features/actions/filing-gate';
 
@@ -112,5 +113,11 @@ describe('confidence gate', () => {
       projectId: null,
       contactIds: [],
     });
+  });
+
+  it('keeps a project explicitly chosen by the user, even when review is needed', () => {
+    const needsReview = decideFiling(capture({ confidence: 0.6 }), context);
+    expect(projectIdForFiling(needsReview, 'chosen-project')).toBe('chosen-project');
+    expect(projectIdForFiling(needsReview)).toBeNull();
   });
 });

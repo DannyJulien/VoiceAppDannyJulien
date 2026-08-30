@@ -1,4 +1,4 @@
-import Svg, { Line, Path, Polyline } from 'react-native-svg';
+import Svg, { Circle, Line, Path, Polyline } from 'react-native-svg';
 
 /**
  * Line icons drawn from Feather (https://feathericons.com, MIT). Feather's 24x24 grid and
@@ -54,6 +54,75 @@ export function TrashIcon({ color, size = 20 }: IconProps) {
       />
       <Line stroke={color} x1={10} x2={10} y1={11} y2={17} {...stroke} />
       <Line stroke={color} x1={14} x2={14} y1={11} y2={17} {...stroke} />
+    </IconFrame>
+  );
+}
+
+export function MoreHorizontalIcon({ color, size = 20 }: IconProps) {
+  return (
+    <IconFrame size={size}>
+      <Circle cx={5} cy={12} fill={color} r={1.5} />
+      <Circle cx={12} cy={12} fill={color} r={1.5} />
+      <Circle cx={19} cy={12} fill={color} r={1.5} />
+    </IconFrame>
+  );
+}
+
+export function CalendarIcon({ color, size = 20 }: IconProps) {
+  return (
+    <IconFrame size={size}>
+      <Path
+        d="M4 5h16a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z"
+        stroke={color}
+        {...stroke}
+      />
+      <Line stroke={color} x1={16} x2={16} y1={3} y2={7} {...stroke} />
+      <Line stroke={color} x1={8} x2={8} y1={3} y2={7} {...stroke} />
+      <Line stroke={color} x1={2} x2={22} y1={11} y2={11} {...stroke} />
+    </IconFrame>
+  );
+}
+
+export function SearchIcon({ color, size = 20 }: IconProps) {
+  return (
+    <IconFrame size={size}>
+      <Circle cx={11} cy={11} r={7} stroke={color} {...stroke} />
+      <Line stroke={color} x1={16.2} x2={21} y1={16.2} y2={21} {...stroke} />
+    </IconFrame>
+  );
+}
+
+export function UsersIcon({ color, size = 20 }: IconProps) {
+  return (
+    <IconFrame size={size}>
+      <Path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" stroke={color} {...stroke} />
+      <Circle cx={9} cy={7} r={4} stroke={color} {...stroke} />
+      <Path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" stroke={color} {...stroke} />
+    </IconFrame>
+  );
+}
+
+export function MessageIcon({ color, size = 20 }: IconProps) {
+  return (
+    <IconFrame size={size}>
+      <Path
+        d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z"
+        stroke={color}
+        {...stroke}
+      />
+    </IconFrame>
+  );
+}
+
+export function MailIcon({ color, size = 20 }: IconProps) {
+  return (
+    <IconFrame size={size}>
+      <Path
+        d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"
+        stroke={color}
+        {...stroke}
+      />
+      <Polyline points="22 6 12 13 2 6" stroke={color} {...stroke} />
     </IconFrame>
   );
 }

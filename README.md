@@ -18,7 +18,7 @@ Research is an optional extension, never an automatic cost:
 VOICE → UNDERSTAND → “Add reliable information?” → RESEARCH → SOURCED RESULT
 ```
 
-- Intent detection now recognizes notes, tasks, reminders, messages, questions, statements, and direct research requests. Every response is validated with Zod.
+- Intent detection recognizes notes, tasks, reminders, messages, questions, statements, and direct research requests. Each intent uses its own processing template — for example, detailed context for notes and precise, non-invented next steps for tasks — while every response remains validated with Zod.
 - Voice captures and typed notes use the same AI understanding flow. Handle proposes a category, matches or proposes a project, and suggests people.
 - A confidence gate (`src/features/actions/filing-gate.ts`, thresholds 0.75 / 0.45 as in Kern) decides what happens next. A capture files itself only when the AI is confident **and** it is a plain note, task or reminder that names no unknown person or project. Anything involving a message, a recipient, a question from the AI, or an unresolved match waits in the Inbox. Below the low bar the AI's placement suggestions are dropped entirely. Auto-filed items are marked "filed for you" and can be sent back to the Inbox from the action screen. The per-user switch `profiles.auto_file_captures` (Inbox screen) turns automatic filing off.
 - A user explicitly presses **Research** before the server calls OpenAI web search. The new Edge Function stores sources, findings, and their many-to-many citation links before a result is shown.

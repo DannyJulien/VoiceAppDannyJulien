@@ -1,6 +1,11 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { z } from 'https://esm.sh/zod@4.4.3';
 
+import {
+  captureIntents,
+  captureProcessingInstructions,
+} from '../_shared/capture-processing-prompts.ts';
+
 const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -31,7 +36,7 @@ const actionSchema = {
   properties: {
     intent: {
       type: 'string',
-      enum: ['note', 'task', 'reminder', 'message', 'question', 'statement', 'research_request'],
+      enum: captureIntents,
     },
     title: { type: 'string' },
     summary: { type: 'string' },
@@ -80,15 +85,7 @@ const actionSchema = {
 };
 
 const understoodActionSchema = z.object({
-  intent: z.enum([
-    'note',
-    'task',
-    'reminder',
-    'message',
-    'question',
-    'statement',
-    'research_request',
-  ]),
+  intent: z.enum([...captureIntents]),
   title: z.string().trim().min(1).max(280),
   summary: z.string().trim().max(2_000),
   topic: z.string().trim().min(1).max(280).nullable(),
@@ -339,7 +336,10 @@ Deno.serve(async (request) => {
         model:
           Deno.env.get('OPENAI_ACTION_MODEL') ?? Deno.env.get('OPENAI_MODEL') ?? 'gpt-4.1-mini',
         store: false,
-        instructions: `Turn one voice capture into one useful action or useful context. The user's timezone is ${payload.timezone ?? 'UTC'}. Never invent a critical time or a contact. Use requiresClarification with a question when key details are missing. Set couldBenefitFromResearch only when external facts, a question, an argument, a decision, or meeting preparation would genuinely improve the capture. A normal personal reminder does not need research. For a direct question or research request, use question or research_request intent. Suggest one category only when confident; otherwise use inbox. ${knownProjects} Set suggestedProjectName to an exact matching existing project name when clearly related. When no existing name fits but the capture clearly names a substantial ongoing project, propose a concise new project name. Otherwise use null. Never use a person's name or a generic one-off task as a project.`,
+        instructions: captureProcessingInstructions({
+          knownProjects,
+          timezone: payload.timezone ?? 'UTC',
+        }),
         input: transcript,
         text: {
           format: {

@@ -7,7 +7,6 @@ import { AppButton } from '@/components/app-button';
 import { IconButton } from '@/components/icon-button';
 import {
   CalendarIcon,
-  MailIcon,
   MessageIcon,
   MoreHorizontalIcon,
   PencilIcon,
@@ -26,29 +25,11 @@ import {
   getCaptureTranscript,
   setActionStatus,
   suggestedPeopleFrom,
-  updateAction,
 } from '@/features/actions/action-service';
 import { actionIcsFilename, createActionIcsEvent } from '@/features/actions/action-calendar';
-import {
-  actionTypeLabel,
-  formatActionWhen,
-  normalizedSchedule,
-  statusLabel,
-} from '@/features/actions/action-utils';
+import { actionTypeLabel, formatActionWhen, statusLabel } from '@/features/actions/action-utils';
 import { useAuth } from '@/features/auth/auth-provider';
-import {
-  openEmailComposer,
-  openSmsComposer,
-  openWhatsAppComposer,
-} from '@/features/contacts/contact-delivery';
-import { actionMessage, contactLabel } from '@/features/contacts/contact-utils';
-import {
-  addActionRecipient,
-  getActionRecipients,
-  getContacts,
-} from '@/features/contacts/contact-service';
 import { categories } from '@/features/projects/project-utils';
-import { getResearchSessionsForAction, startResearch } from '@/features/research/research-service';
 import { downloadIcs } from '@/features/share/share';
 import type { ActionCategory } from '@/types/database';
 
@@ -69,25 +50,16 @@ export default function ActionDetailsScreen() {
   const queryClient = useQueryClient();
   const { session } = useAuth();
   const userId = session?.user.id;
-  const [editing, setEditing] = useState(false);
   const [confirmingDeletion, setConfirmingDeletion] = useState(false);
   const [confirmingDismissal, setConfirmingDismissal] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
   const [menuAnchor, setMenuAnchor] = useState<PopoverAnchor | null>(null);
-  const [openPanel, setOpenPanel] = useState<'contact' | 'placement' | 'research' | null>(null);
+  const [openPanel, setOpenPanel] = useState<'placement' | null>(null);
   const moreButtonRef = useRef<View>(null);
-  const [editedTitle, setEditedTitle] = useState<string | null>(null);
-  const [editedSummary, setEditedSummary] = useState<string | null>(null);
-  const [editedScheduledAt, setEditedScheduledAt] = useState<string | null>(null);
-  const [editedMessageDraft, setEditedMessageDraft] = useState<string | null>(null);
   const [calendarError, setCalendarError] = useState<string | null>(null);
-  const [researchTopic, setResearchTopic] = useState('');
   const [reviewCategory, setReviewCategory] = useState<ActionCategory | null>(null);
   const [reviewProjectName, setReviewProjectName] = useState<string | null>(null);
   const [includeSuggestedPeople, setIncludeSuggestedPeople] = useState(true);
-  const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
-  const [validationError, setValidationError] = useState<string | null>(null);
-  const [deliveryError, setDeliveryError] = useState<string | null>(null);
   const actionQuery = useQuery({
     queryKey: ['action', id, userId],
     queryFn: () => getAction(id, userId!),
@@ -98,32 +70,7 @@ export default function ActionDetailsScreen() {
     queryFn: () => getCaptureTranscript(actionQuery.data!.voice_capture_id, userId!),
     enabled: Boolean(actionQuery.data && userId),
   });
-  const researchQuery = useQuery({
-    queryKey: ['research-for-action', id, userId],
-    queryFn: () => getResearchSessionsForAction(id, userId!),
-    enabled: Boolean(id && userId),
-  });
-  const contactsQuery = useQuery({
-    queryKey: ['contacts', userId],
-    queryFn: () => getContacts(userId!),
-    enabled: Boolean(userId),
-  });
-  const recipientsQuery = useQuery({
-    queryKey: ['action-recipients', id, userId],
-    queryFn: () => getActionRecipients(id, userId!),
-    enabled: Boolean(id && userId),
-  });
   const action = actionQuery.data;
-  const title = editedTitle ?? action?.title ?? '';
-  const summary = editedSummary ?? action?.summary ?? '';
-  const scheduledAt = editedScheduledAt ?? action?.scheduled_at ?? '';
-  const messageDraft = editedMessageDraft ?? action?.message_draft ?? '';
-  const selectedContact =
-    contactsQuery.data?.find((contact) => contact.id === selectedContactId) ?? null;
-  const recipient =
-    recipientsQuery.data?.find((contact) => contact.id === selectedContactId) ??
-    recipientsQuery.data?.[0] ??
-    null;
   const isPendingReview = action?.status === 'pending';
   const selectedReviewCategory = reviewCategory ?? action?.suggested_category ?? 'inbox';
   const selectedReviewProjectName = reviewProjectName ?? action?.suggested_project_name ?? '';
@@ -135,27 +82,6 @@ export default function ActionDetailsScreen() {
     queryClient.invalidateQueries({ queryKey: ['action', id, userId] });
   }
 
-  const updateMutation = useMutation({
-    mutationFn: async () => {
-      if (!userId) throw new Error('You need to be signed in.');
-      const scheduled = normalizedSchedule(scheduledAt);
-      if (scheduled === undefined)
-        throw new Error('Use a valid date and time, for example 2026-08-23 16:30.');
-      return updateAction(id, userId, {
-        message_draft: messageDraft.trim() || null,
-        scheduled_at: scheduled,
-        scheduled_timezone: scheduled
-          ? (Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC')
-          : null,
-        summary: summary.trim() || null,
-        title: title.trim(),
-      });
-    },
-    onSuccess: () => {
-      setEditing(false);
-      invalidateActionQueries();
-    },
-  });
   const completeMutation = useMutation({
     mutationFn: () => {
       if (!userId) throw new Error('You need to be signed in.');
@@ -192,32 +118,6 @@ export default function ActionDetailsScreen() {
     onSuccess: () => {
       if (userId) queryClient.invalidateQueries({ queryKey: ['actions', userId] });
       router.replace('/timeline');
-    },
-  });
-  const researchMutation = useMutation({
-    mutationFn: () => {
-      if (!action) throw new Error('This note is not available for research.');
-      return startResearch({
-        actionId: action.id,
-        captureId: action.voice_capture_id,
-        topic: researchTopic.trim() || action.title,
-      });
-    },
-    onSuccess: ({ researchSessionId }) => {
-      if (userId) {
-        queryClient.invalidateQueries({ queryKey: ['research-for-action', id, userId] });
-        queryClient.invalidateQueries({ queryKey: ['research-sessions', userId] });
-      }
-      router.push({ pathname: '/research/[id]', params: { id: researchSessionId } });
-    },
-  });
-  const recipientMutation = useMutation({
-    mutationFn: () => {
-      if (!selectedContactId) throw new Error('Choose a contact first.');
-      return addActionRecipient(id, selectedContactId);
-    },
-    onSuccess: () => {
-      if (userId) queryClient.invalidateQueries({ queryKey: ['action-recipients', id, userId] });
     },
   });
   if (actionQuery.isPending) {
@@ -258,16 +158,15 @@ export default function ActionDetailsScreen() {
     });
   }
 
-  function edit() {
-    if (!action) return;
-    setValidationError(null);
+  function pushSubScreen(screen: 'edit' | 'research' | 'send') {
     closeMenu();
-    setOpenPanel(null);
-    setEditedTitle(action.title);
-    setEditedSummary(action.summary ?? '');
-    setEditedScheduledAt(action.scheduled_at ?? '');
-    setEditedMessageDraft(action.message_draft ?? '');
-    setEditing(true);
+    const pathname =
+      screen === 'edit'
+        ? ('/action/[id]/edit' as const)
+        : screen === 'research'
+          ? ('/action/[id]/research' as const)
+          : ('/action/[id]/send' as const);
+    router.push({ pathname, params: { id } });
   }
 
   function addToOwnCalendar() {
@@ -282,55 +181,20 @@ export default function ActionDetailsScreen() {
     }
   }
 
-  function saveEdit() {
-    if (!title.trim()) {
-      setValidationError('Add a short title before saving.');
-      return;
-    }
-    setValidationError(null);
-    updateMutation.mutate();
-  }
-
-  function prepareDelivery(channel: 'email' | 'sms' | 'whatsapp') {
-    if (!recipient || !action) {
-      setDeliveryError('Choose a contact before preparing a message.');
-      return;
-    }
-
-    setDeliveryError(null);
-    const message = actionMessage(action);
-    const operation =
-      channel === 'email'
-        ? openEmailComposer(recipient, action.title, message)
-        : channel === 'sms'
-          ? openSmsComposer(recipient, message)
-          : openWhatsAppComposer(recipient, message);
-
-    void operation.catch((deliveryFailure: unknown) => {
-      setDeliveryError(
-        deliveryFailure instanceof Error
-          ? deliveryFailure.message
-          : 'Unable to open the selected messaging app.',
-      );
-    });
-  }
-
   const mutationError =
-    updateMutation.error ??
     completeMutation.error ??
     approveMutation.error ??
     dismissMutation.error ??
-    deleteMutation.error ??
-    researchMutation.error ??
-    recipientMutation.error;
+    deleteMutation.error;
 
-  // One line per action; sub-flows with their own inputs open as a panel on the page.
+  // One line per action; anything with its own inputs lives on a dedicated sub-screen so
+  // this screen never mutates in place.
   const menuItems: PopoverMenuItem[] = isPendingReview
     ? [
         {
           key: 'edit',
           label: 'Edit note',
-          onPress: edit,
+          onPress: () => pushSubScreen('edit'),
           renderIcon: (color, size) => <PencilIcon color={color} size={size} />,
         },
         {
@@ -379,7 +243,7 @@ export default function ActionDetailsScreen() {
         {
           key: 'edit',
           label: 'Edit note',
-          onPress: edit,
+          onPress: () => pushSubScreen('edit'),
           renderIcon: (color, size) => <PencilIcon color={color} size={size} />,
         },
         ...(action.scheduled_at
@@ -400,19 +264,13 @@ export default function ActionDetailsScreen() {
         {
           key: 'research',
           label: 'Research this note',
-          onPress: () => {
-            closeMenu();
-            setOpenPanel('research');
-          },
+          onPress: () => pushSubScreen('research'),
           renderIcon: (color, size) => <SearchIcon color={color} size={size} />,
         },
         {
           key: 'contact',
           label: 'Send to a contact',
-          onPress: () => {
-            closeMenu();
-            setOpenPanel('contact');
-          },
+          onPress: () => pushSubScreen('send'),
           renderIcon: (color, size) => <MessageIcon color={color} size={size} />,
         },
         confirmingDeletion
@@ -449,24 +307,22 @@ export default function ActionDetailsScreen() {
         <View style={styles.heroRow}>
           <View style={styles.heroCopy}>
             <Text style={styles.eyebrow}>{actionTypeLabel(action.action_type).toUpperCase()}</Text>
-            <Text style={styles.title}>{editing ? 'Edit action' : action.title}</Text>
+            <Text style={styles.title}>{action.title}</Text>
             <View style={styles.statusPill}>
               <Text style={styles.statusText}>{statusLabel(action.status)}</Text>
             </View>
           </View>
-          {!editing ? (
-            <View collapsable={false} ref={moreButtonRef} style={styles.moreButton}>
-              <IconButton
-                accessibilityLabel="Open note actions"
-                label="More"
-                onPress={openMenu}
-                renderIcon={(color, size) => <MoreHorizontalIcon color={color} size={size} />}
-              />
-            </View>
-          ) : null}
+          <View collapsable={false} ref={moreButtonRef} style={styles.moreButton}>
+            <IconButton
+              accessibilityLabel="Open note actions"
+              label="More"
+              onPress={openMenu}
+              renderIcon={(color, size) => <MoreHorizontalIcon color={color} size={size} />}
+            />
+          </View>
         </View>
 
-        {isPendingReview && !editing ? (
+        {isPendingReview ? (
           <AppButton
             label="Approve to timeline"
             loading={approveMutation.isPending}
@@ -474,7 +330,7 @@ export default function ActionDetailsScreen() {
           />
         ) : null}
 
-        {!editing && canMarkCompleted ? (
+        {canMarkCompleted ? (
           <AppButton
             label="Mark completed"
             loading={completeMutation.isPending}
@@ -483,83 +339,39 @@ export default function ActionDetailsScreen() {
         ) : null}
 
         <View style={styles.summaryCard}>
-          {editing ? (
-            <>
-              <Text style={styles.fieldLabel}>Title</Text>
-              <TextInput
-                accessibilityLabel="Action title"
-                onChangeText={setEditedTitle}
-                style={styles.input}
-                value={title}
-              />
-              <Text style={styles.fieldLabel}>Details</Text>
-              <TextInput
-                accessibilityLabel="Action details"
-                multiline
-                onChangeText={setEditedSummary}
-                style={[styles.input, styles.multilineInput]}
-                value={summary}
-              />
-              <Text style={styles.fieldLabel}>When (optional)</Text>
-              <TextInput
-                accessibilityHint="Example: 2026-08-23 16:30"
-                accessibilityLabel="Schedule"
-                onChangeText={setEditedScheduledAt}
-                placeholder="2026-08-23 16:30"
-                placeholderTextColor={colors.muted}
-                style={styles.input}
-                value={scheduledAt}
-              />
-              {action.action_type === 'message' ? (
-                <>
-                  <Text style={styles.fieldLabel}>Message draft</Text>
-                  <TextInput
-                    accessibilityLabel="Message draft"
-                    multiline
-                    onChangeText={setEditedMessageDraft}
-                    style={[styles.input, styles.multilineInput]}
-                    value={messageDraft}
-                  />
-                </>
-              ) : null}
-            </>
+          <Text style={styles.summaryLabel}>NOTE</Text>
+          {points.length ? (
+            <View style={styles.points}>
+              {points.map((point, index) => (
+                <View key={`${point}-${index}`} style={styles.pointRow}>
+                  <View style={styles.pointDot} />
+                  <Text style={styles.pointText}>{point}</Text>
+                </View>
+              ))}
+            </View>
           ) : (
-            <>
-              <Text style={styles.summaryLabel}>NOTE</Text>
-              {points.length ? (
-                <View style={styles.points}>
-                  {points.map((point, index) => (
-                    <View key={`${point}-${index}`} style={styles.pointRow}>
-                      <View style={styles.pointDot} />
-                      <Text style={styles.pointText}>{point}</Text>
-                    </View>
-                  ))}
-                </View>
-              ) : (
-                <Text style={styles.emptySummary}>
-                  No extra details were captured for this note.
-                </Text>
-              )}
-              <View style={styles.metaGrid}>
-                {action.scheduled_at ? (
-                  <View style={styles.metaTile}>
-                    <Text style={styles.metaLabel}>WHEN</Text>
-                    <Text style={styles.metaValue}>{formatActionWhen(action.scheduled_at)}</Text>
-                  </View>
-                ) : null}
-                <View style={styles.metaTile}>
-                  <Text style={styles.metaLabel}>CAPTURED</Text>
-                  <Text style={styles.metaValue}>{formatActionWhen(action.created_at)}</Text>
-                </View>
-              </View>
-              {action.message_draft ? (
-                <View style={styles.messageBox}>
-                  <Text style={styles.metaLabel}>READY-TO-SEND MESSAGE</Text>
-                  <Text style={styles.messageText}>{action.message_draft}</Text>
-                </View>
-              ) : null}
-            </>
+            <Text style={styles.emptySummary}>
+              No extra details were captured for this note.
+            </Text>
           )}
+          <View style={styles.metaGrid}>
+            {action.scheduled_at ? (
+              <View style={styles.metaTile}>
+                <Text style={styles.metaLabel}>WHEN</Text>
+                <Text style={styles.metaValue}>{formatActionWhen(action.scheduled_at)}</Text>
+              </View>
+            ) : null}
+            <View style={styles.metaTile}>
+              <Text style={styles.metaLabel}>CAPTURED</Text>
+              <Text style={styles.metaValue}>{formatActionWhen(action.created_at)}</Text>
+            </View>
+          </View>
+          {action.message_draft ? (
+            <View style={styles.messageBox}>
+              <Text style={styles.metaLabel}>READY-TO-SEND MESSAGE</Text>
+              <Text style={styles.messageText}>{action.message_draft}</Text>
+            </View>
+          ) : null}
         </View>
 
         {transcriptQuery.data ? (
@@ -569,42 +381,40 @@ export default function ActionDetailsScreen() {
           </View>
         ) : null}
 
-        {isPendingReview && !editing ? (
-          <>
-            <View style={styles.reviewCard}>
-              <Text style={styles.cardTitle}>Ready for review</Text>
-              <Text style={styles.cardCopy}>
-                We will save this note to your timeline with these suggestions. You can fine-tune
-                them from More if needed.
+        {isPendingReview ? (
+          <View style={styles.reviewCard}>
+            <Text style={styles.cardTitle}>Ready for review</Text>
+            <Text style={styles.cardCopy}>
+              We will save this note to your timeline with these suggestions. You can fine-tune
+              them from More if needed.
+            </Text>
+            <View style={styles.suggestionRow}>
+              <Text style={styles.suggestionLabel}>CATEGORY</Text>
+              <Text style={styles.suggestionValue}>
+                {categories.find((item) => item.value === selectedReviewCategory)?.label ??
+                  'Inbox'}
               </Text>
+            </View>
+            {selectedReviewProjectName ? (
               <View style={styles.suggestionRow}>
-                <Text style={styles.suggestionLabel}>CATEGORY</Text>
+                <Text style={styles.suggestionLabel}>PROJECT</Text>
+                <Text style={styles.suggestionValue}>{selectedReviewProjectName}</Text>
+              </View>
+            ) : null}
+            {suggestedPeople.length ? (
+              <View style={styles.suggestionRow}>
+                <Text style={styles.suggestionLabel}>PEOPLE</Text>
                 <Text style={styles.suggestionValue}>
-                  {categories.find((item) => item.value === selectedReviewCategory)?.label ??
-                    'Inbox'}
+                  {includeSuggestedPeople
+                    ? suggestedPeople.map((person) => person.name).join(', ')
+                    : 'Will not be added'}
                 </Text>
               </View>
-              {selectedReviewProjectName ? (
-                <View style={styles.suggestionRow}>
-                  <Text style={styles.suggestionLabel}>PROJECT</Text>
-                  <Text style={styles.suggestionValue}>{selectedReviewProjectName}</Text>
-                </View>
-              ) : null}
-              {suggestedPeople.length ? (
-                <View style={styles.suggestionRow}>
-                  <Text style={styles.suggestionLabel}>PEOPLE</Text>
-                  <Text style={styles.suggestionValue}>
-                    {includeSuggestedPeople
-                      ? suggestedPeople.map((person) => person.name).join(', ')
-                      : 'Will not be added'}
-                  </Text>
-                </View>
-              ) : null}
-            </View>
-          </>
+            ) : null}
+          </View>
         ) : null}
 
-        {openPanel === 'placement' && isPendingReview && !editing ? (
+        {openPanel === 'placement' && isPendingReview ? (
           <View style={styles.panelCard}>
             <View style={styles.panelHeader}>
               <Text style={styles.cardTitle}>Destination</Text>
@@ -658,170 +468,6 @@ export default function ActionDetailsScreen() {
           </View>
         ) : null}
 
-        {openPanel === 'research' && !isPendingReview && !editing ? (
-          <View style={styles.panelCard}>
-            <View style={styles.panelHeader}>
-              <Text style={styles.cardTitle}>Research this note</Text>
-              <Pressable
-                accessibilityLabel="Hide research options"
-                accessibilityRole="button"
-                hitSlop={8}
-                onPress={() => setOpenPanel(null)}
-              >
-                <Text style={styles.panelHide}>Hide</Text>
-              </Pressable>
-            </View>
-            <Text style={styles.cardCopy}>
-              Use this saved note as context; you never need to record it again.
-            </Text>
-            <View style={styles.compactActions}>
-              <IconButton
-                accessibilityLabel="Research this note now"
-                label="Research now"
-                onPress={() => researchMutation.mutate()}
-                renderIcon={(color, size) => <SearchIcon color={color} size={size} />}
-              />
-              <IconButton
-                accessibilityLabel={
-                  researchTopic ? 'Use note title for research' : 'Change research question'
-                }
-                label={researchTopic ? 'Use title' : 'Question'}
-                onPress={() => setResearchTopic(researchTopic ? '' : action.title)}
-                renderIcon={(color, size) => <PencilIcon color={color} size={size} />}
-              />
-            </View>
-            {researchTopic ? (
-              <TextInput
-                accessibilityLabel="Research topic"
-                onChangeText={setResearchTopic}
-                placeholder={action.title}
-                placeholderTextColor={colors.muted}
-                style={styles.input}
-                value={researchTopic}
-              />
-            ) : null}
-            {researchQuery.isPending ? (
-              <Text style={styles.cardCopy}>Checking past research…</Text>
-            ) : null}
-            {researchQuery.data?.map((research) => (
-              <Pressable
-                accessibilityRole="button"
-                key={research.id}
-                onPress={() =>
-                  router.push({ pathname: '/research/[id]', params: { id: research.id } })
-                }
-                style={({ pressed }) => [styles.textAction, pressed && styles.pressed]}
-              >
-                <Text style={styles.textActionLabel}>
-                  {research.status === 'completed'
-                    ? `Open research: ${research.topic}`
-                    : `Research ${research.status}: ${research.topic}`}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        ) : null}
-
-        {openPanel === 'contact' && !isPendingReview && !editing ? (
-          <View style={styles.panelCard}>
-            <View style={styles.panelHeader}>
-              <Text style={styles.cardTitle}>Send to a contact</Text>
-              <Pressable
-                accessibilityLabel="Hide contact options"
-                accessibilityRole="button"
-                hitSlop={8}
-                onPress={() => setOpenPanel(null)}
-              >
-                <Text style={styles.panelHide}>Hide</Text>
-              </Pressable>
-            </View>
-            <Text style={styles.cardCopy}>
-              Pick a person, then continue in their preferred messaging app.
-            </Text>
-            {contactsQuery.data?.length ? (
-              <ScrollView
-                contentContainerStyle={styles.contactChoices}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-              >
-                {contactsQuery.data.map((contact) => {
-                  const selected = selectedContactId === contact.id;
-                  return (
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityState={{ selected }}
-                      key={contact.id}
-                      onPress={() => setSelectedContactId(contact.id)}
-                      style={[styles.contactChoice, selected && styles.selectedContact]}
-                    >
-                      <Text
-                        style={[styles.contactChoiceText, selected && styles.selectedContactText]}
-                      >
-                        {contact.name}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
-            ) : (
-              <Text style={styles.cardCopy}>Add a contact before preparing a message.</Text>
-            )}
-            <View style={styles.compactActions}>
-              <IconButton
-                accessibilityLabel="Manage contacts"
-                label="Manage"
-                onPress={() => router.push('/contacts')}
-                renderIcon={(color, size) => <UsersIcon color={color} size={size} />}
-              />
-              {selectedContact &&
-              !recipientsQuery.data?.some((contact) => contact.id === selectedContact.id) ? (
-                <IconButton
-                  accessibilityLabel={`Use ${selectedContact.name} for this action`}
-                  label={`Use ${selectedContact.name}`}
-                  onPress={() => recipientMutation.mutate()}
-                  renderIcon={(color, size) => <UsersIcon color={color} size={size} />}
-                />
-              ) : null}
-            </View>
-            {recipient ? (
-              <View style={styles.recipientRow}>
-                <Text style={styles.recipient}>{contactLabel(recipient)}</Text>
-                <View style={styles.deliveryShortcuts}>
-                  {recipient.phone ? (
-                    <>
-                      <IconButton
-                        accessibilityLabel={`Open WhatsApp for ${recipient.name}`}
-                        label="WhatsApp"
-                        onPress={() => prepareDelivery('whatsapp')}
-                        renderIcon={(color, size) => <MessageIcon color={color} size={size} />}
-                      />
-                      <IconButton
-                        accessibilityLabel={`Open SMS composer for ${recipient.name}`}
-                        label="SMS"
-                        onPress={() => prepareDelivery('sms')}
-                        renderIcon={(color, size) => <MessageIcon color={color} size={size} />}
-                      />
-                    </>
-                  ) : null}
-                  {recipient.email ? (
-                    <IconButton
-                      accessibilityLabel={`Open email composer for ${recipient.name}`}
-                      label="Email"
-                      onPress={() => prepareDelivery('email')}
-                      renderIcon={(color, size) => <MailIcon color={color} size={size} />}
-                    />
-                  ) : null}
-                </View>
-              </View>
-            ) : null}
-          </View>
-        ) : null}
-
-        {validationError ? (
-          <Text accessibilityRole="alert" style={styles.error}>
-            {validationError}
-          </Text>
-        ) : null}
         {calendarError ? (
           <Text accessibilityRole="alert" style={styles.error}>
             {calendarError}
@@ -833,28 +479,6 @@ export default function ActionDetailsScreen() {
               ? mutationError.message
               : 'Unable to update this action.'}
           </Text>
-        ) : null}
-        {deliveryError ? (
-          <Text accessibilityRole="alert" style={styles.error}>
-            {deliveryError}
-          </Text>
-        ) : null}
-
-        {editing ? (
-          <View style={styles.actions}>
-            <AppButton label="Save changes" loading={updateMutation.isPending} onPress={saveEdit} />
-            <AppButton
-              label="Cancel"
-              onPress={() => {
-                setEditedTitle(null);
-                setEditedSummary(null);
-                setEditedScheduledAt(null);
-                setEditedMessageDraft(null);
-                setEditing(false);
-              }}
-              variant="quiet"
-            />
-          </View>
         ) : null}
       </ScrollView>
       <PopoverMenu
@@ -946,39 +570,8 @@ const createStyles = (colors: AppColors) =>
       justifyContent: 'space-between',
     },
     panelHide: { color: colors.brand, fontSize: 14, fontWeight: '800' },
-    compactActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     cardTitle: { color: colors.ink, fontSize: 18, fontWeight: '800' },
     cardCopy: { color: colors.muted, fontSize: 14, lineHeight: 21 },
-    contactChoices: { gap: 8, paddingRight: 4 },
-    contactChoice: {
-      alignItems: 'center',
-      backgroundColor: colors.canvas,
-      borderColor: colors.border,
-      borderRadius: 999,
-      borderWidth: 1,
-      justifyContent: 'center',
-      minHeight: 42,
-      paddingHorizontal: 13,
-    },
-    contactChoiceText: { color: colors.ink, fontSize: 14, fontWeight: '800' },
-    selectedContact: { backgroundColor: colors.brand, borderColor: colors.brand },
-    selectedContactText: { color: colors.surface },
-    recipient: { color: colors.ink, fontSize: 14, fontWeight: '700', lineHeight: 20 },
-    recipientRow: {
-      backgroundColor: colors.canvas,
-      borderRadius: 14,
-      gap: 10,
-      padding: 12,
-    },
-    deliveryShortcuts: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-    textAction: {
-      backgroundColor: colors.canvas,
-      borderRadius: 12,
-      minHeight: 44,
-      justifyContent: 'center',
-      paddingHorizontal: 13,
-    },
-    textActionLabel: { color: colors.brand, fontSize: 14, fontWeight: '800' },
     suggestionRow: {
       alignItems: 'center',
       backgroundColor: colors.surface,
@@ -1022,8 +615,5 @@ const createStyles = (colors: AppColors) =>
       minHeight: 52,
       paddingHorizontal: 14,
     },
-    multilineInput: { minHeight: 110, paddingTop: 13, textAlignVertical: 'top' },
-    actions: { gap: 10 },
     error: { color: colors.danger, fontSize: 14, lineHeight: 20 },
-    pressed: { opacity: 0.8 },
   });

@@ -27,6 +27,7 @@ function capture(overrides: Partial<UnderstoodAction> = {}): UnderstoodAction {
     clarificationQuestion: null,
     suggestedCategory: 'personal',
     suggestedProjectName: null,
+    checklistItems: [],
     ...overrides,
   };
 }

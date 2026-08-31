@@ -21,9 +21,12 @@ import {
   approvePendingAction,
   deleteAction,
   getAction,
+  getActionChecklistItems,
   getCaptureTranscript,
+  setActionChecklistItemCompleted,
   setActionStatus,
   suggestedPeopleFrom,
+  type ChecklistItem,
 } from '@/features/actions/action-service';
 import { actionIcsFilename, createActionIcsEvent } from '@/features/actions/action-calendar';
 import { actionTypeLabel, formatActionWhen, statusLabel } from '@/features/actions/action-utils';
@@ -64,6 +67,11 @@ export default function ActionDetailsScreen() {
     queryKey: ['capture-transcript', actionQuery.data?.voice_capture_id, userId],
     queryFn: () => getCaptureTranscript(actionQuery.data!.voice_capture_id, userId!),
     enabled: Boolean(actionQuery.data && userId),
+  });
+  const checklistItemsQuery = useQuery({
+    queryKey: ['action-checklist-items', id, userId],
+    queryFn: () => getActionChecklistItems(id, userId!),
+    enabled: Boolean(id && userId),
   });
   const projectsQuery = useQuery({
     queryKey: ['projects', userId],
@@ -116,6 +124,15 @@ export default function ActionDetailsScreen() {
       router.replace(isPendingReview ? '/inbox' : '/timeline');
     },
   });
+  const checklistMutation = useMutation({
+    mutationFn: (item: ChecklistItem) => {
+      if (!userId) throw new Error('You need to be signed in.');
+      return setActionChecklistItemCompleted(item.id, userId, !item.is_completed);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['action-checklist-items', id, userId] });
+    },
+  });
   if (actionQuery.isPending) {
     return (
       <Screen contentStyle={styles.centered}>
@@ -137,6 +154,8 @@ export default function ActionDetailsScreen() {
 
   const points = summaryPoints(action.summary ?? '');
   const suggestedPeople = suggestedPeopleFrom(action.suggested_people);
+  const checklistItems = checklistItemsQuery.data ?? [];
+  const completedChecklistItems = checklistItems.filter((item) => item.is_completed).length;
 
   function closeMenu() {
     setMenuVisible(false);
@@ -177,7 +196,11 @@ export default function ActionDetailsScreen() {
     }
   }
 
-  const mutationError = completeMutation.error ?? approveMutation.error ?? deleteMutation.error;
+  const mutationError =
+    completeMutation.error ??
+    approveMutation.error ??
+    deleteMutation.error ??
+    checklistMutation.error;
 
   // One line per action; anything with its own inputs lives on a dedicated sub-screen so
   // this screen never mutates in place.
@@ -274,7 +297,11 @@ export default function ActionDetailsScreen() {
         />
         <View style={styles.heroRow}>
           <View style={styles.heroCopy}>
-            <Text style={styles.eyebrow}>{actionTypeLabel(action.action_type).toUpperCase()}</Text>
+            <Text style={styles.eyebrow}>
+              {checklistItems.length
+                ? 'CHECKLIST'
+                : actionTypeLabel(action.action_type).toUpperCase()}
+            </Text>
             <Text style={styles.title}>{action.title}</Text>
             <View style={styles.statusPill}>
               <Text style={styles.statusText}>{statusLabel(action.status)}</Text>
@@ -326,8 +353,56 @@ export default function ActionDetailsScreen() {
           />
         ) : null}
 
+        {checklistItems.length ? (
+          <View style={styles.checklistCard}>
+            <View style={styles.checklistHeader}>
+              <View>
+                <Text style={styles.summaryLabel}>YOUR CHECKLIST</Text>
+                <Text style={styles.checklistHint}>Tap an item when it is done.</Text>
+              </View>
+              <Text style={styles.checklistCount}>
+                {completedChecklistItems}/{checklistItems.length}
+              </Text>
+            </View>
+            <View style={styles.checklistItems}>
+              {checklistItems.map((item) => (
+                <Pressable
+                  accessibilityHint="Marks this checklist item as done or not done"
+                  accessibilityLabel={item.title}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{
+                    busy:
+                      checklistMutation.isPending && checklistMutation.variables?.id === item.id,
+                    checked: item.is_completed,
+                  }}
+                  disabled={checklistMutation.isPending}
+                  key={item.id}
+                  onPress={() => checklistMutation.mutate(item)}
+                  style={({ pressed }) => [
+                    styles.checklistItem,
+                    item.is_completed && styles.checklistItemCompleted,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <View style={[styles.checkmark, item.is_completed && styles.checkmarkCompleted]}>
+                    {item.is_completed ? <Text style={styles.checkmarkText}>✓</Text> : null}
+                  </View>
+                  <Text
+                    style={[
+                      styles.checklistItemText,
+                      item.is_completed && styles.checklistItemTextDone,
+                    ]}
+                  >
+                    {item.title}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        ) : null}
+
         <View style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>NOTE</Text>
+          <Text style={styles.summaryLabel}>{checklistItems.length ? 'DETAILS' : 'NOTE'}</Text>
           {points.length ? (
             <View style={styles.points}>
               {points.map((point, index) => (
@@ -483,6 +558,63 @@ const createStyles = (colors: AppColors) =>
     },
     pointText: { color: colors.ink, flex: 1, fontSize: 16, lineHeight: 23 },
     emptySummary: { color: colors.muted, fontSize: 15, lineHeight: 22 },
+    checklistCard: {
+      backgroundColor: colors.accentSoft,
+      borderColor: colors.focus,
+      borderRadius: 24,
+      borderWidth: 1,
+      gap: 16,
+      padding: 18,
+    },
+    checklistHeader: {
+      alignItems: 'flex-start',
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+    },
+    checklistHint: { color: colors.muted, fontSize: 14, lineHeight: 20, marginTop: 4 },
+    checklistCount: {
+      backgroundColor: colors.surface,
+      borderRadius: 99,
+      color: colors.brand,
+      fontSize: 14,
+      fontWeight: '900',
+      overflow: 'hidden',
+      paddingHorizontal: 11,
+      paddingVertical: 6,
+    },
+    checklistItems: { gap: 9 },
+    checklistItem: {
+      alignItems: 'center',
+      backgroundColor: colors.surface,
+      borderColor: colors.border,
+      borderRadius: 15,
+      borderWidth: 1,
+      flexDirection: 'row',
+      gap: 12,
+      minHeight: 54,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+    },
+    checklistItemCompleted: { backgroundColor: colors.canvas },
+    checkmark: {
+      alignItems: 'center',
+      borderColor: colors.muted,
+      borderRadius: 11,
+      borderWidth: 2,
+      height: 22,
+      justifyContent: 'center',
+      width: 22,
+    },
+    checkmarkCompleted: { backgroundColor: colors.brand, borderColor: colors.brand },
+    checkmarkText: { color: colors.surface, fontSize: 14, fontWeight: '900', lineHeight: 17 },
+    checklistItemText: {
+      color: colors.ink,
+      flex: 1,
+      fontSize: 16,
+      fontWeight: '700',
+      lineHeight: 22,
+    },
+    checklistItemTextDone: { color: colors.muted, textDecorationLine: 'line-through' },
     metaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
     metaTile: {
       backgroundColor: colors.canvas,

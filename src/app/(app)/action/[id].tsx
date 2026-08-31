@@ -50,7 +50,6 @@ export default function ActionDetailsScreen() {
   const { session } = useAuth();
   const userId = session?.user.id;
   const [confirmingDeletion, setConfirmingDeletion] = useState(false);
-  const [confirmingDismissal, setConfirmingDismissal] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
   const [menuAnchor, setMenuAnchor] = useState<PopoverAnchor | null>(null);
   const moreButtonRef = useRef<View>(null);
@@ -107,13 +106,6 @@ export default function ActionDetailsScreen() {
       }
     },
   });
-  const dismissMutation = useMutation({
-    mutationFn: () => {
-      if (!userId) throw new Error('You need to be signed in.');
-      return setActionStatus(id, userId, 'cancelled');
-    },
-    onSuccess: invalidateActionQueries,
-  });
   const deleteMutation = useMutation({
     mutationFn: () => {
       if (!userId) throw new Error('You need to be signed in.');
@@ -121,7 +113,7 @@ export default function ActionDetailsScreen() {
     },
     onSuccess: () => {
       if (userId) queryClient.invalidateQueries({ queryKey: ['actions', userId] });
-      router.replace('/timeline');
+      router.replace(isPendingReview ? '/inbox' : '/timeline');
     },
   });
   if (actionQuery.isPending) {
@@ -149,12 +141,10 @@ export default function ActionDetailsScreen() {
   function closeMenu() {
     setMenuVisible(false);
     setConfirmingDeletion(false);
-    setConfirmingDismissal(false);
   }
 
   function openMenu() {
     setConfirmingDeletion(false);
-    setConfirmingDismissal(false);
     // The menu hangs from the More button, so it needs the button's window position.
     moreButtonRef.current?.measureInWindow((x, y, width, height) => {
       setMenuAnchor({ height, width, x, y });
@@ -186,10 +176,7 @@ export default function ActionDetailsScreen() {
   }
 
   const mutationError =
-    completeMutation.error ??
-    approveMutation.error ??
-    dismissMutation.error ??
-    deleteMutation.error;
+    completeMutation.error ?? approveMutation.error ?? deleteMutation.error;
 
   // One line per action; anything with its own inputs lives on a dedicated sub-screen so
   // this screen never mutates in place.
@@ -201,20 +188,20 @@ export default function ActionDetailsScreen() {
           onPress: () => pushSubScreen('edit'),
           renderIcon: (color, size) => <PencilIcon color={color} size={size} />,
         },
-        confirmingDismissal
+        confirmingDeletion
           ? {
               key: 'dismiss',
               label: 'Dismiss permanently',
               hint: 'The note will be discarded, not saved.',
-              loading: dismissMutation.isPending,
-              onPress: () => dismissMutation.mutate(undefined, { onSettled: closeMenu }),
+              loading: deleteMutation.isPending,
+              onPress: () => deleteMutation.mutate(undefined, { onSettled: closeMenu }),
               renderIcon: (color, size) => <TrashIcon color={color} size={size} />,
               tone: 'danger',
             }
           : {
               key: 'dismiss',
               label: 'Dismiss note',
-              onPress: () => setConfirmingDismissal(true),
+              onPress: () => setConfirmingDeletion(true),
               renderIcon: (color, size) => <TrashIcon color={color} size={size} />,
               tone: 'danger',
             },

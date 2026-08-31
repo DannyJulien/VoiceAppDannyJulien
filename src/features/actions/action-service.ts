@@ -271,7 +271,6 @@ export async function getScheduledActions(userId: string) {
     .select()
     .eq('user_id', userId)
     .not('scheduled_at', 'is', null)
-    .neq('status', 'cancelled')
     .order('scheduled_at', { ascending: true });
   if (error) throw error;
   return data;

@@ -12,7 +12,23 @@ This file is the shared project contract for people and coding agents. `AGENTS.m
 
 ## Working agreement
 
-1. Claim or create a focused GitHub issue before starting a change; do not let two people or agents work on the same scope unintentionally. Claiming is mandatory and immediate: the moment work on an issue starts, assign the issue to the person doing (or instructing) the work and add the "in progress" label. Never start implementation on an unclaimed issue.
+1. Claim or create a focused GitHub issue before starting a change; do not let two people or agents work on the same scope unintentionally. Claiming is mandatory and immediate: the moment work on an issue starts, assign the issue to the person doing (or instructing) the work and set its Status to **In progress** on the `voice app` project board. Never start implementation on an unclaimed issue.
+
+   The `voice app` project board (number `3`, owner `DannyJulien`, columns Backlog / In progress / Done) is the single source of truth for status. There is no status label. The board's own workflows already add every new issue as Backlog and move it to Done on close and on merge, so **In progress** is the only transition anyone has to make by hand:
+
+   ```bash
+   # once per machine, in a real terminal (device-code flow):
+   #   gh auth refresh -h github.com -s project
+   # `repo` scope alone fails every board call with INSUFFICIENT_SCOPES.
+   N=73  # the issue number
+   gh issue edit $N --add-assignee @me
+   gh project item-edit \
+     --id "$(gh project item-list 3 --owner DannyJulien --limit 100 --format json -q ".items[] | select(.content.number==$N) | .id")" \
+     --project-id "$(gh project view 3 --owner DannyJulien --format json -q .id)" \
+     --field-id "$(gh project field-list 3 --owner DannyJulien --format json -q '.fields[] | select(.name=="Status") | .id')" \
+     --single-select-option-id "$(gh project field-list 3 --owner DannyJulien --format json -q '.fields[] | select(.name=="Status") | .options[] | select(.name=="In progress") | .id')"
+   ```
+
 2. Work on a dedicated branch, open a pull request, and let a teammate review/merge it. Do not directly push to `main`.
 3. Keep migrations, deployment steps, and product decisions with the code in the same pull request. Announce any migration before it is applied to production.
 4. Complete the acceptance criteria and run the relevant checks: `npm run lint`, `npm run typecheck`, `npm test`, and a web build when UI changes.

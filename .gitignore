@@ -55,3 +55,6 @@ deploy/mac-mini/handled-web.pid
 
 # Supabase CLI link state (per machine)
 supabase/.temp/
+
+# Playwright MCP run artifacts (page snapshots, console logs) - regenerated per run
+.playwright-mcp/

@@ -30,6 +30,25 @@ export const researchFreshnessSchema = z.enum([
   'not_time_sensitive',
 ]);
 export const actionCategorySchema = z.enum(['inbox', 'work', 'personal', 'meeting', 'idea']);
+const checklistItemSchema = z.string().trim().min(1).max(280);
+
+export function normalizeChecklistItems(items: readonly string[]) {
+  const seen = new Set<string>();
+
+  return items.flatMap((item) => {
+    const title = item.trim();
+    const key = title.toLocaleLowerCase();
+    if (!title || seen.has(key)) return [];
+    seen.add(key);
+    return [title];
+  });
+}
+
+export const checklistItemsSchema = z
+  .array(checklistItemSchema)
+  .max(30)
+  .transform((items) => normalizeChecklistItems(items))
+  .default([]);
 
 export const understoodActionSchema = z.object({
   intent: actionIntentSchema,
@@ -53,6 +72,7 @@ export const understoodActionSchema = z.object({
   clarificationQuestion: z.string().trim().max(500).nullable(),
   suggestedCategory: actionCategorySchema.nullable().default(null),
   suggestedProjectName: z.string().trim().min(1).max(80).nullable().default(null),
+  checklistItems: checklistItemsSchema,
 });
 
 export type UnderstoodAction = z.infer<typeof understoodActionSchema>;

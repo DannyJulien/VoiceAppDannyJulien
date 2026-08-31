@@ -44,4 +44,12 @@ describe('capture processing prompts', () => {
     expect(instructions).toContain('messageDraft: write a ready-to-review draft');
     expect(instructions).toContain('Never invent a due date, owner, or priority.');
   });
+
+  it('asks the model to recognise explicit checklists without inventing items', () => {
+    expect(instructions).toContain('checklistItems: return an empty array unless');
+    expect(instructions).toContain(
+      'without checkbox symbols, numbering, invented items, or duplicates',
+    );
+    expect(instructions).toContain('never turn each list item into a separate action');
+  });
 });

@@ -147,6 +147,34 @@ export type Database = {
         };
         Relationships: [];
       };
+      action_checklist_items: {
+        Row: {
+          id: string;
+          action_id: string;
+          user_id: string;
+          position: number;
+          title: string;
+          is_completed: boolean;
+          completed_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          action_id: string;
+          user_id?: string;
+          position: number;
+          title: string;
+          is_completed?: boolean;
+          completed_at?: string | null;
+        };
+        Update: {
+          position?: number;
+          title?: string;
+          is_completed?: boolean;
+          completed_at?: string | null;
+        };
+        Relationships: [];
+      };
       projects: {
         Row: {
           id: string;

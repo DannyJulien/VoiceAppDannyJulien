@@ -1,0 +1,39 @@
+import { describe, expect, it } from '@jest/globals';
+
+import { understoodActionSchema } from '@/features/actions/action-schema';
+
+const baseAction = {
+  clarificationQuestion: null,
+  confidence: 0.93,
+  couldBenefitFromResearch: false,
+  intent: 'note',
+  messageDraft: null,
+  people: [],
+  researchFreshness: 'not_time_sensitive',
+  researchGoal: null,
+  researchReason: null,
+  requiresClarification: false,
+  scheduledAt: null,
+  suggestedCategory: 'personal',
+  suggestedProjectName: null,
+  summary: 'A packing list for the cycling holiday.',
+  title: 'Cycling holiday',
+  topic: 'Cycling holiday',
+};
+
+describe('understood action checklist items', () => {
+  it('keeps a distinct, ordered checklist on a capture', () => {
+    const result = understoodActionSchema.parse({
+      ...baseAction,
+      checklistItems: ['Bicycle', 'Bike tent', 'bicycle', 'Water bottles'],
+    });
+
+    expect(result.checklistItems).toEqual(['Bicycle', 'Bike tent', 'Water bottles']);
+  });
+
+  it('keeps normal captures compatible by defaulting to an empty checklist', () => {
+    const result = understoodActionSchema.parse(baseAction);
+
+    expect(result.checklistItems).toEqual([]);
+  });
+});

@@ -32,6 +32,7 @@ const actionSchema = {
     'clarificationQuestion',
     'suggestedCategory',
     'suggestedProjectName',
+    'checklistItems',
   ],
   properties: {
     intent: {
@@ -81,6 +82,10 @@ const actionSchema = {
       enum: ['inbox', 'work', 'personal', 'meeting', 'idea', null],
     },
     suggestedProjectName: { type: ['string', 'null'] },
+    checklistItems: {
+      type: 'array',
+      items: { type: 'string' },
+    },
   },
 };
 
@@ -115,6 +120,7 @@ const understoodActionSchema = z.object({
   clarificationQuestion: z.string().trim().max(500).nullable(),
   suggestedCategory: z.enum(['inbox', 'work', 'personal', 'meeting', 'idea']).nullable(),
   suggestedProjectName: z.string().trim().min(1).max(80).nullable(),
+  checklistItems: z.array(z.string().trim().min(1).max(280)).max(30),
 });
 
 function json(body: unknown, status = 200) {

@@ -9,6 +9,7 @@ import { normalizedProjectName } from '@/features/projects/project-utils';
 import { getSupabaseClient } from '@/services/supabase/client';
 
 export type SavedAction = Database['public']['Tables']['actions']['Row'];
+export type ChecklistItem = Database['public']['Tables']['action_checklist_items']['Row'];
 export type ActionFilter = 'all' | ActionType;
 
 export type ActionReviewInput = {
@@ -50,6 +51,34 @@ export function suggestedPeopleFrom(value: Json): SuggestedPerson[] {
   });
 }
 
+async function ensureChecklistItems(
+  actionId: string,
+  userId: string,
+  checklistItems: readonly string[],
+) {
+  if (!checklistItems.length) return;
+
+  const client = getSupabaseClient();
+  const { data: existing, error: existingError } = await client
+    .from('action_checklist_items')
+    .select('id')
+    .eq('action_id', actionId)
+    .eq('user_id', userId)
+    .limit(1);
+  if (existingError) throw existingError;
+  if (existing.length) return;
+
+  const { error } = await client.from('action_checklist_items').insert(
+    checklistItems.map((title, position) => ({
+      action_id: actionId,
+      position,
+      title,
+      user_id: userId,
+    })),
+  );
+  if (error) throw error;
+}
+
 export async function saveReviewedAction({
   action,
   captureId,
@@ -80,6 +109,7 @@ export async function saveReviewedAction({
     .single();
 
   if (error) throw error;
+  await ensureChecklistItems(data.id, userId, action.checklistItems);
   return data;
 }
 
@@ -103,7 +133,10 @@ export async function fileUnderstoodAction({
     .eq('user_id', userId)
     .maybeSingle();
   if (existingError) throw existingError;
-  if (existing) return existing;
+  if (existing) {
+    await ensureChecklistItems(existing.id, userId, action.checklistItems);
+    return existing;
+  }
 
   const autoFiled = decision.outcome === 'auto';
   // Below the low bar nothing of the AI's placement is kept: the user gets the
@@ -134,6 +167,7 @@ export async function fileUnderstoodAction({
     .select()
     .single();
   if (error) throw error;
+  await ensureChecklistItems(data.id, userId, action.checklistItems);
 
   if (autoFiled && decision.contactIds.length) {
     const rows = action.people.flatMap((person, index) => {
@@ -284,6 +318,36 @@ export async function getAction(actionId: string, userId: string) {
     .eq('user_id', userId)
     .single();
 
+  if (error) throw error;
+  return data;
+}
+
+export async function getActionChecklistItems(actionId: string, userId: string) {
+  const { data, error } = await getSupabaseClient()
+    .from('action_checklist_items')
+    .select()
+    .eq('action_id', actionId)
+    .eq('user_id', userId)
+    .order('position', { ascending: true });
+  if (error) throw error;
+  return data;
+}
+
+export async function setActionChecklistItemCompleted(
+  itemId: string,
+  userId: string,
+  isCompleted: boolean,
+) {
+  const { data, error } = await getSupabaseClient()
+    .from('action_checklist_items')
+    .update({
+      completed_at: isCompleted ? new Date().toISOString() : null,
+      is_completed: isCompleted,
+    })
+    .eq('id', itemId)
+    .eq('user_id', userId)
+    .select()
+    .single();
   if (error) throw error;
   return data;
 }

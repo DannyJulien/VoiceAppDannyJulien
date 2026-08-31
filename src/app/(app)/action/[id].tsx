@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -16,6 +16,7 @@ import {
   UsersIcon,
 } from '@/components/icons';
 import { useTabBarInset } from '@/components/mobile-navigation';
+import { type PopoverAnchor, PopoverMenu, type PopoverMenuItem } from '@/components/popover-menu';
 import { Screen } from '@/components/screen';
 import { type AppColors, useTheme } from '@/features/theme/theme-provider';
 import {
@@ -71,14 +72,16 @@ export default function ActionDetailsScreen() {
   const [editing, setEditing] = useState(false);
   const [confirmingDeletion, setConfirmingDeletion] = useState(false);
   const [confirmingDismissal, setConfirmingDismissal] = useState(false);
-  const [showMoreActions, setShowMoreActions] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [menuAnchor, setMenuAnchor] = useState<PopoverAnchor | null>(null);
+  const [openPanel, setOpenPanel] = useState<'contact' | 'placement' | 'research' | null>(null);
+  const moreButtonRef = useRef<View>(null);
   const [editedTitle, setEditedTitle] = useState<string | null>(null);
   const [editedSummary, setEditedSummary] = useState<string | null>(null);
   const [editedScheduledAt, setEditedScheduledAt] = useState<string | null>(null);
   const [editedMessageDraft, setEditedMessageDraft] = useState<string | null>(null);
   const [calendarError, setCalendarError] = useState<string | null>(null);
   const [researchTopic, setResearchTopic] = useState('');
-  const [editingPlacement, setEditingPlacement] = useState(false);
   const [reviewCategory, setReviewCategory] = useState<ActionCategory | null>(null);
   const [reviewProjectName, setReviewProjectName] = useState<string | null>(null);
   const [includeSuggestedPeople, setIncludeSuggestedPeople] = useState(true);
@@ -239,12 +242,27 @@ export default function ActionDetailsScreen() {
   const points = summaryPoints(action.summary ?? '');
   const suggestedPeople = suggestedPeopleFrom(action.suggested_people);
 
+  function closeMenu() {
+    setMenuVisible(false);
+    setConfirmingDeletion(false);
+    setConfirmingDismissal(false);
+  }
+
+  function openMenu() {
+    setConfirmingDeletion(false);
+    setConfirmingDismissal(false);
+    // The menu hangs from the More button, so it needs the button's window position.
+    moreButtonRef.current?.measureInWindow((x, y, width, height) => {
+      setMenuAnchor({ height, width, x, y });
+      setMenuVisible(true);
+    });
+  }
+
   function edit() {
     if (!action) return;
     setValidationError(null);
-    setConfirmingDeletion(false);
-    setConfirmingDismissal(false);
-    setShowMoreActions(false);
+    closeMenu();
+    setOpenPanel(null);
     setEditedTitle(action.title);
     setEditedSummary(action.summary ?? '');
     setEditedScheduledAt(action.scheduled_at ?? '');
@@ -306,6 +324,116 @@ export default function ActionDetailsScreen() {
     researchMutation.error ??
     recipientMutation.error;
 
+  // One line per action; sub-flows with their own inputs open as a panel on the page.
+  const menuItems: PopoverMenuItem[] = isPendingReview
+    ? [
+        {
+          key: 'edit',
+          label: 'Edit note',
+          onPress: edit,
+          renderIcon: (color, size) => <PencilIcon color={color} size={size} />,
+        },
+        {
+          key: 'destination',
+          label: 'Change destination',
+          onPress: () => {
+            closeMenu();
+            setOpenPanel('placement');
+          },
+          renderIcon: (color, size) => <CalendarIcon color={color} size={size} />,
+        },
+        ...(suggestedPeople.length
+          ? [
+              {
+                key: 'people',
+                label: includeSuggestedPeople ? 'Do not add people' : 'Add suggested people',
+                onPress: () => {
+                  setIncludeSuggestedPeople((current) => !current);
+                  closeMenu();
+                },
+                renderIcon: (color: string, size: number) => (
+                  <UsersIcon color={color} size={size} />
+                ),
+              },
+            ]
+          : []),
+        confirmingDismissal
+          ? {
+              key: 'dismiss',
+              label: 'Dismiss permanently',
+              hint: 'The note will be discarded, not saved.',
+              loading: dismissMutation.isPending,
+              onPress: () => dismissMutation.mutate(undefined, { onSettled: closeMenu }),
+              renderIcon: (color, size) => <TrashIcon color={color} size={size} />,
+              tone: 'danger',
+            }
+          : {
+              key: 'dismiss',
+              label: 'Dismiss note',
+              onPress: () => setConfirmingDismissal(true),
+              renderIcon: (color, size) => <TrashIcon color={color} size={size} />,
+              tone: 'danger',
+            },
+      ]
+    : [
+        {
+          key: 'edit',
+          label: 'Edit note',
+          onPress: edit,
+          renderIcon: (color, size) => <PencilIcon color={color} size={size} />,
+        },
+        ...(action.scheduled_at
+          ? [
+              {
+                key: 'calendar',
+                label: 'Add to my calendar',
+                onPress: () => {
+                  closeMenu();
+                  addToOwnCalendar();
+                },
+                renderIcon: (color: string, size: number) => (
+                  <CalendarIcon color={color} size={size} />
+                ),
+              },
+            ]
+          : []),
+        {
+          key: 'research',
+          label: 'Research this note',
+          onPress: () => {
+            closeMenu();
+            setOpenPanel('research');
+          },
+          renderIcon: (color, size) => <SearchIcon color={color} size={size} />,
+        },
+        {
+          key: 'contact',
+          label: 'Send to a contact',
+          onPress: () => {
+            closeMenu();
+            setOpenPanel('contact');
+          },
+          renderIcon: (color, size) => <MessageIcon color={color} size={size} />,
+        },
+        confirmingDeletion
+          ? {
+              key: 'delete',
+              label: 'Delete permanently',
+              hint: 'This cannot be undone.',
+              loading: deleteMutation.isPending,
+              onPress: () => deleteMutation.mutate(undefined, { onSettled: closeMenu }),
+              renderIcon: (color, size) => <TrashIcon color={color} size={size} />,
+              tone: 'danger',
+            }
+          : {
+              key: 'delete',
+              label: 'Delete note',
+              onPress: () => setConfirmingDeletion(true),
+              renderIcon: (color, size) => <TrashIcon color={color} size={size} />,
+              tone: 'danger',
+            },
+      ];
+
   return (
     <Screen>
       <ScrollView
@@ -327,17 +455,14 @@ export default function ActionDetailsScreen() {
             </View>
           </View>
           {!editing ? (
-            <IconButton
-              accessibilityLabel={showMoreActions ? 'Hide note actions' : 'Show note actions'}
-              label="More"
-              onPress={() => {
-                setShowMoreActions((visible) => !visible);
-                setConfirmingDeletion(false);
-                setConfirmingDismissal(false);
-              }}
-              renderIcon={(color, size) => <MoreHorizontalIcon color={color} size={size} />}
-              style={styles.moreButton}
-            />
+            <View collapsable={false} ref={moreButtonRef} style={styles.moreButton}>
+              <IconButton
+                accessibilityLabel="Open note actions"
+                label="More"
+                onPress={openMenu}
+                renderIcon={(color, size) => <MoreHorizontalIcon color={color} size={size} />}
+              />
+            </View>
           ) : null}
         </View>
 
@@ -479,318 +604,227 @@ export default function ActionDetailsScreen() {
           </>
         ) : null}
 
-        {showMoreActions && !editing ? (
-          <View style={styles.overflowCard}>
-            {isPendingReview ? (
-              <View style={styles.menuSection}>
-                <Text style={styles.menuHeading}>Review options</Text>
-                <IconButton
-                  accessibilityLabel="Edit note before approval"
-                  label="Edit note"
-                  onPress={edit}
-                  renderIcon={(color, size) => <PencilIcon color={color} size={size} />}
-                />
-                <IconButton
-                  accessibilityLabel="Change suggested destination"
-                  label="Destination"
-                  onPress={() => setEditingPlacement((current) => !current)}
-                  renderIcon={(color, size) => <CalendarIcon color={color} size={size} />}
-                />
-                {suggestedPeople.length ? (
-                  <IconButton
-                    accessibilityLabel={
-                      includeSuggestedPeople
-                        ? 'Do not add suggested people'
-                        : 'Add suggested people'
-                    }
-                    label={includeSuggestedPeople ? 'Include people' : 'Skip people'}
-                    onPress={() => setIncludeSuggestedPeople((current) => !current)}
-                    renderIcon={(color, size) => <UsersIcon color={color} size={size} />}
-                  />
-                ) : null}
-                {editingPlacement ? (
-                  <View style={styles.placementEditor}>
-                    <Text style={styles.fieldLabel}>Category</Text>
-                    <ScrollView
-                      contentContainerStyle={styles.choices}
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                    >
-                      {categories.map((category) => {
-                        const selected = category.value === selectedReviewCategory;
-                        return (
-                          <Pressable
-                            accessibilityRole="button"
-                            accessibilityState={{ selected }}
-                            key={category.value}
-                            onPress={() => setReviewCategory(category.value)}
-                            style={[
-                              styles.choice,
-                              selected && {
-                                backgroundColor: category.color,
-                                borderColor: category.color,
-                              },
-                            ]}
-                          >
-                            <Text
-                              style={[styles.choiceText, selected && styles.choiceTextSelected]}
-                            >
-                              {category.label}
-                            </Text>
-                          </Pressable>
-                        );
-                      })}
-                    </ScrollView>
-                    <Text style={styles.fieldLabel}>Project (optional)</Text>
-                    <TextInput
-                      accessibilityLabel="Suggested project"
-                      onChangeText={setReviewProjectName}
-                      placeholder="No project"
-                      placeholderTextColor={colors.muted}
-                      style={styles.input}
-                      value={selectedReviewProjectName}
-                    />
-                  </View>
-                ) : null}
-                <View style={styles.dangerZone}>
-                  <Text style={styles.dangerLabel}>DANGER ZONE</Text>
-                  {confirmingDismissal ? (
-                    <>
-                      <Text style={styles.deleteHint}>Dismiss this note without saving it?</Text>
-                      <View style={styles.confirmRow}>
-                        <AppButton
-                          label="Keep note"
-                          onPress={() => setConfirmingDismissal(false)}
-                          style={styles.confirmButton}
-                          variant="secondary"
-                        />
-                        <AppButton
-                          label="Dismiss"
-                          loading={dismissMutation.isPending}
-                          onPress={() => dismissMutation.mutate()}
-                          style={styles.deleteConfirmButton}
-                        />
-                      </View>
-                    </>
-                  ) : (
-                    <IconButton
-                      accessibilityLabel="Dismiss this note"
-                      label="Dismiss note"
-                      onPress={() => setConfirmingDismissal(true)}
-                      renderIcon={(color, size) => <TrashIcon color={color} size={size} />}
-                      tone="danger"
-                    />
-                  )}
-                </View>
-              </View>
-            ) : (
-              <>
-                <View style={styles.menuSection}>
-                  <Text style={styles.menuHeading}>Note actions</Text>
-                  <View style={styles.compactActions}>
-                    <IconButton
-                      accessibilityLabel="Edit note"
-                      label="Edit"
-                      onPress={edit}
-                      renderIcon={(color, size) => <PencilIcon color={color} size={size} />}
-                    />
-                    {action.scheduled_at ? (
-                      <IconButton
-                        accessibilityHint="Downloads an .ics file you can open in your own calendar app."
-                        accessibilityLabel="Add note to my calendar"
-                        label="Calendar"
-                        onPress={addToOwnCalendar}
-                        renderIcon={(color, size) => <CalendarIcon color={color} size={size} />}
-                      />
-                    ) : null}
-                  </View>
-                  {calendarError ? (
-                    <Text accessibilityRole="alert" style={styles.error}>
-                      {calendarError}
+        {openPanel === 'placement' && isPendingReview && !editing ? (
+          <View style={styles.panelCard}>
+            <View style={styles.panelHeader}>
+              <Text style={styles.cardTitle}>Destination</Text>
+              <Pressable
+                accessibilityLabel="Hide destination options"
+                accessibilityRole="button"
+                hitSlop={8}
+                onPress={() => setOpenPanel(null)}
+              >
+                <Text style={styles.panelHide}>Hide</Text>
+              </Pressable>
+            </View>
+            <Text style={styles.fieldLabel}>Category</Text>
+            <ScrollView
+              contentContainerStyle={styles.choices}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+            >
+              {categories.map((category) => {
+                const selected = category.value === selectedReviewCategory;
+                return (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityState={{ selected }}
+                    key={category.value}
+                    onPress={() => setReviewCategory(category.value)}
+                    style={[
+                      styles.choice,
+                      selected && {
+                        backgroundColor: category.color,
+                        borderColor: category.color,
+                      },
+                    ]}
+                  >
+                    <Text style={[styles.choiceText, selected && styles.choiceTextSelected]}>
+                      {category.label}
                     </Text>
-                  ) : null}
-                </View>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+            <Text style={styles.fieldLabel}>Project (optional)</Text>
+            <TextInput
+              accessibilityLabel="Suggested project"
+              onChangeText={setReviewProjectName}
+              placeholder="No project"
+              placeholderTextColor={colors.muted}
+              style={styles.input}
+              value={selectedReviewProjectName}
+            />
+          </View>
+        ) : null}
 
-                <View style={styles.menuSection}>
-                  <Text style={styles.menuHeading}>Research</Text>
-                  <Text style={styles.cardCopy}>
-                    Use this saved note as context; you never need to record it again.
-                  </Text>
-                  <View style={styles.compactActions}>
-                    <IconButton
-                      accessibilityLabel="Research this note now"
-                      label="Research now"
-                      onPress={() => researchMutation.mutate()}
-                      renderIcon={(color, size) => <SearchIcon color={color} size={size} />}
-                    />
-                    <IconButton
-                      accessibilityLabel={
-                        researchTopic ? 'Use note title for research' : 'Change research question'
-                      }
-                      label={researchTopic ? 'Use title' : 'Question'}
-                      onPress={() => setResearchTopic(researchTopic ? '' : action.title)}
-                      renderIcon={(color, size) => <PencilIcon color={color} size={size} />}
-                    />
-                  </View>
-                  {researchTopic ? (
-                    <TextInput
-                      accessibilityLabel="Research topic"
-                      onChangeText={setResearchTopic}
-                      placeholder={action.title}
-                      placeholderTextColor={colors.muted}
-                      style={styles.input}
-                      value={researchTopic}
-                    />
-                  ) : null}
-                  {researchQuery.isPending ? (
-                    <Text style={styles.cardCopy}>Checking past research…</Text>
-                  ) : null}
-                  {researchQuery.data?.map((research) => (
+        {openPanel === 'research' && !isPendingReview && !editing ? (
+          <View style={styles.panelCard}>
+            <View style={styles.panelHeader}>
+              <Text style={styles.cardTitle}>Research this note</Text>
+              <Pressable
+                accessibilityLabel="Hide research options"
+                accessibilityRole="button"
+                hitSlop={8}
+                onPress={() => setOpenPanel(null)}
+              >
+                <Text style={styles.panelHide}>Hide</Text>
+              </Pressable>
+            </View>
+            <Text style={styles.cardCopy}>
+              Use this saved note as context; you never need to record it again.
+            </Text>
+            <View style={styles.compactActions}>
+              <IconButton
+                accessibilityLabel="Research this note now"
+                label="Research now"
+                onPress={() => researchMutation.mutate()}
+                renderIcon={(color, size) => <SearchIcon color={color} size={size} />}
+              />
+              <IconButton
+                accessibilityLabel={
+                  researchTopic ? 'Use note title for research' : 'Change research question'
+                }
+                label={researchTopic ? 'Use title' : 'Question'}
+                onPress={() => setResearchTopic(researchTopic ? '' : action.title)}
+                renderIcon={(color, size) => <PencilIcon color={color} size={size} />}
+              />
+            </View>
+            {researchTopic ? (
+              <TextInput
+                accessibilityLabel="Research topic"
+                onChangeText={setResearchTopic}
+                placeholder={action.title}
+                placeholderTextColor={colors.muted}
+                style={styles.input}
+                value={researchTopic}
+              />
+            ) : null}
+            {researchQuery.isPending ? (
+              <Text style={styles.cardCopy}>Checking past research…</Text>
+            ) : null}
+            {researchQuery.data?.map((research) => (
+              <Pressable
+                accessibilityRole="button"
+                key={research.id}
+                onPress={() =>
+                  router.push({ pathname: '/research/[id]', params: { id: research.id } })
+                }
+                style={({ pressed }) => [styles.textAction, pressed && styles.pressed]}
+              >
+                <Text style={styles.textActionLabel}>
+                  {research.status === 'completed'
+                    ? `Open research: ${research.topic}`
+                    : `Research ${research.status}: ${research.topic}`}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
+
+        {openPanel === 'contact' && !isPendingReview && !editing ? (
+          <View style={styles.panelCard}>
+            <View style={styles.panelHeader}>
+              <Text style={styles.cardTitle}>Send to a contact</Text>
+              <Pressable
+                accessibilityLabel="Hide contact options"
+                accessibilityRole="button"
+                hitSlop={8}
+                onPress={() => setOpenPanel(null)}
+              >
+                <Text style={styles.panelHide}>Hide</Text>
+              </Pressable>
+            </View>
+            <Text style={styles.cardCopy}>
+              Pick a person, then continue in their preferred messaging app.
+            </Text>
+            {contactsQuery.data?.length ? (
+              <ScrollView
+                contentContainerStyle={styles.contactChoices}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+              >
+                {contactsQuery.data.map((contact) => {
+                  const selected = selectedContactId === contact.id;
+                  return (
                     <Pressable
                       accessibilityRole="button"
-                      key={research.id}
-                      onPress={() =>
-                        router.push({ pathname: '/research/[id]', params: { id: research.id } })
-                      }
-                      style={({ pressed }) => [styles.textAction, pressed && styles.pressed]}
+                      accessibilityState={{ selected }}
+                      key={contact.id}
+                      onPress={() => setSelectedContactId(contact.id)}
+                      style={[styles.contactChoice, selected && styles.selectedContact]}
                     >
-                      <Text style={styles.textActionLabel}>
-                        {research.status === 'completed'
-                          ? `Open research: ${research.topic}`
-                          : `Research ${research.status}: ${research.topic}`}
+                      <Text
+                        style={[styles.contactChoiceText, selected && styles.selectedContactText]}
+                      >
+                        {contact.name}
                       </Text>
                     </Pressable>
-                  ))}
-                </View>
-
-                <View style={styles.menuSection}>
-                  <View style={styles.menuHeadingRow}>
-                    <Text style={styles.menuHeading}>Send to a contact</Text>
-                    <IconButton
-                      accessibilityLabel="Manage contacts"
-                      label="Manage"
-                      onPress={() => router.push('/contacts')}
-                      renderIcon={(color, size) => <UsersIcon color={color} size={size} />}
-                    />
-                  </View>
-                  <Text style={styles.cardCopy}>
-                    Pick a person, then continue in their preferred messaging app.
-                  </Text>
-                  {contactsQuery.data?.length ? (
-                    <ScrollView
-                      contentContainerStyle={styles.contactChoices}
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                    >
-                      {contactsQuery.data.map((contact) => {
-                        const selected = selectedContactId === contact.id;
-                        return (
-                          <Pressable
-                            accessibilityRole="button"
-                            accessibilityState={{ selected }}
-                            key={contact.id}
-                            onPress={() => setSelectedContactId(contact.id)}
-                            style={[styles.contactChoice, selected && styles.selectedContact]}
-                          >
-                            <Text
-                              style={[
-                                styles.contactChoiceText,
-                                selected && styles.selectedContactText,
-                              ]}
-                            >
-                              {contact.name}
-                            </Text>
-                          </Pressable>
-                        );
-                      })}
-                    </ScrollView>
-                  ) : (
-                    <Text style={styles.cardCopy}>Add a contact before preparing a message.</Text>
-                  )}
-                  {selectedContact &&
-                  !recipientsQuery.data?.some((contact) => contact.id === selectedContact.id) ? (
-                    <IconButton
-                      accessibilityLabel={`Use ${selectedContact.name} for this action`}
-                      label={`Use ${selectedContact.name}`}
-                      onPress={() => recipientMutation.mutate()}
-                      renderIcon={(color, size) => <UsersIcon color={color} size={size} />}
-                    />
-                  ) : null}
-                  {recipient ? (
-                    <View style={styles.recipientRow}>
-                      <Text style={styles.recipient}>{contactLabel(recipient)}</Text>
-                      <View style={styles.deliveryShortcuts}>
-                        {recipient.phone ? (
-                          <>
-                            <IconButton
-                              accessibilityLabel={`Open WhatsApp for ${recipient.name}`}
-                              label="WhatsApp"
-                              onPress={() => prepareDelivery('whatsapp')}
-                              renderIcon={(color, size) => (
-                                <MessageIcon color={color} size={size} />
-                              )}
-                            />
-                            <IconButton
-                              accessibilityLabel={`Open SMS composer for ${recipient.name}`}
-                              label="SMS"
-                              onPress={() => prepareDelivery('sms')}
-                              renderIcon={(color, size) => (
-                                <MessageIcon color={color} size={size} />
-                              )}
-                            />
-                          </>
-                        ) : null}
-                        {recipient.email ? (
-                          <IconButton
-                            accessibilityLabel={`Open email composer for ${recipient.name}`}
-                            label="Email"
-                            onPress={() => prepareDelivery('email')}
-                            renderIcon={(color, size) => <MailIcon color={color} size={size} />}
-                          />
-                        ) : null}
-                      </View>
-                    </View>
-                  ) : null}
-                </View>
-
-                <View style={styles.dangerZone}>
-                  <Text style={styles.dangerLabel}>DANGER ZONE</Text>
-                  {confirmingDeletion ? (
-                    <>
-                      <Text style={styles.deleteHint}>This cannot be undone.</Text>
-                      <View style={styles.confirmRow}>
-                        <AppButton
-                          label="Keep note"
-                          onPress={() => setConfirmingDeletion(false)}
-                          style={styles.confirmButton}
-                          variant="secondary"
-                        />
-                        <AppButton
-                          label="Delete permanently"
-                          loading={deleteMutation.isPending}
-                          onPress={() => deleteMutation.mutate()}
-                          style={styles.deleteConfirmButton}
-                        />
-                      </View>
-                    </>
-                  ) : (
-                    <IconButton
-                      accessibilityLabel="Delete this note"
-                      label="Delete note"
-                      onPress={() => setConfirmingDeletion(true)}
-                      renderIcon={(color, size) => <TrashIcon color={color} size={size} />}
-                      tone="danger"
-                    />
-                  )}
-                </View>
-              </>
+                  );
+                })}
+              </ScrollView>
+            ) : (
+              <Text style={styles.cardCopy}>Add a contact before preparing a message.</Text>
             )}
+            <View style={styles.compactActions}>
+              <IconButton
+                accessibilityLabel="Manage contacts"
+                label="Manage"
+                onPress={() => router.push('/contacts')}
+                renderIcon={(color, size) => <UsersIcon color={color} size={size} />}
+              />
+              {selectedContact &&
+              !recipientsQuery.data?.some((contact) => contact.id === selectedContact.id) ? (
+                <IconButton
+                  accessibilityLabel={`Use ${selectedContact.name} for this action`}
+                  label={`Use ${selectedContact.name}`}
+                  onPress={() => recipientMutation.mutate()}
+                  renderIcon={(color, size) => <UsersIcon color={color} size={size} />}
+                />
+              ) : null}
+            </View>
+            {recipient ? (
+              <View style={styles.recipientRow}>
+                <Text style={styles.recipient}>{contactLabel(recipient)}</Text>
+                <View style={styles.deliveryShortcuts}>
+                  {recipient.phone ? (
+                    <>
+                      <IconButton
+                        accessibilityLabel={`Open WhatsApp for ${recipient.name}`}
+                        label="WhatsApp"
+                        onPress={() => prepareDelivery('whatsapp')}
+                        renderIcon={(color, size) => <MessageIcon color={color} size={size} />}
+                      />
+                      <IconButton
+                        accessibilityLabel={`Open SMS composer for ${recipient.name}`}
+                        label="SMS"
+                        onPress={() => prepareDelivery('sms')}
+                        renderIcon={(color, size) => <MessageIcon color={color} size={size} />}
+                      />
+                    </>
+                  ) : null}
+                  {recipient.email ? (
+                    <IconButton
+                      accessibilityLabel={`Open email composer for ${recipient.name}`}
+                      label="Email"
+                      onPress={() => prepareDelivery('email')}
+                      renderIcon={(color, size) => <MailIcon color={color} size={size} />}
+                    />
+                  ) : null}
+                </View>
+              </View>
+            ) : null}
           </View>
         ) : null}
 
         {validationError ? (
           <Text accessibilityRole="alert" style={styles.error}>
             {validationError}
+          </Text>
+        ) : null}
+        {calendarError ? (
+          <Text accessibilityRole="alert" style={styles.error}>
+            {calendarError}
           </Text>
         ) : null}
         {mutationError ? (
@@ -823,6 +857,12 @@ export default function ActionDetailsScreen() {
           </View>
         ) : null}
       </ScrollView>
+      <PopoverMenu
+        anchor={menuAnchor}
+        items={menuItems}
+        onRequestClose={closeMenu}
+        visible={menuVisible}
+      />
     </Screen>
   );
 }
@@ -891,21 +931,21 @@ const createStyles = (colors: AppColors) =>
     messageBox: { backgroundColor: colors.accentSoft, borderRadius: 14, gap: 7, padding: 14 },
     messageText: { color: colors.ink, fontSize: 16, lineHeight: 23 },
     reviewCard: { backgroundColor: colors.brandSoft, borderRadius: 16, gap: 10, padding: 16 },
-    overflowCard: {
+    panelCard: {
       backgroundColor: colors.surface,
       borderColor: colors.border,
       borderRadius: 16,
       borderWidth: 1,
+      gap: 10,
       padding: 16,
     },
-    menuSection: { gap: 10, paddingVertical: 4 },
-    menuHeadingRow: {
+    panelHeader: {
       alignItems: 'center',
       flexDirection: 'row',
       gap: 12,
       justifyContent: 'space-between',
     },
-    menuHeading: { color: colors.ink, fontSize: 16, fontWeight: '900' },
+    panelHide: { color: colors.brand, fontSize: 14, fontWeight: '800' },
     compactActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     cardTitle: { color: colors.ink, fontSize: 18, fontWeight: '800' },
     cardCopy: { color: colors.muted, fontSize: 14, lineHeight: 21 },
@@ -956,7 +996,6 @@ const createStyles = (colors: AppColors) =>
       fontWeight: '800',
       marginLeft: 14,
     },
-    placementEditor: { gap: 8 },
     choices: { gap: 8 },
     choice: {
       alignItems: 'center',
@@ -985,24 +1024,6 @@ const createStyles = (colors: AppColors) =>
     },
     multilineInput: { minHeight: 110, paddingTop: 13, textAlignVertical: 'top' },
     actions: { gap: 10 },
-    dangerZone: {
-      borderColor: colors.danger,
-      borderTopWidth: 1,
-      gap: 10,
-      marginTop: 16,
-      paddingTop: 16,
-    },
-    dangerLabel: { color: colors.danger, fontSize: 11, fontWeight: '900', letterSpacing: 1 },
-    confirmRow: { flexDirection: 'row', gap: 8 },
-    confirmButton: { flex: 1, minHeight: 46, paddingHorizontal: 10 },
-    deleteConfirmButton: {
-      backgroundColor: colors.danger,
-      flex: 1,
-      minHeight: 46,
-      paddingHorizontal: 10,
-    },
     error: { color: colors.danger, fontSize: 14, lineHeight: 20 },
     pressed: { opacity: 0.8 },
-    deleteButton: { backgroundColor: colors.danger },
-    deleteHint: { color: colors.danger, fontSize: 14, textAlign: 'center' },
   });

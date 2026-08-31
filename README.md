@@ -23,6 +23,7 @@ VOICE → UNDERSTAND → “Add reliable information?” → RESEARCH → SOURCE
 - A confidence gate (`src/features/actions/filing-gate.ts`, thresholds 0.75 / 0.45 as in Kern) decides what happens next. A capture files itself only when the AI is confident **and** it is a plain note, task or reminder that names no unknown person or project. Anything involving a message, a recipient, a question from the AI, or an unresolved match waits in the Inbox. Below the low bar the AI's placement suggestions are dropped entirely. Auto-filed items are marked "filed for you" and can be sent back to the Inbox from the action screen. The per-user switch `profiles.auto_file_captures` (Inbox screen) turns automatic filing off.
 - A user explicitly presses **Research** before the server calls OpenAI web search. The new Edge Function stores sources, findings, and their many-to-many citation links before a result is shown.
 - Research results offer a concise answer, findings with source links, talking points, counterpoints, an editable share message, copy/Web Share fallback, a meeting briefing, and universal ICS download.
+- Every project can copy a Claude Code brief in one tap. The default **full** brief is self-contained; **new only** contains unshipped knowledge and ideas plus every unfinished next step. Every exported brief stores its exact Markdown and the entries it contained, while shipped knowledge and ideas leave the active project timeline.
 - Research, sources, findings, and meeting context are owner-scoped by RLS. The mobile/web client only receives the public Supabase URL and publishable key.
 - `npm run build:web` exports a responsive static web build to `dist/`; `npm run serve:web` serves it locally with `/health`.
 
@@ -53,7 +54,7 @@ Do not close an issue merely because work has started or code exists only locall
 The local implementation is complete, but the new database migration and Edge Function must be deployed to the existing Supabase project before users can press **Research**.
 
 1. Immediately revoke the OpenAI key that was previously present in `.env.example`, then create a replacement in OpenAI.
-2. Apply the migrations in `supabase/migrations/` in order. The Supabase CLI is a dev dependency: once per machine run `npx supabase login` (in a real terminal, it opens the browser) and `npx supabase link --project-ref <ref>`, then `npx supabase db push --linked` from `main` applies whatever is missing and `npx supabase migration list --linked` shows local vs. remote state. All migrations up to `20260830090000_confidence_gate.sql` are live as of 2026-08-29.
+2. Apply the migrations in `supabase/migrations/` in order. The Supabase CLI is a dev dependency: once per machine run `npx supabase login` (in a real terminal, it opens the browser) and `npx supabase link --project-ref <ref>`, then `npx supabase db push --linked` from `main` applies whatever is missing and `npx supabase migration list --linked` shows local vs. remote state. Do not assume a local migration is already live. In particular, `20260831200000_project_brief_exports.sql` is required before users can copy project briefs.
 3. Configure these **Supabase Edge Function Secrets** (never Expo public variables):
 
    ```dotenv

@@ -40,6 +40,8 @@ const action: SavedAction = {
   suggested_project_name: null,
   suggested_people: [],
   auto_filed_at: null,
+  exported_at: null,
+  archived_at: null,
   created_at: contact.created_at,
   updated_at: contact.updated_at,
 };

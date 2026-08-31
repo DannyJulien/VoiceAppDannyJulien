@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -12,7 +12,6 @@ import {
   PencilIcon,
   SearchIcon,
   TrashIcon,
-  UsersIcon,
 } from '@/components/icons';
 import { useTabBarInset } from '@/components/mobile-navigation';
 import { type PopoverAnchor, PopoverMenu, type PopoverMenuItem } from '@/components/popover-menu';
@@ -29,9 +28,9 @@ import {
 import { actionIcsFilename, createActionIcsEvent } from '@/features/actions/action-calendar';
 import { actionTypeLabel, formatActionWhen, statusLabel } from '@/features/actions/action-utils';
 import { useAuth } from '@/features/auth/auth-provider';
-import { categories } from '@/features/projects/project-utils';
+import { getProjects } from '@/features/projects/project-service';
+import { categoryDetails } from '@/features/projects/project-utils';
 import { downloadIcs } from '@/features/share/share';
-import type { ActionCategory } from '@/types/database';
 
 function summaryPoints(value: string) {
   return value
@@ -54,11 +53,8 @@ export default function ActionDetailsScreen() {
   const [confirmingDismissal, setConfirmingDismissal] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
   const [menuAnchor, setMenuAnchor] = useState<PopoverAnchor | null>(null);
-  const [openPanel, setOpenPanel] = useState<'placement' | null>(null);
   const moreButtonRef = useRef<View>(null);
   const [calendarError, setCalendarError] = useState<string | null>(null);
-  const [reviewCategory, setReviewCategory] = useState<ActionCategory | null>(null);
-  const [reviewProjectName, setReviewProjectName] = useState<string | null>(null);
   const [includeSuggestedPeople, setIncludeSuggestedPeople] = useState(true);
   const actionQuery = useQuery({
     queryKey: ['action', id, userId],
@@ -70,11 +66,18 @@ export default function ActionDetailsScreen() {
     queryFn: () => getCaptureTranscript(actionQuery.data!.voice_capture_id, userId!),
     enabled: Boolean(actionQuery.data && userId),
   });
+  const projectsQuery = useQuery({
+    queryKey: ['projects', userId],
+    queryFn: () => getProjects(userId!),
+    enabled: Boolean(userId),
+  });
   const action = actionQuery.data;
   const isPendingReview = action?.status === 'pending';
-  const selectedReviewCategory = reviewCategory ?? action?.suggested_category ?? 'inbox';
-  const selectedReviewProjectName = reviewProjectName ?? action?.suggested_project_name ?? '';
   const canMarkCompleted = !isPendingReview && action?.status !== 'completed';
+  const noteProject =
+    projectsQuery.data?.find((project) => project.id === action?.project_id) ?? null;
+  const reviewCategoryValue = action?.suggested_category ?? action?.category ?? 'inbox';
+  const reviewProjectName = action?.suggested_project_name?.trim() || noteProject?.name || '';
 
   function invalidateActionQueries() {
     if (!userId) return;
@@ -93,14 +96,15 @@ export default function ActionDetailsScreen() {
     mutationFn: () => {
       if (!userId || !action) throw new Error('This capture is unavailable.');
       return approvePendingAction(action, userId, {
-        category: selectedReviewCategory,
         people: includeSuggestedPeople ? suggestedPeople : [],
-        projectName: selectedReviewProjectName || null,
       });
     },
     onSuccess: () => {
       invalidateActionQueries();
-      if (userId) queryClient.invalidateQueries({ queryKey: ['contacts', userId] });
+      if (userId) {
+        queryClient.invalidateQueries({ queryKey: ['contacts', userId] });
+        queryClient.invalidateQueries({ queryKey: ['project-actions'] });
+      }
     },
   });
   const dismissMutation = useMutation({
@@ -197,30 +201,6 @@ export default function ActionDetailsScreen() {
           onPress: () => pushSubScreen('edit'),
           renderIcon: (color, size) => <PencilIcon color={color} size={size} />,
         },
-        {
-          key: 'destination',
-          label: 'Change destination',
-          onPress: () => {
-            closeMenu();
-            setOpenPanel('placement');
-          },
-          renderIcon: (color, size) => <CalendarIcon color={color} size={size} />,
-        },
-        ...(suggestedPeople.length
-          ? [
-              {
-                key: 'people',
-                label: includeSuggestedPeople ? 'Do not add people' : 'Add suggested people',
-                onPress: () => {
-                  setIncludeSuggestedPeople((current) => !current);
-                  closeMenu();
-                },
-                renderIcon: (color: string, size: number) => (
-                  <UsersIcon color={color} size={size} />
-                ),
-              },
-            ]
-          : []),
         confirmingDismissal
           ? {
               key: 'dismiss',
@@ -311,6 +291,26 @@ export default function ActionDetailsScreen() {
             <View style={styles.statusPill}>
               <Text style={styles.statusText}>{statusLabel(action.status)}</Text>
             </View>
+            {!isPendingReview ? (
+              <Pressable
+                accessibilityHint="Opens the edit screen to change the category or project."
+                accessibilityLabel="Note destination"
+                accessibilityRole="button"
+                onPress={() => pushSubScreen('edit')}
+                style={({ pressed }) => [styles.destinationRow, pressed && styles.pressed]}
+              >
+                <View
+                  style={[
+                    styles.destinationDot,
+                    { backgroundColor: categoryDetails(action.category).color },
+                  ]}
+                />
+                <Text style={styles.destinationText}>
+                  {categoryDetails(action.category).label}
+                  {noteProject ? ` · ${noteProject.name}` : ' · No project'}
+                </Text>
+              </Pressable>
+            ) : null}
           </View>
           <View collapsable={false} ref={moreButtonRef} style={styles.moreButton}>
             <IconButton
@@ -385,86 +385,42 @@ export default function ActionDetailsScreen() {
           <View style={styles.reviewCard}>
             <Text style={styles.cardTitle}>Ready for review</Text>
             <Text style={styles.cardCopy}>
-              We will save this note to your timeline with these suggestions. You can fine-tune
-              them from More if needed.
+              Approving saves this note to your timeline with these details. Edit the note if
+              something is off.
             </Text>
             <View style={styles.suggestionRow}>
               <Text style={styles.suggestionLabel}>CATEGORY</Text>
               <Text style={styles.suggestionValue}>
-                {categories.find((item) => item.value === selectedReviewCategory)?.label ??
-                  'Inbox'}
+                {categoryDetails(reviewCategoryValue).label}
               </Text>
             </View>
-            {selectedReviewProjectName ? (
+            {reviewProjectName ? (
               <View style={styles.suggestionRow}>
                 <Text style={styles.suggestionLabel}>PROJECT</Text>
-                <Text style={styles.suggestionValue}>{selectedReviewProjectName}</Text>
+                <Text style={styles.suggestionValue}>{reviewProjectName}</Text>
               </View>
             ) : null}
             {suggestedPeople.length ? (
-              <View style={styles.suggestionRow}>
-                <Text style={styles.suggestionLabel}>PEOPLE</Text>
-                <Text style={styles.suggestionValue}>
-                  {includeSuggestedPeople
-                    ? suggestedPeople.map((person) => person.name).join(', ')
-                    : 'Will not be added'}
-                </Text>
-              </View>
-            ) : null}
-          </View>
-        ) : null}
-
-        {openPanel === 'placement' && isPendingReview ? (
-          <View style={styles.panelCard}>
-            <View style={styles.panelHeader}>
-              <Text style={styles.cardTitle}>Destination</Text>
               <Pressable
-                accessibilityLabel="Hide destination options"
+                accessibilityHint="Toggles whether these people are added when you approve."
                 accessibilityRole="button"
-                hitSlop={8}
-                onPress={() => setOpenPanel(null)}
+                accessibilityState={{ selected: includeSuggestedPeople }}
+                onPress={() => setIncludeSuggestedPeople((current) => !current)}
+                style={({ pressed }) => [styles.suggestionRow, pressed && styles.pressed]}
               >
-                <Text style={styles.panelHide}>Hide</Text>
+                <Text style={styles.suggestionLabel}>PEOPLE</Text>
+                <View style={styles.suggestionToggle}>
+                  <Text style={styles.suggestionValue}>
+                    {includeSuggestedPeople
+                      ? suggestedPeople.map((person) => person.name).join(', ')
+                      : 'Will not be added'}
+                  </Text>
+                  <Text style={styles.suggestionToggleHint}>
+                    {includeSuggestedPeople ? 'Tap to exclude' : 'Tap to include'}
+                  </Text>
+                </View>
               </Pressable>
-            </View>
-            <Text style={styles.fieldLabel}>Category</Text>
-            <ScrollView
-              contentContainerStyle={styles.choices}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-            >
-              {categories.map((category) => {
-                const selected = category.value === selectedReviewCategory;
-                return (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityState={{ selected }}
-                    key={category.value}
-                    onPress={() => setReviewCategory(category.value)}
-                    style={[
-                      styles.choice,
-                      selected && {
-                        backgroundColor: category.color,
-                        borderColor: category.color,
-                      },
-                    ]}
-                  >
-                    <Text style={[styles.choiceText, selected && styles.choiceTextSelected]}>
-                      {category.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-            <Text style={styles.fieldLabel}>Project (optional)</Text>
-            <TextInput
-              accessibilityLabel="Suggested project"
-              onChangeText={setReviewProjectName}
-              placeholder="No project"
-              placeholderTextColor={colors.muted}
-              style={styles.input}
-              value={selectedReviewProjectName}
-            />
+            ) : null}
           </View>
         ) : null}
 
@@ -555,21 +511,6 @@ const createStyles = (colors: AppColors) =>
     messageBox: { backgroundColor: colors.accentSoft, borderRadius: 14, gap: 7, padding: 14 },
     messageText: { color: colors.ink, fontSize: 16, lineHeight: 23 },
     reviewCard: { backgroundColor: colors.brandSoft, borderRadius: 16, gap: 10, padding: 16 },
-    panelCard: {
-      backgroundColor: colors.surface,
-      borderColor: colors.border,
-      borderRadius: 16,
-      borderWidth: 1,
-      gap: 10,
-      padding: 16,
-    },
-    panelHeader: {
-      alignItems: 'center',
-      flexDirection: 'row',
-      gap: 12,
-      justifyContent: 'space-between',
-    },
-    panelHide: { color: colors.brand, fontSize: 14, fontWeight: '800' },
     cardTitle: { color: colors.ink, fontSize: 18, fontWeight: '800' },
     cardCopy: { color: colors.muted, fontSize: 14, lineHeight: 21 },
     suggestionRow: {
@@ -589,31 +530,19 @@ const createStyles = (colors: AppColors) =>
       fontWeight: '800',
       marginLeft: 14,
     },
-    choices: { gap: 8 },
-    choice: {
-      alignItems: 'center',
-      backgroundColor: colors.surface,
-      borderColor: colors.border,
-      borderRadius: 99,
-      borderWidth: 1,
-      justifyContent: 'center',
-      minHeight: 40,
-      paddingHorizontal: 14,
-    },
-    choiceText: { color: colors.ink, fontSize: 14, fontWeight: '800' },
-    choiceTextSelected: { color: colors.surface },
     transcript: { backgroundColor: colors.brandSoft, borderRadius: 16, gap: 7, padding: 16 },
     transcriptText: { color: colors.ink, fontSize: 15, lineHeight: 23 },
-    fieldLabel: { color: colors.ink, fontSize: 14, fontWeight: '700', marginTop: 2 },
-    input: {
-      backgroundColor: colors.canvas,
-      borderColor: colors.border,
-      borderRadius: 12,
-      borderWidth: 1,
-      color: colors.ink,
-      fontSize: 16,
-      minHeight: 52,
-      paddingHorizontal: 14,
+    destinationRow: {
+      alignItems: 'center',
+      alignSelf: 'flex-start',
+      flexDirection: 'row',
+      gap: 7,
+      minHeight: 28,
     },
+    destinationDot: { borderRadius: 4, height: 8, width: 8 },
+    destinationText: { color: colors.muted, fontSize: 14, fontWeight: '700' },
+    suggestionToggle: { alignItems: 'flex-end', flexShrink: 1, gap: 2, marginLeft: 14 },
+    suggestionToggleHint: { color: colors.brand, fontSize: 11, fontWeight: '800' },
     error: { color: colors.danger, fontSize: 14, lineHeight: 20 },
+    pressed: { opacity: 0.8 },
   });

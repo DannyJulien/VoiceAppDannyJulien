@@ -70,6 +70,12 @@ export default function ResearchActionScreen() {
     );
   }
 
+  // Opened from a deep link or a PWA refresh there is no history to go back to.
+  function backToNote() {
+    if (router.canGoBack()) router.back();
+    else router.replace({ pathname: '/action/[id]', params: { id } });
+  }
+
   return (
     <Screen>
       <ScrollView
@@ -78,7 +84,7 @@ export default function ResearchActionScreen() {
       >
         <AppButton
           label="‹ Note"
-          onPress={() => router.back()}
+          onPress={backToNote}
           style={styles.back}
           variant="quiet"
         />

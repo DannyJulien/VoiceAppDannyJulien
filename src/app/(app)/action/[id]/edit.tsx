@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -10,6 +10,13 @@ import { type AppColors, useTheme } from '@/features/theme/theme-provider';
 import { getAction, updateAction } from '@/features/actions/action-service';
 import { normalizedSchedule } from '@/features/actions/action-utils';
 import { useAuth } from '@/features/auth/auth-provider';
+import { findOrCreateProject, getProjects } from '@/features/projects/project-service';
+import { categories, normalizedProjectName } from '@/features/projects/project-utils';
+import type { ActionCategory } from '@/types/database';
+
+// Sentinels for the project picker; real choices are project ids (uuids), so no collision.
+const NO_PROJECT = 'none';
+const CREATE_SUGGESTED = 'create-suggested';
 
 export default function EditActionScreen() {
   const colors = useTheme();
@@ -23,16 +30,42 @@ export default function EditActionScreen() {
   const [editedTitle, setEditedTitle] = useState<string | null>(null);
   const [editedSummary, setEditedSummary] = useState<string | null>(null);
   const [editedScheduledAt, setEditedScheduledAt] = useState<string | null>(null);
+  const [editedCategory, setEditedCategory] = useState<ActionCategory | null>(null);
+  const [editedProject, setEditedProject] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
   const actionQuery = useQuery({
     queryKey: ['action', id, userId],
     queryFn: () => getAction(id, userId!),
     enabled: Boolean(id && userId),
   });
+  const projectsQuery = useQuery({
+    queryKey: ['projects', userId],
+    queryFn: () => getProjects(userId!),
+    enabled: Boolean(userId),
+  });
   const action = actionQuery.data;
+  const projects = projectsQuery.data ?? [];
   const title = editedTitle ?? action?.title ?? '';
   const summary = editedSummary ?? action?.summary ?? '';
   const scheduledAt = editedScheduledAt ?? action?.scheduled_at ?? '';
+  const category = editedCategory ?? action?.suggested_category ?? action?.category ?? 'inbox';
+  // The AI's suggested project only matters while it doesn't match an existing project;
+  // then it becomes a one-tap "create" chip instead of a silent find-or-create on approval.
+  const suggestedName = action?.suggested_project_name?.trim() || null;
+  const suggestedMatch = suggestedName
+    ? (projects.find(
+        (project) => normalizedProjectName(project.name) === normalizedProjectName(suggestedName),
+      ) ?? null)
+    : null;
+  const unmatchedSuggestion = suggestedName && !suggestedMatch ? suggestedName : null;
+  const projectChoice =
+    editedProject ?? suggestedMatch?.id ?? action?.project_id ?? NO_PROJECT;
+
+  // Opened from a deep link or a PWA refresh there is no history to go back to.
+  function backToNote() {
+    if (router.canGoBack()) router.back();
+    else router.replace({ pathname: '/action/[id]', params: { id } });
+  }
 
   const updateMutation = useMutation({
     mutationFn: async () => {
@@ -40,11 +73,23 @@ export default function EditActionScreen() {
       const scheduled = normalizedSchedule(scheduledAt);
       if (scheduled === undefined)
         throw new Error('Use a valid date and time, for example 2026-08-23 16:30.');
+      const projectId =
+        projectChoice === CREATE_SUGGESTED
+          ? ((await findOrCreateProject(userId, unmatchedSuggestion!))?.id ?? null)
+          : projectChoice === NO_PROJECT
+            ? null
+            : projectChoice;
+      // Saving settles the destination, so the AI suggestions are spent: approval must
+      // not re-apply them over what the user chose here.
       return updateAction(id, userId, {
+        category,
+        project_id: projectId,
         scheduled_at: scheduled,
         scheduled_timezone: scheduled
           ? (Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC')
           : null,
+        suggested_category: null,
+        suggested_project_name: null,
         summary: summary.trim() || null,
         title: title.trim(),
       });
@@ -53,8 +98,10 @@ export default function EditActionScreen() {
       if (userId) {
         queryClient.invalidateQueries({ queryKey: ['actions', userId] });
         queryClient.invalidateQueries({ queryKey: ['action', id, userId] });
+        queryClient.invalidateQueries({ queryKey: ['projects', userId] });
+        queryClient.invalidateQueries({ queryKey: ['project-actions'] });
       }
-      router.back();
+      backToNote();
     },
   });
 
@@ -94,7 +141,7 @@ export default function EditActionScreen() {
       >
         <AppButton
           label="‹ Note"
-          onPress={() => router.back()}
+          onPress={backToNote}
           style={styles.back}
           variant="quiet"
         />
@@ -127,6 +174,95 @@ export default function EditActionScreen() {
             style={styles.input}
             value={scheduledAt}
           />
+          <Text style={styles.fieldLabel}>Category</Text>
+          <ScrollView
+            contentContainerStyle={styles.choices}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+          >
+            {categories.map((item) => {
+              const selected = item.value === category;
+              return (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                  key={item.value}
+                  onPress={() => setEditedCategory(item.value)}
+                  style={[
+                    styles.choice,
+                    selected && { backgroundColor: item.color, borderColor: item.color },
+                  ]}
+                >
+                  <Text style={[styles.choiceText, selected && styles.choiceTextSelected]}>
+                    {item.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+          <Text style={styles.fieldLabel}>Project</Text>
+          <ScrollView
+            contentContainerStyle={styles.choices}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+          >
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ selected: projectChoice === NO_PROJECT }}
+              onPress={() => setEditedProject(NO_PROJECT)}
+              style={[styles.choice, projectChoice === NO_PROJECT && styles.selectedNeutral]}
+            >
+              <Text
+                style={[
+                  styles.choiceText,
+                  projectChoice === NO_PROJECT && styles.choiceTextSelected,
+                ]}
+              >
+                No project
+              </Text>
+            </Pressable>
+            {projects.map((project) => {
+              const selected = projectChoice === project.id;
+              return (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                  key={project.id}
+                  onPress={() => setEditedProject(project.id)}
+                  style={[
+                    styles.choice,
+                    selected && { backgroundColor: project.color, borderColor: project.color },
+                  ]}
+                >
+                  <Text style={[styles.choiceText, selected && styles.choiceTextSelected]}>
+                    {project.name}
+                  </Text>
+                </Pressable>
+              );
+            })}
+            {unmatchedSuggestion ? (
+              <Pressable
+                accessibilityHint="Creates this project and files the note under it."
+                accessibilityRole="button"
+                accessibilityState={{ selected: projectChoice === CREATE_SUGGESTED }}
+                onPress={() => setEditedProject(CREATE_SUGGESTED)}
+                style={[
+                  styles.choice,
+                  styles.createChoice,
+                  projectChoice === CREATE_SUGGESTED && styles.selectedNeutral,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.createChoiceText,
+                    projectChoice === CREATE_SUGGESTED && styles.choiceTextSelected,
+                  ]}
+                >
+                  {`Create “${unmatchedSuggestion}”`}
+                </Text>
+              </Pressable>
+            ) : null}
+          </ScrollView>
         </View>
 
         {validationError ? (
@@ -144,7 +280,7 @@ export default function EditActionScreen() {
 
         <View style={styles.actions}>
           <AppButton label="Save changes" loading={updateMutation.isPending} onPress={saveEdit} />
-          <AppButton label="Cancel" onPress={() => router.back()} variant="quiet" />
+          <AppButton label="Cancel" onPress={backToNote} variant="quiet" />
         </View>
       </ScrollView>
     </Screen>
@@ -185,6 +321,22 @@ const createStyles = (colors: AppColors) =>
       paddingHorizontal: 14,
     },
     multilineInput: { minHeight: 110, paddingTop: 13, textAlignVertical: 'top' },
+    choices: { gap: 8, paddingRight: 4 },
+    choice: {
+      alignItems: 'center',
+      backgroundColor: colors.canvas,
+      borderColor: colors.border,
+      borderRadius: 99,
+      borderWidth: 1,
+      justifyContent: 'center',
+      minHeight: 40,
+      paddingHorizontal: 14,
+    },
+    choiceText: { color: colors.ink, fontSize: 14, fontWeight: '800' },
+    choiceTextSelected: { color: colors.surface },
+    selectedNeutral: { backgroundColor: colors.brand, borderColor: colors.brand },
+    createChoice: { borderColor: colors.brand, borderStyle: 'dashed' },
+    createChoiceText: { color: colors.brand, fontSize: 14, fontWeight: '800' },
     actions: { gap: 10 },
     error: { color: colors.danger, fontSize: 14, lineHeight: 20 },
   });

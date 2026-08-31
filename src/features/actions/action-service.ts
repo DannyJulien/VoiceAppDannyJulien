@@ -4,7 +4,8 @@ import { actionTypeForIntent, type UnderstoodAction } from '@/features/actions/a
 import { projectIdForFiling, type FilingDecision } from '@/features/actions/filing-gate';
 import { createContact, getContacts } from '@/features/contacts/contact-service';
 import { normalizedContactName } from '@/features/contacts/contact-utils';
-import { findOrCreateProject } from '@/features/projects/project-service';
+import { getProjects } from '@/features/projects/project-service';
+import { normalizedProjectName } from '@/features/projects/project-utils';
 import { getSupabaseClient } from '@/services/supabase/client';
 
 export type SavedAction = Database['public']['Tables']['actions']['Row'];
@@ -157,12 +158,19 @@ export async function approvePendingAction(
   action: SavedAction,
   userId: string,
   {
-    category = action.suggested_category ?? 'inbox',
+    category = action.suggested_category ?? action.category,
     people = suggestedPeopleFrom(action.suggested_people),
     projectName = action.suggested_project_name,
   }: PendingApprovalInput = {},
 ) {
-  const project = projectName?.trim() ? await findOrCreateProject(userId, projectName) : null;
+  // A suggested name only resolves to a project the user already has. Creating one is an
+  // explicit choice on the edit screen, never a side effect of approving.
+  const normalizedName = projectName?.trim() ? normalizedProjectName(projectName) : null;
+  const project = normalizedName
+    ? ((await getProjects(userId)).find(
+        (candidate) => normalizedProjectName(candidate.name) === normalizedName,
+      ) ?? null)
+    : null;
   const contacts = await getContacts(userId);
   for (const person of people) {
     const normalizedName = normalizedContactName(person.name);

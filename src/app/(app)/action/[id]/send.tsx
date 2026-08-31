@@ -100,6 +100,12 @@ export default function SendActionScreen() {
     );
   }
 
+  // Opened from a deep link or a PWA refresh there is no history to go back to.
+  function backToNote() {
+    if (router.canGoBack()) router.back();
+    else router.replace({ pathname: '/action/[id]', params: { id } });
+  }
+
   function prepareDelivery(channel: 'email' | 'sms' | 'whatsapp') {
     if (!recipient || !action) {
       setDeliveryError('Choose a contact before preparing a message.');
@@ -135,7 +141,7 @@ export default function SendActionScreen() {
       >
         <AppButton
           label="‹ Note"
-          onPress={() => router.back()}
+          onPress={backToNote}
           style={styles.back}
           variant="quiet"
         />

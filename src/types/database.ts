@@ -1,6 +1,6 @@
 export type PreferredLanguage = 'en' | 'nl' | 'fr';
 export type ActionType = 'note' | 'task' | 'reminder' | 'message';
-export type ActionStatus = 'pending' | 'approved' | 'completed' | 'cancelled';
+export type ActionStatus = 'pending' | 'approved' | 'completed';
 export type ActionCategory = 'inbox' | 'work' | 'personal' | 'meeting' | 'idea';
 export type ResearchGoal =
   | 'answer_question'

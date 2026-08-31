@@ -23,6 +23,7 @@ export type ResearchSourceType =
   | 'company'
   | 'documentation'
   | 'other';
+export type ProjectBriefMode = 'full' | 'new_only';
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type Database = {
@@ -96,6 +97,8 @@ export type Database = {
           suggested_project_name: string | null;
           suggested_people: Json;
           auto_filed_at: string | null;
+          exported_at: string | null;
+          archived_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -119,6 +122,8 @@ export type Database = {
           suggested_project_name?: string | null;
           suggested_people?: Json;
           auto_filed_at?: string | null;
+          exported_at?: string | null;
+          archived_at?: string | null;
         };
         Update: {
           voice_capture_id?: string | null;
@@ -137,6 +142,8 @@ export type Database = {
           suggested_project_name?: string | null;
           suggested_people?: Json;
           auto_filed_at?: string | null;
+          exported_at?: string | null;
+          archived_at?: string | null;
         };
         Relationships: [];
       };
@@ -162,6 +169,31 @@ export type Database = {
           summary?: string;
           color?: string;
         };
+        Relationships: [];
+      };
+      project_briefs: {
+        Row: {
+          id: string;
+          user_id: string;
+          project_id: string;
+          mode: ProjectBriefMode;
+          content: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id?: string;
+          project_id: string;
+          mode: ProjectBriefMode;
+          content: string;
+        };
+        Update: Record<string, never>;
+        Relationships: [];
+      };
+      project_brief_entries: {
+        Row: { brief_id: string; action_id: string };
+        Insert: { brief_id: string; action_id: string };
+        Update: Record<string, never>;
         Relationships: [];
       };
       people: {
@@ -391,6 +423,7 @@ export type Database = {
       research_freshness: ResearchFreshness;
       research_status: ResearchStatus;
       research_confidence: ResearchConfidence;
+      project_brief_mode: ProjectBriefMode;
     };
     CompositeTypes: Record<string, never>;
   };

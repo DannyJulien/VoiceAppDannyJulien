@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -11,6 +12,10 @@ import { getProjectActions } from '@/features/actions/action-service';
 import { actionTypeLabel } from '@/features/actions/action-utils';
 import { useAuth } from '@/features/auth/auth-provider';
 import { getProject, updateProjectSummary } from '@/features/projects/project-service';
+import {
+  exportProjectBrief,
+  type ProjectBriefMode,
+} from '@/features/projects/project-brief-service';
 import { categoryDetails, maxProjectSummaryLength } from '@/features/projects/project-utils';
 
 export default function ProjectTimelineScreen() {
@@ -24,6 +29,7 @@ export default function ProjectTimelineScreen() {
   const userId = session?.user.id;
   const [editingSummary, setEditingSummary] = useState(false);
   const [summaryDraft, setSummaryDraft] = useState('');
+  const [briefFeedback, setBriefFeedback] = useState<string | null>(null);
   const projectQuery = useQuery({
     queryKey: ['project', id, userId],
     queryFn: () => getProject(id, userId!),
@@ -48,6 +54,25 @@ export default function ProjectTimelineScreen() {
       }
     },
   });
+  const briefMutation = useMutation({
+    mutationFn: async (mode: ProjectBriefMode) => {
+      if (!project || !userId) throw new Error('This project is unavailable.');
+      const brief = await exportProjectBrief({ mode, projectId: project.id, userId });
+      const copied = await Clipboard.setStringAsync(brief.content);
+      if (!copied) throw new Error('Your device could not copy the brief. Please try again.');
+      return brief;
+    },
+    onSuccess: (brief) => {
+      const itemCount = brief.includedActionIds.length;
+      setBriefFeedback(
+        `${brief.mode === 'full' ? 'Full brief' : 'New only update'} copied — ${itemCount} ${itemCount === 1 ? 'entry' : 'entries'} included.`,
+      );
+      if (userId) {
+        queryClient.invalidateQueries({ queryKey: ['project-actions', id, userId] });
+        queryClient.invalidateQueries({ queryKey: ['actions', userId] });
+      }
+    },
+  });
   if (projectQuery.isPending)
     return (
       <Screen contentStyle={styles.center}>
@@ -61,6 +86,10 @@ export default function ProjectTimelineScreen() {
         <AppButton label="Back to projects" onPress={() => router.replace('/projects' as never)} />
       </Screen>
     );
+
+  const actions = actionsQuery.data ?? [];
+  const activeActions = actions.filter((action) => !action.archived_at);
+  const archivedActions = actions.filter((action) => action.archived_at);
 
   return (
     <Screen>
@@ -139,15 +168,48 @@ export default function ProjectTimelineScreen() {
           label="Add a note to this project"
           onPress={() => router.push({ pathname: '/note/new', params: { projectId: project.id } })}
         />
+        <View style={styles.briefCard}>
+          <Text style={styles.briefTitle}>Claude Code brief</Text>
+          <Text style={styles.briefCopy}>
+            Copy a self-contained project brief now, or send only the entries not shared before.
+          </Text>
+          <AppButton
+            accessibilityHint="Copies a complete project brief to your clipboard."
+            label="Copy full brief"
+            loading={briefMutation.isPending && briefMutation.variables === 'full'}
+            onPress={() => {
+              setBriefFeedback(null);
+              briefMutation.mutate('full');
+            }}
+          />
+          <AppButton
+            accessibilityHint="Copies only new knowledge and ideas, plus unfinished next steps."
+            label="Copy new only"
+            loading={briefMutation.isPending && briefMutation.variables === 'new_only'}
+            onPress={() => {
+              setBriefFeedback(null);
+              briefMutation.mutate('new_only');
+            }}
+            variant="secondary"
+          />
+          {briefFeedback ? <Text style={styles.success}>{briefFeedback}</Text> : null}
+          {briefMutation.error ? (
+            <Text accessibilityRole="alert" style={styles.error}>
+              {briefMutation.error instanceof Error
+                ? briefMutation.error.message
+                : 'Unable to create the project brief.'}
+            </Text>
+          ) : null}
+        </View>
         {actionsQuery.isPending ? <Text style={styles.copy}>Loading timeline…</Text> : null}
-        {actionsQuery.data?.length === 0 ? (
+        {activeActions.length === 0 ? (
           <View style={styles.empty}>
             <Text style={styles.emptyTitle}>This timeline is empty</Text>
             <Text style={styles.copy}>Add a voice or typed note and it will appear here.</Text>
           </View>
         ) : null}
         <View style={styles.timeline}>
-          {actionsQuery.data?.map((action) => {
+          {activeActions.map((action) => {
             const category = categoryDetails(action.category);
             return (
               <View key={action.id} style={styles.eventRow}>
@@ -176,6 +238,15 @@ export default function ProjectTimelineScreen() {
             );
           })}
         </View>
+        {archivedActions.length ? (
+          <View style={styles.archivedCard}>
+            <Text style={styles.archivedTitle}>Shipped to Claude Code</Text>
+            <Text style={styles.copy}>
+              {archivedActions.length} {archivedActions.length === 1 ? 'entry has' : 'entries have'}{' '}
+              already been included in a brief. They remain in the full brief history.
+            </Text>
+          </View>
+        ) : null}
       </ScrollView>
     </Screen>
   );
@@ -219,6 +290,17 @@ const createStyles = (colors: AppColors) =>
     summaryActions: { flexDirection: 'row', gap: 8 },
     summaryAction: { flex: 1, minHeight: 46, paddingHorizontal: 10 },
     editSummary: { alignSelf: 'flex-start', minHeight: 42, paddingHorizontal: 14 },
+    briefCard: {
+      backgroundColor: colors.surface,
+      borderColor: colors.border,
+      borderRadius: 20,
+      borderWidth: 1,
+      gap: 11,
+      padding: 16,
+    },
+    briefTitle: { color: colors.ink, fontSize: 19, fontWeight: '900' },
+    briefCopy: { color: colors.muted, fontSize: 14, lineHeight: 21 },
+    success: { color: colors.brand, fontSize: 14, fontWeight: '700', lineHeight: 20 },
     empty: {
       backgroundColor: colors.surface,
       borderColor: colors.border,
@@ -253,5 +335,12 @@ const createStyles = (colors: AppColors) =>
     eventCopy: { color: colors.muted, fontSize: 14, lineHeight: 20 },
     date: { color: colors.muted, fontSize: 12 },
     open: { alignSelf: 'flex-start', minHeight: 32, paddingHorizontal: 0 },
+    archivedCard: {
+      backgroundColor: colors.brandSoft,
+      borderRadius: 18,
+      gap: 7,
+      padding: 16,
+    },
+    archivedTitle: { color: colors.ink, fontSize: 16, fontWeight: '900' },
     error: { color: colors.danger, fontSize: 14, lineHeight: 20 },
   });

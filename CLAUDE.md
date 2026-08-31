@@ -12,7 +12,10 @@ This file is the shared project contract for people and coding agents. `AGENTS.m
 
 ## Working agreement
 
-1. Claim or create a focused GitHub issue before starting a change; do not let two people or agents work on the same scope unintentionally. Claiming is mandatory and immediate: the moment work on an issue starts, assign the issue to the person doing (or instructing) the work and add the "in progress" label. Never start implementation on an unclaimed issue.
+1. Claim or create a focused GitHub issue before starting a change; do not let two people or agents work on the same scope unintentionally. Claiming is mandatory and immediate: the moment work on an issue starts, assign the issue to the person doing (or instructing) the work and set its Status to **In progress** on the `voice app` project board. Never start implementation on an unclaimed issue.
+
+   The board is the single source of truth for status; there is no status label. Adding an issue to the board, moving it to Done on close, and moving it to Done on merge are handled by the board's own workflows, so the only transition a person or agent has to make by hand is **In progress**. See `docs/project-board.md` for the exact commands.
+
 2. Work on a dedicated branch, open a pull request, and let a teammate review/merge it. Do not directly push to `main`.
 3. Keep migrations, deployment steps, and product decisions with the code in the same pull request. Announce any migration before it is applied to production.
 4. Complete the acceptance criteria and run the relevant checks: `npm run lint`, `npm run typecheck`, `npm test`, and a web build when UI changes.

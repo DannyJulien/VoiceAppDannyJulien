@@ -5,6 +5,12 @@ import {
   normalizeChecklistItems,
   type UnderstoodAction,
 } from '@/features/actions/action-schema';
+import {
+  type ApprovedActionFields,
+  approvedActionUpdate,
+  checklistItemsFrom,
+  isChecklistAppendProposal,
+} from '@/features/actions/action-utils';
 import { projectIdForFiling, type FilingDecision } from '@/features/actions/filing-gate';
 import { createContact, getContacts } from '@/features/contacts/contact-service';
 import { normalizedContactName } from '@/features/contacts/contact-utils';
@@ -54,11 +60,6 @@ export function suggestedPeopleFrom(value: Json): SuggestedPerson[] {
       (candidate.role === 'recipient' || candidate.role === 'mentioned')
     );
   });
-}
-
-export function checklistItemsFrom(value: Json): string[] {
-  if (!Array.isArray(value)) return [];
-  return normalizeChecklistItems(value.filter((item): item is string => typeof item === 'string'));
 }
 
 async function ensureChecklistItems(
@@ -389,6 +390,32 @@ export type PendingApprovalInput = {
   projectName?: string | null;
 };
 
+/**
+ * Find-or-create a contact per suggested person and link it to the action. Safe to run
+ * again after a failed approval: existing contacts are reused and the link is an upsert.
+ */
+async function linkSuggestedPeople(actionId: string, userId: string, people: SuggestedPerson[]) {
+  if (!people.length) return;
+  const contacts = await getContacts(userId);
+  for (const person of people) {
+    const normalizedName = normalizedContactName(person.name);
+    let contact = contacts.find(
+      (candidate) => normalizedContactName(candidate.name) === normalizedName,
+    );
+    if (!contact) {
+      contact = await createContact(userId, { name: person.name });
+      contacts.push(contact);
+    }
+    const { error } = await getSupabaseClient()
+      .from('action_people')
+      .upsert(
+        { action_id: actionId, person_id: contact.id, role: person.role },
+        { onConflict: 'action_id,person_id,role', ignoreDuplicates: true },
+      );
+    if (error) throw error;
+  }
+}
+
 export async function approvePendingAction(
   action: SavedAction,
   userId: string,
@@ -398,12 +425,11 @@ export async function approvePendingAction(
     projectName = action.suggested_project_name,
   }: PendingApprovalInput = {},
 ) {
-  const checklistAppendItems = checklistItemsFrom(action.checklist_append_items);
-  if (action.checklist_target_action_id && checklistAppendItems.length) {
+  if (isChecklistAppendProposal(action)) {
     const appendedAction = await appendActionChecklistItems(
-      action.checklist_target_action_id,
+      action.checklist_target_action_id!,
       userId,
-      checklistAppendItems,
+      checklistItemsFrom(action.checklist_append_items),
     );
     const { error } = await getSupabaseClient()
       .from('actions')
@@ -422,33 +448,34 @@ export async function approvePendingAction(
         (candidate) => normalizedProjectName(candidate.name) === normalizedName,
       ) ?? null)
     : null;
-  const contacts = await getContacts(userId);
-  for (const person of people) {
-    const normalizedName = normalizedContactName(person.name);
-    let contact = contacts.find(
-      (candidate) => normalizedContactName(candidate.name) === normalizedName,
-    );
-    if (!contact) {
-      contact = await createContact(userId, { name: person.name });
-      contacts.push(contact);
-    }
-    const { error } = await getSupabaseClient()
-      .from('action_people')
-      .upsert(
-        { action_id: action.id, person_id: contact.id, role: person.role },
-        { onConflict: 'action_id,person_id,role', ignoreDuplicates: true },
-      );
-    if (error) throw error;
+  await linkSuggestedPeople(action.id, userId, people);
+  return updateAction(
+    action.id,
+    userId,
+    approvedActionUpdate({ category, project_id: project?.id ?? action.project_id }),
+  );
+}
+
+export type PendingApprovalEdits = Required<ApprovedActionFields>;
+
+/**
+ * Approve a pending capture with the user's edits applied. The edits and the status change
+ * travel in one row update, so the capture is either still pending with its old values or
+ * on the timeline with the new ones; a failure never leaves it edited-but-unapproved.
+ * Contact links are written first and are idempotent, so a retry is safe.
+ */
+export async function approvePendingActionWithEdits(
+  action: SavedAction,
+  userId: string,
+  edits: PendingApprovalEdits,
+  people: SuggestedPerson[] = suggestedPeopleFrom(action.suggested_people),
+) {
+  if (action.status !== 'pending') throw new Error('This capture is no longer waiting.');
+  if (isChecklistAppendProposal(action)) {
+    throw new Error('Open this capture from the note to approve its checklist additions.');
   }
-  return updateAction(action.id, userId, {
-    auto_filed_at: null,
-    category,
-    project_id: project?.id ?? action.project_id,
-    status: 'approved',
-    suggested_category: null,
-    suggested_project_name: null,
-    suggested_people: [],
-  });
+  await linkSuggestedPeople(action.id, userId, people);
+  return updateAction(action.id, userId, approvedActionUpdate(edits));
 }
 
 export async function createManualNote({

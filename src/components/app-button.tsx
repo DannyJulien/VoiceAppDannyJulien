@@ -8,6 +8,8 @@ type AppButtonProps = {
   loading?: boolean;
   disabled?: boolean;
   variant?: 'primary' | 'secondary' | 'quiet';
+  /** Danger paints a primary button red and a secondary or quiet label red. */
+  tone?: 'neutral' | 'danger';
   style?: ViewStyle;
   accessibilityHint?: string;
 };
@@ -18,6 +20,7 @@ export function AppButton({
   loading = false,
   disabled = false,
   variant = 'primary',
+  tone = 'neutral',
   style,
   accessibilityHint,
 }: AppButtonProps) {
@@ -25,6 +28,7 @@ export function AppButton({
   const styles = createStyles(colors);
   const isDisabled = disabled || loading;
   const isPrimary = variant === 'primary';
+  const isDanger = tone === 'danger';
 
   return (
     <Pressable
@@ -39,15 +43,24 @@ export function AppButton({
         variant === 'primary' && styles.primary,
         variant === 'secondary' && styles.secondary,
         variant === 'quiet' && styles.quiet,
+        isPrimary && isDanger && styles.primaryDanger,
         pressed && !isDisabled && styles.pressed,
         isDisabled && styles.disabled,
         style,
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={isPrimary ? colors.onBrand : colors.brand} />
+        <ActivityIndicator
+          color={isPrimary ? colors.onBrand : isDanger ? colors.danger : colors.brand}
+        />
       ) : (
-        <Text style={[styles.label, isPrimary ? styles.primaryLabel : styles.secondaryLabel]}>
+        <Text
+          style={[
+            styles.label,
+            isPrimary ? styles.primaryLabel : styles.secondaryLabel,
+            !isPrimary && isDanger && styles.dangerLabel,
+          ]}
+        >
           {label}
         </Text>
       )}
@@ -72,9 +85,15 @@ const createStyles = (colors: AppColors) =>
     },
     secondary: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
     quiet: { backgroundColor: 'transparent' },
+    primaryDanger: {
+      backgroundColor: colors.danger,
+      borderColor: colors.danger,
+      boxShadow: `0px 5px 12px ${colors.danger}2E`,
+    },
     pressed: { opacity: 0.86 },
     disabled: { opacity: 0.48 },
     label: { fontSize: 15, fontWeight: '800' },
     primaryLabel: { color: colors.onBrand },
     secondaryLabel: { color: colors.brand },
+    dangerLabel: { color: colors.danger },
   });

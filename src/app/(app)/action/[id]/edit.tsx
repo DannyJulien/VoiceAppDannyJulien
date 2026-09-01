@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { AppButton } from '@/components/app-button';
@@ -9,8 +9,14 @@ import { DateTimeField } from '@/components/date-time-field';
 import { useTabBarInset } from '@/components/mobile-navigation';
 import { Screen } from '@/components/screen';
 import { type AppColors, useTheme } from '@/features/theme/theme-provider';
-import { getAction, updateAction } from '@/features/actions/action-service';
-import { normalizedSchedule } from '@/features/actions/action-utils';
+import {
+  approvePendingActionWithEdits,
+  deleteAction,
+  getAction,
+  suggestedPeopleFrom,
+  updateAction,
+} from '@/features/actions/action-service';
+import { isChecklistAppendProposal, normalizedSchedule } from '@/features/actions/action-utils';
 import { useAuth } from '@/features/auth/auth-provider';
 import { findOrCreateProject, getProjects } from '@/features/projects/project-service';
 import { categories, normalizedProjectName } from '@/features/projects/project-utils';
@@ -34,6 +40,8 @@ export default function EditActionScreen() {
   const [editedScheduledAt, setEditedScheduledAt] = useState<string | null>(null);
   const [editedCategory, setEditedCategory] = useState<ActionCategory | null>(null);
   const [editedProject, setEditedProject] = useState<string | null>(null);
+  const [includeSuggestedPeople, setIncludeSuggestedPeople] = useState(true);
+  const [confirmingDismiss, setConfirmingDismiss] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const actionQuery = useQuery({
     queryKey: ['action', id, userId],
@@ -47,6 +55,13 @@ export default function EditActionScreen() {
   });
   const action = actionQuery.data;
   const projects = projectsQuery.data ?? [];
+  // A capture still waiting in the inbox is approved from here in one press. A checklist
+  // addition is the exception: approving it appends items and drops the capture, so its
+  // edits are saved as before and the note detail keeps the approval.
+  const approvesOnSave = Boolean(
+    action && action.status === 'pending' && !isChecklistAppendProposal(action),
+  );
+  const suggestedPeople = suggestedPeopleFrom(action?.suggested_people ?? []);
   const title = editedTitle ?? action?.title ?? '';
   const summary = editedSummary ?? action?.summary ?? '';
   const scheduledAt = editedScheduledAt ?? action?.scheduled_at ?? '';
@@ -60,50 +75,83 @@ export default function EditActionScreen() {
       ) ?? null)
     : null;
   const unmatchedSuggestion = suggestedName && !suggestedMatch ? suggestedName : null;
-  const projectChoice =
-    editedProject ?? suggestedMatch?.id ?? action?.project_id ?? NO_PROJECT;
+  const projectChoice = editedProject ?? suggestedMatch?.id ?? action?.project_id ?? NO_PROJECT;
 
-  // Opened from a deep link or a PWA refresh there is no history to go back to.
-  function backToNote() {
+  // Back is a real back: wherever this screen was pushed from. Only a deep link or a PWA
+  // refresh has no history; then a waiting capture returns to the inbox, a note to itself.
+  const noteHref: Href = { pathname: '/action/[id]', params: { id } };
+  const fallbackHref: Href = approvesOnSave ? '/inbox' : noteHref;
+  function leave(fallback: Href) {
     if (router.canGoBack()) router.back();
-    else router.replace({ pathname: '/action/[id]', params: { id } });
+    else router.replace(fallback);
   }
 
-  const updateMutation = useMutation({
+  // Everything the form settles, resolved once so saving and approving cannot drift apart.
+  async function editedFields() {
+    if (!userId) throw new Error('You need to be signed in.');
+    const scheduled = normalizedSchedule(scheduledAt);
+    if (scheduled === undefined)
+      throw new Error('Use a valid date and time, for example 2026-08-23 16:30.');
+    const projectId =
+      projectChoice === CREATE_SUGGESTED
+        ? ((await findOrCreateProject(userId, unmatchedSuggestion!))?.id ?? null)
+        : projectChoice === NO_PROJECT
+          ? null
+          : projectChoice;
+    return {
+      category,
+      project_id: projectId,
+      scheduled_at: scheduled,
+      scheduled_timezone: scheduled
+        ? (Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC')
+        : null,
+      summary: summary.trim() || null,
+      title: title.trim(),
+    };
+  }
+
+  const submitMutation = useMutation({
     mutationFn: async () => {
-      if (!userId) throw new Error('You need to be signed in.');
-      const scheduled = normalizedSchedule(scheduledAt);
-      if (scheduled === undefined)
-        throw new Error('Use a valid date and time, for example 2026-08-23 16:30.');
-      const projectId =
-        projectChoice === CREATE_SUGGESTED
-          ? ((await findOrCreateProject(userId, unmatchedSuggestion!))?.id ?? null)
-          : projectChoice === NO_PROJECT
-            ? null
-            : projectChoice;
+      const fields = await editedFields();
+      if (approvesOnSave && action) {
+        await approvePendingActionWithEdits(
+          action,
+          userId!,
+          fields,
+          includeSuggestedPeople ? suggestedPeople : [],
+        );
+        return 'approved' as const;
+      }
       // Saving settles the destination, so the AI suggestions are spent: approval must
       // not re-apply them over what the user chose here.
-      return updateAction(id, userId, {
-        category,
-        project_id: projectId,
-        scheduled_at: scheduled,
-        scheduled_timezone: scheduled
-          ? (Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC')
-          : null,
+      await updateAction(id, userId!, {
+        ...fields,
         suggested_category: null,
         suggested_project_name: null,
-        summary: summary.trim() || null,
-        title: title.trim(),
       });
+      return 'saved' as const;
     },
-    onSuccess: () => {
+    onSuccess: (outcome) => {
       if (userId) {
         queryClient.invalidateQueries({ queryKey: ['actions', userId] });
         queryClient.invalidateQueries({ queryKey: ['action', id, userId] });
         queryClient.invalidateQueries({ queryKey: ['projects', userId] });
         queryClient.invalidateQueries({ queryKey: ['project-actions'] });
+        if (outcome === 'approved') {
+          queryClient.invalidateQueries({ queryKey: ['contacts', userId] });
+        }
       }
-      backToNote();
+      leave(outcome === 'approved' ? '/inbox' : noteHref);
+    },
+  });
+  const dismissMutation = useMutation({
+    mutationFn: () => {
+      if (!userId) throw new Error('You need to be signed in.');
+      return deleteAction(id, userId);
+    },
+    onSuccess: () => {
+      if (userId) queryClient.invalidateQueries({ queryKey: ['actions', userId] });
+      leave('/inbox');
     },
   });
 
@@ -126,14 +174,16 @@ export default function EditActionScreen() {
     );
   }
 
-  function saveEdit() {
+  function submit() {
     if (!title.trim()) {
       setValidationError('Add a short title before saving.');
       return;
     }
     setValidationError(null);
-    updateMutation.mutate();
+    submitMutation.mutate();
   }
+
+  const mutationError = submitMutation.error ?? dismissMutation.error;
 
   return (
     <Screen>
@@ -141,14 +191,20 @@ export default function EditActionScreen() {
         contentContainerStyle={[styles.content, tabBarInset]}
         keyboardShouldPersistTaps="handled"
       >
-        <AppButton
-          label="‹ Note"
-          onPress={backToNote}
+        <BackButton
+          fallbackHref={fallbackHref}
+          fallbackLabel={approvesOnSave ? '‹ Inbox' : '‹ Note'}
           style={styles.back}
           variant="quiet"
         />
-        <Text style={styles.eyebrow}>EDIT NOTE</Text>
+        <Text style={styles.eyebrow}>{approvesOnSave ? 'CHECK AND APPROVE' : 'EDIT NOTE'}</Text>
         <Text style={styles.title}>{action.title}</Text>
+        {approvesOnSave ? (
+          <Text style={styles.copy}>
+            Handle was not sure where this belongs. Correct anything that is off, then approve it to
+            your Timeline.
+          </Text>
+        ) : null}
 
         <View style={styles.card}>
           <Text style={styles.fieldLabel}>Title</Text>
@@ -261,6 +317,27 @@ export default function EditActionScreen() {
               </Pressable>
             ) : null}
           </ScrollView>
+          {approvesOnSave && suggestedPeople.length ? (
+            <>
+              <Text style={styles.fieldLabel}>People</Text>
+              <Pressable
+                accessibilityHint="Toggles whether these people are added when you approve."
+                accessibilityRole="button"
+                accessibilityState={{ selected: includeSuggestedPeople }}
+                onPress={() => setIncludeSuggestedPeople((current) => !current)}
+                style={({ pressed }) => [styles.peopleRow, pressed && styles.pressed]}
+              >
+                <Text style={styles.peopleNames}>
+                  {includeSuggestedPeople
+                    ? suggestedPeople.map((person) => person.name).join(', ')
+                    : 'Will not be added'}
+                </Text>
+                <Text style={styles.peopleHint}>
+                  {includeSuggestedPeople ? 'Tap to exclude' : 'Tap to include'}
+                </Text>
+              </Pressable>
+            </>
+          ) : null}
         </View>
 
         {validationError ? (
@@ -268,18 +345,59 @@ export default function EditActionScreen() {
             {validationError}
           </Text>
         ) : null}
-        {updateMutation.error ? (
+        {mutationError ? (
           <Text accessibilityRole="alert" style={styles.error}>
-            {updateMutation.error instanceof Error
-              ? updateMutation.error.message
-              : 'Unable to update this note.'}
+            {mutationError instanceof Error ? mutationError.message : 'Unable to update this note.'}
           </Text>
         ) : null}
 
-        <View style={styles.actions}>
-          <AppButton label="Save changes" loading={updateMutation.isPending} onPress={saveEdit} />
-          <AppButton label="Cancel" onPress={backToNote} variant="quiet" />
-        </View>
+        {confirmingDismiss ? (
+          <View style={styles.confirmCard}>
+            <Text style={styles.confirmTitle}>Dismiss this capture?</Text>
+            <Text style={styles.confirmCopy}>The note will be discarded, not saved.</Text>
+            <View style={styles.confirmRow}>
+              <AppButton
+                label="Dismiss permanently"
+                loading={dismissMutation.isPending}
+                onPress={() => dismissMutation.mutate()}
+                style={styles.confirmButton}
+                tone="danger"
+              />
+              <AppButton
+                label="Keep"
+                onPress={() => setConfirmingDismiss(false)}
+                style={styles.confirmButton}
+                variant="secondary"
+              />
+            </View>
+          </View>
+        ) : (
+          <View style={styles.actions}>
+            <AppButton
+              label={approvesOnSave ? 'Approve' : 'Save changes'}
+              loading={submitMutation.isPending}
+              onPress={submit}
+            />
+            <View style={styles.secondaryRow}>
+              <AppButton
+                label="Cancel"
+                onPress={() => leave(fallbackHref)}
+                style={styles.secondaryButton}
+                variant="quiet"
+              />
+              {approvesOnSave ? (
+                <AppButton
+                  accessibilityHint="Discards this capture instead of filing it."
+                  label="Dismiss note"
+                  onPress={() => setConfirmingDismiss(true)}
+                  style={styles.secondaryButton}
+                  tone="danger"
+                  variant="quiet"
+                />
+              ) : null}
+            </View>
+          </View>
+        )}
       </ScrollView>
     </Screen>
   );
@@ -335,6 +453,36 @@ const createStyles = (colors: AppColors) =>
     selectedNeutral: { backgroundColor: colors.brand, borderColor: colors.brand },
     createChoice: { borderColor: colors.brand, borderStyle: 'dashed' },
     createChoiceText: { color: colors.brand, fontSize: 14, fontWeight: '800' },
-    actions: { gap: 10 },
+    peopleRow: {
+      alignItems: 'center',
+      backgroundColor: colors.canvas,
+      borderColor: colors.border,
+      borderRadius: 12,
+      borderWidth: 1,
+      flexDirection: 'row',
+      gap: 14,
+      justifyContent: 'space-between',
+      minHeight: 52,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+    },
+    peopleNames: { color: colors.ink, flexShrink: 1, fontSize: 15, fontWeight: '700' },
+    peopleHint: { color: colors.brand, fontSize: 12, fontWeight: '800' },
+    pressed: { opacity: 0.8 },
+    actions: { gap: 4 },
+    secondaryRow: { flexDirection: 'row', gap: 10 },
+    secondaryButton: { flex: 1 },
+    confirmCard: {
+      backgroundColor: colors.dangerSoft,
+      borderColor: colors.danger,
+      borderRadius: 18,
+      borderWidth: 1,
+      gap: 10,
+      padding: 16,
+    },
+    confirmTitle: { color: colors.ink, fontSize: 17, fontWeight: '900' },
+    confirmCopy: { color: colors.muted, fontSize: 14, lineHeight: 20 },
+    confirmRow: { flexDirection: 'row', gap: 10 },
+    confirmButton: { flex: 1 },
     error: { color: colors.danger, fontSize: 14, lineHeight: 20 },
   });

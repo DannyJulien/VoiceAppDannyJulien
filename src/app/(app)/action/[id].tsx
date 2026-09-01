@@ -21,7 +21,6 @@ import { Screen } from '@/components/screen';
 import { type AppColors, useTheme } from '@/features/theme/theme-provider';
 import {
   approvePendingAction,
-  checklistItemsFrom,
   deleteAction,
   getAction,
   getActionChecklistItems,
@@ -32,7 +31,12 @@ import {
   type ChecklistItem,
 } from '@/features/actions/action-service';
 import { actionIcsFilename, createActionIcsEvent } from '@/features/actions/action-calendar';
-import { actionTypeLabel, formatActionWhen, statusLabel } from '@/features/actions/action-utils';
+import {
+  actionTypeLabel,
+  checklistItemsFrom,
+  formatActionWhen,
+  statusLabel,
+} from '@/features/actions/action-utils';
 import { useAuth } from '@/features/auth/auth-provider';
 import { getProjects } from '@/features/projects/project-service';
 import { categoryDetails } from '@/features/projects/project-utils';

@@ -7,7 +7,11 @@ import { useTabBarInset } from '@/components/mobile-navigation';
 import { Screen } from '@/components/screen';
 import { type AppColors, useTheme } from '@/features/theme/theme-provider';
 import { getActions } from '@/features/actions/action-service';
-import { actionTypeLabel, formatActionWhen } from '@/features/actions/action-utils';
+import {
+  actionTypeLabel,
+  formatActionWhen,
+  isChecklistAppendProposal,
+} from '@/features/actions/action-utils';
 import { useAuth } from '@/features/auth/auth-provider';
 
 export default function InboxScreen() {
@@ -70,8 +74,17 @@ export default function InboxScreen() {
               accessibilityLabel={`${actionTypeLabel(action.action_type)}: ${action.title}`}
               accessibilityRole="button"
               key={action.id}
-              accessibilityHint="Opens the capture so you can approve it"
-              onPress={() => router.push({ pathname: '/action/[id]', params: { id: action.id } })}
+              accessibilityHint="Opens the capture so you can check it and approve it"
+              // A capture waits here because Handle was unsure, so it opens ready to correct.
+              // A checklist addition has nothing to edit: it is reviewed on the note itself.
+              onPress={() =>
+                router.push({
+                  pathname: isChecklistAppendProposal(action)
+                    ? '/action/[id]'
+                    : '/action/[id]/edit',
+                  params: { id: action.id },
+                })
+              }
               style={({ pressed }) => [styles.actionCard, pressed && styles.actionCardPressed]}
             >
               <View style={styles.cardTopRow}>

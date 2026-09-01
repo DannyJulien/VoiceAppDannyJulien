@@ -4,6 +4,7 @@ import {
   actionTypeLabel,
   calendarMonthDays,
   localDateKey,
+  localDateTimeInputValue,
   normalizedSchedule,
   statusLabel,
 } from '@/features/actions/action-utils';
@@ -32,5 +33,27 @@ describe('action utilities', () => {
     const days = calendarMonthDays(new Date(2026, 7, 1));
     expect(days).toHaveLength(37);
     expect(localDateKey(days.at(-1)!)).toBe('2026-08-31');
+  });
+});
+
+describe('localDateTimeInputValue', () => {
+  it('renders a stored ISO timestamp as the local datetime-local value', () => {
+    const local = new Date(2026, 8, 4, 9, 5);
+    expect(localDateTimeInputValue(local.toISOString())).toBe('2026-09-04T09:05');
+  });
+
+  it('passes a datetime-local value through unchanged', () => {
+    expect(localDateTimeInputValue('2026-09-04T09:05')).toBe('2026-09-04T09:05');
+  });
+
+  it('shows an empty field for unset or unreadable values', () => {
+    expect(localDateTimeInputValue(null)).toBe('');
+    expect(localDateTimeInputValue('')).toBe('');
+    expect(localDateTimeInputValue('next friday')).toBe('');
+  });
+
+  it('round-trips through normalizedSchedule without changing the instant', () => {
+    const stored = new Date(2026, 8, 4, 9, 5).toISOString();
+    expect(normalizedSchedule(localDateTimeInputValue(stored))).toBe(stored);
   });
 });

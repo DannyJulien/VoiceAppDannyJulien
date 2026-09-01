@@ -5,6 +5,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 
 import { AppButton } from '@/components/app-button';
 import { BackButton } from '@/components/back-button';
+import { DateTimeField } from '@/components/date-time-field';
 import { useTabBarInset } from '@/components/mobile-navigation';
 import { Screen } from '@/components/screen';
 import { type AppColors, useTheme } from '@/features/theme/theme-provider';
@@ -134,13 +135,9 @@ export default function AddToMeetingScreen() {
             value={meetingTitle}
           />
           <Text style={styles.fieldLabel}>Meeting starts</Text>
-          <TextInput
-            accessibilityHint="Example: 2026-08-24 14:00"
+          <DateTimeField
             accessibilityLabel="Meeting start"
-            onChangeText={setMeetingStart}
-            placeholder="2026-08-24 14:00"
-            placeholderTextColor={colors.muted}
-            style={styles.input}
+            onChange={setMeetingStart}
             value={meetingStart}
           />
         </View>

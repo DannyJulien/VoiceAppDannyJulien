@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { AppButton } from '@/components/app-button';
 import { BackButton } from '@/components/back-button';
+import { DateTimeField } from '@/components/date-time-field';
 import { useTabBarInset } from '@/components/mobile-navigation';
 import { Screen } from '@/components/screen';
 import { type AppColors, useTheme } from '@/features/theme/theme-provider';
@@ -166,13 +167,9 @@ export default function EditActionScreen() {
             value={summary}
           />
           <Text style={styles.fieldLabel}>When (optional)</Text>
-          <TextInput
-            accessibilityHint="Example: 2026-08-23 16:30"
+          <DateTimeField
             accessibilityLabel="Schedule"
-            onChangeText={setEditedScheduledAt}
-            placeholder="2026-08-23 16:30"
-            placeholderTextColor={colors.muted}
-            style={styles.input}
+            onChange={setEditedScheduledAt}
             value={scheduledAt}
           />
           <Text style={styles.fieldLabel}>Category</Text>

@@ -2,12 +2,105 @@ import { describe, expect, it } from '@jest/globals';
 
 import {
   actionTypeLabel,
+  approvedActionUpdate,
   calendarMonthDays,
+  checklistItemsFrom,
+  isChecklistAppendProposal,
   localDateKey,
   localDateTimeInputValue,
   normalizedSchedule,
   statusLabel,
 } from '@/features/actions/action-utils';
+
+describe('approving a pending capture', () => {
+  it('moves the row to the timeline and spends every suggestion in the same update', () => {
+    expect(approvedActionUpdate({ category: 'work', project_id: 'project-1' })).toEqual({
+      auto_filed_at: null,
+      category: 'work',
+      project_id: 'project-1',
+      status: 'approved',
+      suggested_category: null,
+      suggested_people: [],
+      suggested_project_name: null,
+    });
+  });
+
+  it('carries the edited fields along, including an explicit no-project and no-date', () => {
+    const update = approvedActionUpdate({
+      category: 'personal',
+      project_id: null,
+      scheduled_at: null,
+      scheduled_timezone: null,
+      summary: null,
+      title: 'Call the dentist',
+    });
+    expect(update).toMatchObject({
+      project_id: null,
+      scheduled_at: null,
+      scheduled_timezone: null,
+      status: 'approved',
+      summary: null,
+      title: 'Call the dentist',
+    });
+  });
+
+  it('never lets an edit resurrect a suggestion or the auto-filed marker', () => {
+    const update = approvedActionUpdate({
+      ...({
+        auto_filed_at: '2026-08-01T10:00:00.000Z',
+        suggested_category: 'work',
+        suggested_project_name: 'Kitchen',
+      } as object),
+      category: 'idea',
+      project_id: null,
+    });
+    expect(update.auto_filed_at).toBeNull();
+    expect(update.suggested_category).toBeNull();
+    expect(update.suggested_project_name).toBeNull();
+  });
+});
+
+describe('checklist append proposals', () => {
+  it('reads only usable strings out of the stored items', () => {
+    expect(checklistItemsFrom(['Milk', ' ', 42, 'Eggs', null])).toEqual(['Milk', 'Eggs']);
+    expect(checklistItemsFrom('Milk')).toEqual([]);
+    expect(checklistItemsFrom(null)).toEqual([]);
+  });
+
+  it('recognizes a pending capture that adds items to an existing checklist', () => {
+    expect(
+      isChecklistAppendProposal({
+        checklist_append_items: ['Milk'],
+        checklist_target_action_id: 'checklist-1',
+        status: 'pending',
+      }),
+    ).toBe(true);
+  });
+
+  it('treats every other pending capture as an ordinary note to edit', () => {
+    expect(
+      isChecklistAppendProposal({
+        checklist_append_items: [],
+        checklist_target_action_id: 'checklist-1',
+        status: 'pending',
+      }),
+    ).toBe(false);
+    expect(
+      isChecklistAppendProposal({
+        checklist_append_items: ['Milk'],
+        checklist_target_action_id: null,
+        status: 'pending',
+      }),
+    ).toBe(false);
+    expect(
+      isChecklistAppendProposal({
+        checklist_append_items: ['Milk'],
+        checklist_target_action_id: 'checklist-1',
+        status: 'approved',
+      }),
+    ).toBe(false);
+  });
+});
 
 describe('action utilities', () => {
   it('formats action labels for the inbox', () => {

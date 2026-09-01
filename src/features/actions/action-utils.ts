@@ -1,4 +1,9 @@
-import type { ActionStatus, ActionType } from '@/types/database';
+import type { ActionCategory, ActionStatus, ActionType, Database, Json } from '@/types/database';
+
+import { normalizeChecklistItems } from '@/features/actions/action-schema';
+
+type ActionRow = Database['public']['Tables']['actions']['Row'];
+type ActionUpdate = Database['public']['Tables']['actions']['Update'];
 
 const localSchedulePattern = /^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2}):(\d{2})(?::(\d{2}))?)?$/;
 
@@ -20,6 +25,51 @@ export function formatActionWhen(value: string | null) {
 
 export function statusLabel(status: ActionStatus) {
   return status.charAt(0).toUpperCase() + status.slice(1);
+}
+
+export function checklistItemsFrom(value: Json): string[] {
+  if (!Array.isArray(value)) return [];
+  return normalizeChecklistItems(value.filter((item): item is string => typeof item === 'string'));
+}
+
+/**
+ * A pending capture that proposes items for an existing checklist. Approving it appends
+ * the items and drops the capture, so its own title, date and category are never kept:
+ * it is reviewed on the note detail, not in the editor.
+ */
+export function isChecklistAppendProposal(
+  action: Pick<ActionRow, 'checklist_append_items' | 'checklist_target_action_id' | 'status'>,
+) {
+  return (
+    action.status === 'pending' &&
+    Boolean(action.checklist_target_action_id) &&
+    checklistItemsFrom(action.checklist_append_items).length > 0
+  );
+}
+
+export type ApprovedActionFields = {
+  category: ActionCategory;
+  project_id: string | null;
+  scheduled_at?: string | null;
+  scheduled_timezone?: string | null;
+  summary?: string | null;
+  title?: string;
+};
+
+/**
+ * The single row update that takes a pending capture to the timeline. Everything the AI
+ * suggested is spent by it, so a later edit or approval cannot re-apply a suggestion over
+ * what the user settled here.
+ */
+export function approvedActionUpdate(fields: ApprovedActionFields): ActionUpdate {
+  return {
+    ...fields,
+    auto_filed_at: null,
+    status: 'approved',
+    suggested_category: null,
+    suggested_people: [],
+    suggested_project_name: null,
+  };
 }
 
 export function normalizedSchedule(value: string) {

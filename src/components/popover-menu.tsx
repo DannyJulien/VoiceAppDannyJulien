@@ -24,6 +24,8 @@ export type PopoverMenuItem = {
   loading?: boolean;
   /** Small line under the row, e.g. a destructive-action warning. */
   hint?: string;
+  /** Spoken explanation of what the row does, for actions the label cannot carry alone. */
+  accessibilityHint?: string;
 };
 
 const ICON_SIZE = 20;
@@ -68,6 +70,7 @@ export function PopoverMenu({
           return (
             <View key={item.key}>
               <Pressable
+                accessibilityHint={item.accessibilityHint}
                 accessibilityRole="menuitem"
                 accessibilityState={{ busy: item.loading }}
                 disabled={item.loading}

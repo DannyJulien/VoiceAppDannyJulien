@@ -138,11 +138,6 @@ export default function ProjectsScreen() {
                   <Text style={styles.projectMeta}>
                     {count} {count === 1 ? 'item' : 'items'} in timeline
                   </Text>
-                  {project.summary ? (
-                    <Text numberOfLines={2} style={styles.projectSummary}>
-                      {project.summary}
-                    </Text>
-                  ) : null}
                 </View>
                 <Text style={styles.arrow}>›</Text>
               </Pressable>
@@ -201,7 +196,6 @@ const createStyles = (colors: AppColors) =>
     projectCopy: { flex: 1, gap: 3 },
     projectName: { color: colors.ink, fontSize: 17, fontWeight: '900' },
     projectMeta: { color: colors.muted, fontSize: 14 },
-    projectSummary: { color: colors.muted, fontSize: 13, lineHeight: 19 },
     arrow: { color: colors.muted, fontSize: 28, lineHeight: 28 },
     error: { color: colors.danger, fontSize: 14, lineHeight: 20 },
   });

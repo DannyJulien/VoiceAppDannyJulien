@@ -5,7 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { AppButton } from '@/components/app-button';
-import { CopyIcon, PencilIcon } from '@/components/icons';
+import { CopyIcon, PencilIcon, TrashIcon } from '@/components/icons';
 import { useTabBarInset } from '@/components/mobile-navigation';
 import { MoreMenu } from '@/components/more-menu';
 import { type PopoverMenuItem } from '@/components/popover-menu';
@@ -14,7 +14,11 @@ import { type AppColors, useTheme } from '@/features/theme/theme-provider';
 import { getProjectActions } from '@/features/actions/action-service';
 import { actionTypeLabel } from '@/features/actions/action-utils';
 import { useAuth } from '@/features/auth/auth-provider';
-import { getProject, updateProjectSummary } from '@/features/projects/project-service';
+import {
+  deleteProject,
+  getProject,
+  updateProjectSummary,
+} from '@/features/projects/project-service';
 import {
   exportProjectBrief,
   type ProjectBriefMode,
@@ -78,6 +82,23 @@ export default function ProjectTimelineScreen() {
       }
     },
   });
+  const [confirmingDeletion, setConfirmingDeletion] = useState(false);
+  const deleteMutation = useMutation({
+    mutationFn: () => {
+      if (!project || !userId) throw new Error('This project is unavailable.');
+      return deleteProject(project.id, userId);
+    },
+    onSuccess: () => {
+      if (userId) {
+        // The notes survive without a project, so every list that shows them refreshes.
+        queryClient.invalidateQueries({ queryKey: ['projects', userId] });
+        queryClient.invalidateQueries({ queryKey: ['actions', userId] });
+        queryClient.invalidateQueries({ queryKey: ['project-actions'] });
+        queryClient.removeQueries({ queryKey: ['project', id, userId] });
+      }
+      router.replace('/projects' as never);
+    },
+  });
   if (projectQuery.isPending)
     return (
       <Screen contentStyle={styles.center}>
@@ -98,6 +119,8 @@ export default function ProjectTimelineScreen() {
 
   function closeMenu() {
     setMenuVisible(false);
+    // Reopening the menu must start from the plain "Delete project" row again.
+    setConfirmingDeletion(false);
   }
 
   function startEditingSummary() {
@@ -138,6 +161,24 @@ export default function ProjectTimelineScreen() {
       onPress: () => copyBrief('new_only'),
       renderIcon: (color, size) => <CopyIcon color={color} size={size} />,
     },
+    // Same two-step confirmation as deleting a note: the row turns into the real action.
+    confirmingDeletion
+      ? {
+          key: 'delete',
+          label: 'Delete permanently',
+          hint: 'The notes stay in your timeline, without this project.',
+          loading: deleteMutation.isPending,
+          onPress: () => deleteMutation.mutate(undefined, { onSettled: closeMenu }),
+          renderIcon: (color, size) => <TrashIcon color={color} size={size} />,
+          tone: 'danger',
+        }
+      : {
+          key: 'delete',
+          label: 'Delete project',
+          onPress: () => setConfirmingDeletion(true),
+          renderIcon: (color, size) => <TrashIcon color={color} size={size} />,
+          tone: 'danger',
+        },
   ];
 
   return (
@@ -226,6 +267,13 @@ export default function ProjectTimelineScreen() {
               {briefMutation.error instanceof Error
                 ? briefMutation.error.message
                 : 'Unable to create the project brief.'}
+            </Text>
+          ) : null}
+          {deleteMutation.error ? (
+            <Text accessibilityRole="alert" style={styles.error}>
+              {deleteMutation.error instanceof Error
+                ? deleteMutation.error.message
+                : 'Unable to delete this project.'}
             </Text>
           ) : null}
         </View>

@@ -110,3 +110,17 @@ export async function updateProjectSummary(projectId: string, userId: string, su
   }
   return withDefaultProjectSummary(data);
 }
+
+/**
+ * Removes the project only. Its notes stay in the timeline without a project:
+ * `actions.project_id` is `on delete set null`, so the database unlinks them.
+ * Brief history for the project cascades away with it.
+ */
+export async function deleteProject(projectId: string, userId: string) {
+  const { error } = await getSupabaseClient()
+    .from('projects')
+    .delete()
+    .eq('id', projectId)
+    .eq('user_id', userId);
+  if (error) throw error;
+}

@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { AppButton } from '@/components/app-button';
+import { AppTextInput } from '@/components/app-text-input';
 import { useTabBarInset } from '@/components/mobile-navigation';
 import { Screen } from '@/components/screen';
 import { type AppColors, useTheme } from '@/features/theme/theme-provider';
@@ -80,13 +81,12 @@ export default function NewNoteScreen() {
           </Text>
         </View>
 
-        <TextInput
+        <AppTextInput
           accessibilityLabel="Your thought"
           autoFocus
           multiline
           onChangeText={setText}
           placeholder="For example: I need to prepare the proposal with Daniel for next Thursday…"
-          placeholderTextColor={colors.muted}
           style={styles.input}
           textAlignVertical="top"
           value={text}
@@ -131,10 +131,7 @@ const createStyles = (colors: AppColors) =>
     copy: { color: colors.muted, fontSize: 16, lineHeight: 23 },
     input: {
       backgroundColor: colors.surface,
-      borderColor: colors.border,
       borderRadius: 22,
-      borderWidth: 1,
-      color: colors.ink,
       fontSize: 17,
       lineHeight: 25,
       minHeight: 250,

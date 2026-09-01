@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation, useQuery } from '@tanstack/react-query';
 
 import { AppButton } from '@/components/app-button';
+import { AppTextInput } from '@/components/app-text-input';
 import { BackButton } from '@/components/back-button';
 import { DateTimeField } from '@/components/date-time-field';
 import { useTabBarInset } from '@/components/mobile-navigation';
@@ -126,12 +127,10 @@ export default function AddToMeetingScreen() {
         <View style={styles.card}>
           <Text style={styles.topic}>{result.topic}</Text>
           <Text style={styles.fieldLabel}>Meeting title</Text>
-          <TextInput
+          <AppTextInput
             accessibilityLabel="Meeting title"
             onChangeText={setMeetingTitle}
             placeholder="Customer AI Strategy Call"
-            placeholderTextColor={colors.muted}
-            style={styles.input}
             value={meetingTitle}
           />
           <Text style={styles.fieldLabel}>Meeting starts</Text>
@@ -198,16 +197,6 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
   },
   topic: { color: colors.ink, fontSize: 18, fontWeight: '800', marginBottom: 4 },
   fieldLabel: { color: colors.ink, fontSize: 14, fontWeight: '700', marginTop: 2 },
-  input: {
-    backgroundColor: colors.canvas,
-    borderColor: colors.border,
-    borderRadius: 12,
-    borderWidth: 1,
-    color: colors.ink,
-    fontSize: 16,
-    minHeight: 52,
-    paddingHorizontal: 14,
-  },
   error: { color: colors.danger, fontSize: 14, lineHeight: 20 },
   successCard: { backgroundColor: colors.brandSoft, borderRadius: 18, gap: 10, padding: 18 },
   successTitle: { color: colors.ink, fontSize: 18, fontWeight: '800' },

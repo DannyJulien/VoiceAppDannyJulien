@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { AppButton } from '@/components/app-button';
+import { AppTextInput } from '@/components/app-text-input';
 import { CopyIcon, PencilIcon, TrashIcon } from '@/components/icons';
 import { useTabBarInset } from '@/components/mobile-navigation';
 import { MoreMenu } from '@/components/more-menu';
@@ -210,14 +211,13 @@ export default function ProjectTimelineScreen() {
           </View>
           {editingSummary ? (
             <View style={styles.summaryEditor}>
-              <TextInput
+              <AppTextInput
                 accessibilityLabel="Project summary"
                 autoFocus
                 maxLength={maxProjectSummaryLength}
                 multiline
                 onChangeText={setSummaryDraft}
                 placeholder="What should this project keep in mind?"
-                placeholderTextColor={colors.muted}
                 style={styles.summaryInput}
                 value={summaryDraft}
               />
@@ -352,18 +352,7 @@ const createStyles = (colors: AppColors) =>
     copy: { color: colors.muted, fontSize: 16, lineHeight: 23 },
     summary: { color: colors.ink, fontSize: 16, lineHeight: 24 },
     summaryEditor: { gap: 10 },
-    summaryInput: {
-      backgroundColor: colors.surface,
-      borderColor: colors.border,
-      borderRadius: 14,
-      borderWidth: 1,
-      color: colors.ink,
-      fontSize: 16,
-      minHeight: 100,
-      paddingHorizontal: 14,
-      paddingTop: 13,
-      textAlignVertical: 'top',
-    },
+    summaryInput: { backgroundColor: colors.surface, borderRadius: 14, minHeight: 100 },
     summaryActions: { flexDirection: 'row', gap: 8 },
     summaryAction: { flex: 1, minHeight: 46, paddingHorizontal: 10 },
     addSummary: { alignSelf: 'flex-start', minHeight: 36, paddingHorizontal: 0 },

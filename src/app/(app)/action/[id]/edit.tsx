@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { AppButton } from '@/components/app-button';
+import { AppTextInput } from '@/components/app-text-input';
 import { BackButton } from '@/components/back-button';
 import { DateTimeField } from '@/components/date-time-field';
 import { useTabBarInset } from '@/components/mobile-navigation';
@@ -208,18 +209,16 @@ export default function EditActionScreen() {
 
         <View style={styles.card}>
           <Text style={styles.fieldLabel}>Title</Text>
-          <TextInput
+          <AppTextInput
             accessibilityLabel="Note title"
             onChangeText={setEditedTitle}
-            style={styles.input}
             value={title}
           />
           <Text style={styles.fieldLabel}>Details</Text>
-          <TextInput
+          <AppTextInput
             accessibilityLabel="Note details"
             multiline
             onChangeText={setEditedSummary}
-            style={[styles.input, styles.multilineInput]}
             value={summary}
           />
           <Text style={styles.fieldLabel}>When (optional)</Text>
@@ -426,17 +425,6 @@ const createStyles = (colors: AppColors) =>
       padding: 18,
     },
     fieldLabel: { color: colors.ink, fontSize: 14, fontWeight: '700', marginTop: 2 },
-    input: {
-      backgroundColor: colors.canvas,
-      borderColor: colors.border,
-      borderRadius: 12,
-      borderWidth: 1,
-      color: colors.ink,
-      fontSize: 16,
-      minHeight: 52,
-      paddingHorizontal: 14,
-    },
-    multilineInput: { minHeight: 110, paddingTop: 13, textAlignVertical: 'top' },
     choices: { gap: 8, paddingRight: 4 },
     choice: {
       alignItems: 'center',

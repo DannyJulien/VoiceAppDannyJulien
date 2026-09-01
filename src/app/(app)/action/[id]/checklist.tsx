@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { AppButton } from '@/components/app-button';
+import { AppTextInput } from '@/components/app-text-input';
 import { BackButton } from '@/components/back-button';
 import { useTabBarInset } from '@/components/mobile-navigation';
 import { Screen } from '@/components/screen';
@@ -131,13 +132,12 @@ export default function EditChecklistScreen() {
 
         <View style={styles.addCard}>
           <Text style={styles.fieldLabel}>NEW ITEM</Text>
-          <TextInput
+          <AppTextInput
             accessibilityLabel="New checklist item"
             maxLength={280}
             onChangeText={setNewItem}
             onSubmitEditing={() => addMutation.mutate()}
             placeholder="For example, pack water bottles"
-            placeholderTextColor={colors.muted}
             returnKeyType="done"
             style={styles.input}
             value={newItem}
@@ -163,7 +163,7 @@ export default function EditChecklistScreen() {
                     <Text style={styles.itemNumber}>{index + 1}</Text>
                     <Text style={styles.itemState}>{item.is_completed ? 'DONE' : 'TO DO'}</Text>
                   </View>
-                  <TextInput
+                  <AppTextInput
                     accessibilityLabel={`Checklist item ${index + 1}`}
                     maxLength={280}
                     onChangeText={(next) =>
@@ -300,11 +300,7 @@ const createStyles = (colors: AppColors) =>
     fieldLabel: { color: colors.brand, fontSize: 11, fontWeight: '900', letterSpacing: 0.9 },
     input: {
       backgroundColor: colors.surface,
-      borderColor: colors.border,
       borderRadius: 13,
-      borderWidth: 1,
-      color: colors.ink,
-      fontSize: 16,
       minHeight: 50,
       paddingHorizontal: 13,
     },
@@ -330,16 +326,7 @@ const createStyles = (colors: AppColors) =>
       paddingVertical: 5,
     },
     itemState: { color: colors.muted, fontSize: 11, fontWeight: '900', letterSpacing: 0.8 },
-    itemInput: {
-      backgroundColor: colors.canvas,
-      borderColor: colors.border,
-      borderRadius: 12,
-      borderWidth: 1,
-      color: colors.ink,
-      fontSize: 16,
-      minHeight: 48,
-      paddingHorizontal: 12,
-    },
+    itemInput: { minHeight: 48, paddingHorizontal: 12 },
     orderSection: { gap: 7 },
     actionLabel: { color: colors.muted, fontSize: 11, fontWeight: '900', letterSpacing: 0.8 },
     orderActions: { flexDirection: 'row', gap: 8 },

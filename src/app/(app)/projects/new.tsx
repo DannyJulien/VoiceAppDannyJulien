@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { AppButton } from '@/components/app-button';
+import { AppTextInput } from '@/components/app-text-input';
 import { BackButton } from '@/components/back-button';
 import { useTabBarInset } from '@/components/mobile-navigation';
 import { Screen } from '@/components/screen';
@@ -58,24 +59,22 @@ export default function NewProjectScreen() {
           </Text>
         </View>
         <View style={styles.form}>
-          <TextInput
+          <AppTextInput
             accessibilityLabel="Project name"
             autoFocus
             onChangeText={setName}
             placeholder="e.g. New website"
-            placeholderTextColor={colors.muted}
             style={styles.input}
             value={name}
           />
           <Text style={styles.fieldLabel}>Project context (optional)</Text>
-          <TextInput
+          <AppTextInput
             accessibilityHint="A short description helps file related notes in the right project."
             accessibilityLabel="Project summary"
             maxLength={maxProjectSummaryLength}
             multiline
             onChangeText={setSummary}
             placeholder="What is this project about?"
-            placeholderTextColor={colors.muted}
             style={[styles.input, styles.summaryInput]}
             value={summary}
           />
@@ -129,17 +128,8 @@ const createStyles = (colors: AppColors) =>
     copy: { color: colors.muted, fontSize: 16, lineHeight: 23 },
     form: { gap: 12 },
     fieldLabel: { color: colors.ink, fontSize: 14, fontWeight: '800' },
-    input: {
-      backgroundColor: colors.surface,
-      borderColor: colors.border,
-      borderRadius: 14,
-      borderWidth: 1,
-      color: colors.ink,
-      fontSize: 16,
-      minHeight: 52,
-      paddingHorizontal: 14,
-    },
-    summaryInput: { minHeight: 86, paddingTop: 13, textAlignVertical: 'top' },
+    input: { backgroundColor: colors.surface, borderRadius: 14 },
+    summaryInput: { minHeight: 86 },
     colorRow: { flexDirection: 'row', gap: 12 },
     color: { borderColor: 'transparent', borderRadius: 16, borderWidth: 3, height: 32, width: 32 },
     colorSelected: { borderColor: colors.ink },

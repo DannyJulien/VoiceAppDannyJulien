@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { AppButton } from '@/components/app-button';
+import { BackButton } from '@/components/back-button';
 import { IconButton } from '@/components/icon-button';
 import {
   CalendarIcon,
@@ -121,7 +122,8 @@ export default function ActionDetailsScreen() {
     },
     onSuccess: () => {
       if (userId) queryClient.invalidateQueries({ queryKey: ['actions', userId] });
-      router.replace(isPendingReview ? '/inbox' : '/timeline');
+      if (router.canGoBack()) router.back();
+      else router.replace(isPendingReview ? '/inbox' : '/timeline');
     },
   });
   const checklistMutation = useMutation({
@@ -147,7 +149,7 @@ export default function ActionDetailsScreen() {
         <Text style={styles.copy}>
           It may have been removed or you no longer have access to it.
         </Text>
-        <AppButton label="Back to timeline" onPress={() => router.replace('/timeline')} />
+        <BackButton fallbackHref="/timeline" fallbackLabel="Back to timeline" label="Go back" />
       </Screen>
     );
   }
@@ -289,9 +291,9 @@ export default function ActionDetailsScreen() {
         contentContainerStyle={[styles.content, tabBarInset]}
         keyboardShouldPersistTaps="handled"
       >
-        <AppButton
-          label={isPendingReview ? '‹ Inbox' : '‹ Timeline'}
-          onPress={() => router.replace(isPendingReview ? '/inbox' : '/timeline')}
+        <BackButton
+          fallbackHref={isPendingReview ? '/inbox' : '/timeline'}
+          fallbackLabel={isPendingReview ? '‹ Inbox' : '‹ Timeline'}
           style={styles.back}
           variant="quiet"
         />

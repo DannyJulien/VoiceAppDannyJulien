@@ -1,4 +1,4 @@
-import Svg, { Circle, Line, Path, Polyline } from 'react-native-svg';
+import Svg, { Circle, Line, Path, Polyline, Rect } from 'react-native-svg';
 
 /**
  * Line icons drawn from Feather (https://feathericons.com, MIT). Feather's 24x24 grid and
@@ -141,6 +141,19 @@ export function MessageIcon({ color, size = 20 }: IconProps) {
     <IconFrame size={size}>
       <Path
         d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z"
+        stroke={color}
+        {...stroke}
+      />
+    </IconFrame>
+  );
+}
+
+export function CopyIcon({ color, size = 20 }: IconProps) {
+  return (
+    <IconFrame size={size}>
+      <Rect height={13} rx={2} ry={2} stroke={color} width={13} x={9} y={9} {...stroke} />
+      <Path
+        d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
         stroke={color}
         {...stroke}
       />

@@ -1,22 +1,21 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { AppButton } from '@/components/app-button';
 import { BackButton } from '@/components/back-button';
-import { IconButton } from '@/components/icon-button';
 import {
   CalendarIcon,
   MessageIcon,
-  MoreHorizontalIcon,
   PencilIcon,
   PlusIcon,
   SearchIcon,
   TrashIcon,
 } from '@/components/icons';
 import { useTabBarInset } from '@/components/mobile-navigation';
-import { type PopoverAnchor, PopoverMenu, type PopoverMenuItem } from '@/components/popover-menu';
+import { MoreMenu } from '@/components/more-menu';
+import { type PopoverMenuItem } from '@/components/popover-menu';
 import { Screen } from '@/components/screen';
 import { type AppColors, useTheme } from '@/features/theme/theme-provider';
 import {
@@ -61,8 +60,6 @@ export default function ActionDetailsScreen() {
   const userId = session?.user.id;
   const [confirmingDeletion, setConfirmingDeletion] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
-  const [menuAnchor, setMenuAnchor] = useState<PopoverAnchor | null>(null);
-  const moreButtonRef = useRef<View>(null);
   const [calendarError, setCalendarError] = useState<string | null>(null);
   const [includeSuggestedPeople, setIncludeSuggestedPeople] = useState(true);
   const actionQuery = useQuery({
@@ -185,11 +182,7 @@ export default function ActionDetailsScreen() {
 
   function openMenu() {
     setConfirmingDeletion(false);
-    // The menu hangs from the More button, so it needs the button's window position.
-    moreButtonRef.current?.measureInWindow((x, y, width, height) => {
-      setMenuAnchor({ height, width, x, y });
-      setMenuVisible(true);
-    });
+    setMenuVisible(true);
   }
 
   function pushSubScreen(screen: 'checklist' | 'edit' | 'research' | 'send') {
@@ -370,14 +363,14 @@ export default function ActionDetailsScreen() {
               </Pressable>
             ) : null}
           </View>
-          <View collapsable={false} ref={moreButtonRef} style={styles.moreButton}>
-            <IconButton
-              accessibilityLabel="Open note actions"
-              label="More"
-              onPress={openMenu}
-              renderIcon={(color, size) => <MoreHorizontalIcon color={color} size={size} />}
-            />
-          </View>
+          <MoreMenu
+            accessibilityLabel="Open note actions"
+            items={menuItems}
+            onOpen={openMenu}
+            onRequestClose={closeMenu}
+            style={styles.moreButton}
+            visible={menuVisible}
+          />
         </View>
 
         {isPendingReview ? (
@@ -564,12 +557,6 @@ export default function ActionDetailsScreen() {
           </Text>
         ) : null}
       </ScrollView>
-      <PopoverMenu
-        anchor={menuAnchor}
-        items={menuItems}
-        onRequestClose={closeMenu}
-        visible={menuVisible}
-      />
     </Screen>
   );
 }

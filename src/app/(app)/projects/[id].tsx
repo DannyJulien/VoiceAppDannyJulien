@@ -5,7 +5,10 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { AppButton } from '@/components/app-button';
+import { CopyIcon, PencilIcon } from '@/components/icons';
 import { useTabBarInset } from '@/components/mobile-navigation';
+import { MoreMenu } from '@/components/more-menu';
+import { type PopoverMenuItem } from '@/components/popover-menu';
 import { Screen } from '@/components/screen';
 import { type AppColors, useTheme } from '@/features/theme/theme-provider';
 import { getProjectActions } from '@/features/actions/action-service';
@@ -28,6 +31,7 @@ export default function ProjectTimelineScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session } = useAuth();
   const userId = session?.user.id;
+  const [menuVisible, setMenuVisible] = useState(false);
   const [editingSummary, setEditingSummary] = useState(false);
   const [summaryDraft, setSummaryDraft] = useState('');
   const [briefFeedback, setBriefFeedback] = useState<string | null>(null);
@@ -92,9 +96,56 @@ export default function ProjectTimelineScreen() {
   // export only marks what it handed over; it never hides anything (#89).
   const actions = actionsQuery.data ?? [];
 
+  function closeMenu() {
+    setMenuVisible(false);
+  }
+
+  function startEditingSummary() {
+    if (!project) return;
+    closeMenu();
+    setSummaryDraft(project.summary);
+    setEditingSummary(true);
+  }
+
+  function copyBrief(mode: ProjectBriefMode) {
+    setBriefFeedback(null);
+    // The row keeps its spinner until the copy settles; the outcome then shows under the
+    // header, where it stays readable after the menu has gone.
+    briefMutation.mutate(mode, { onSettled: closeMenu });
+  }
+
+  // Occasional actions live here so the notes, which are read constantly, start higher.
+  const menuItems: PopoverMenuItem[] = [
+    {
+      key: 'context',
+      label: project.summary ? 'Edit project context' : 'Add project context',
+      onPress: startEditingSummary,
+      renderIcon: (color, size) => <PencilIcon color={color} size={size} />,
+    },
+    {
+      key: 'brief-full',
+      label: 'Copy full brief',
+      accessibilityHint: 'Copies a complete project brief to your clipboard.',
+      loading: briefMutation.isPending && briefMutation.variables === 'full',
+      onPress: () => copyBrief('full'),
+      renderIcon: (color, size) => <CopyIcon color={color} size={size} />,
+    },
+    {
+      key: 'brief-new',
+      label: 'Copy new only',
+      accessibilityHint: 'Copies only new knowledge and ideas, plus unfinished next steps.',
+      loading: briefMutation.isPending && briefMutation.variables === 'new_only',
+      onPress: () => copyBrief('new_only'),
+      renderIcon: (color, size) => <CopyIcon color={color} size={size} />,
+    },
+  ];
+
   return (
     <Screen>
-      <ScrollView contentContainerStyle={[styles.content, tabBarInset]}>
+      <ScrollView
+        contentContainerStyle={[styles.content, tabBarInset]}
+        keyboardShouldPersistTaps="handled"
+      >
         <AppButton
           label="‹ Projects"
           onPress={() => router.replace('/projects' as never)}
@@ -102,18 +153,25 @@ export default function ProjectTimelineScreen() {
           variant="quiet"
         />
         <View style={styles.hero}>
-          <View style={[styles.mark, { backgroundColor: project.color }]} />
-          <Text style={styles.title}>{project.name}</Text>
-          <Text style={styles.copy}>
-            Everything connected to this project, in the order it happened.
-          </Text>
-        </View>
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>PROJECT CONTEXT</Text>
+          <View style={styles.heroRow}>
+            <View style={styles.heroCopy}>
+              <View style={[styles.mark, { backgroundColor: project.color }]} />
+              <Text style={styles.title}>{project.name}</Text>
+            </View>
+            <MoreMenu
+              accessibilityLabel="Open project actions"
+              items={menuItems}
+              onOpen={() => setMenuVisible(true)}
+              onRequestClose={closeMenu}
+              style={styles.moreButton}
+              visible={menuVisible}
+            />
+          </View>
           {editingSummary ? (
-            <>
+            <View style={styles.summaryEditor}>
               <TextInput
                 accessibilityLabel="Project summary"
+                autoFocus
                 maxLength={maxProjectSummaryLength}
                 multiline
                 onChangeText={setSummaryDraft}
@@ -146,49 +204,22 @@ export default function ProjectTimelineScreen() {
                   style={styles.summaryAction}
                 />
               </View>
-            </>
+            </View>
+          ) : project.summary ? (
+            <Text style={styles.summary}>{project.summary}</Text>
           ) : (
             <>
-              <Text style={styles.summaryCopy}>
-                {project.summary ||
-                  'Add a short description so related notes can be filed with better context.'}
+              <Text style={styles.copy}>
+                Add a short description so related notes can be filed with better context.
               </Text>
               <AppButton
-                label={project.summary ? 'Edit project context' : 'Add project context'}
-                onPress={() => {
-                  setSummaryDraft(project.summary);
-                  setEditingSummary(true);
-                }}
-                style={styles.editSummary}
-                variant="secondary"
+                label="Add project context"
+                onPress={startEditingSummary}
+                style={styles.addSummary}
+                variant="quiet"
               />
             </>
           )}
-        </View>
-        <View style={styles.briefCard}>
-          <Text style={styles.briefTitle}>Claude Code brief</Text>
-          <Text style={styles.briefCopy}>
-            Copy a self-contained project brief now, or send only the entries not shared before.
-          </Text>
-          <AppButton
-            accessibilityHint="Copies a complete project brief to your clipboard."
-            label="Copy full brief"
-            loading={briefMutation.isPending && briefMutation.variables === 'full'}
-            onPress={() => {
-              setBriefFeedback(null);
-              briefMutation.mutate('full');
-            }}
-          />
-          <AppButton
-            accessibilityHint="Copies only new knowledge and ideas, plus unfinished next steps."
-            label="Copy new only"
-            loading={briefMutation.isPending && briefMutation.variables === 'new_only'}
-            onPress={() => {
-              setBriefFeedback(null);
-              briefMutation.mutate('new_only');
-            }}
-            variant="secondary"
-          />
           {briefFeedback ? <Text style={styles.success}>{briefFeedback}</Text> : null}
           {briefMutation.error ? (
             <Text accessibilityRole="alert" style={styles.error}>
@@ -253,7 +284,15 @@ const createStyles = (colors: AppColors) =>
     content: { gap: 18, paddingBottom: 32, paddingTop: 16 },
     center: { gap: 14, justifyContent: 'center' },
     back: { alignSelf: 'flex-start', minHeight: 36, paddingHorizontal: 0 },
-    hero: { gap: 6 },
+    hero: { gap: 10 },
+    heroRow: {
+      alignItems: 'flex-start',
+      flexDirection: 'row',
+      gap: 14,
+      justifyContent: 'space-between',
+    },
+    heroCopy: { flex: 1, gap: 6 },
+    moreButton: { alignSelf: 'flex-start', marginTop: 4 },
     mark: { borderRadius: 6, height: 12, width: 42 },
     title: {
       color: colors.ink,
@@ -263,14 +302,8 @@ const createStyles = (colors: AppColors) =>
       lineHeight: 40,
     },
     copy: { color: colors.muted, fontSize: 16, lineHeight: 23 },
-    summaryCard: {
-      backgroundColor: colors.brandSoft,
-      borderRadius: 18,
-      gap: 10,
-      padding: 16,
-    },
-    summaryLabel: { color: colors.brand, fontSize: 12, fontWeight: '900', letterSpacing: 0.9 },
-    summaryCopy: { color: colors.ink, fontSize: 15, lineHeight: 22 },
+    summary: { color: colors.ink, fontSize: 16, lineHeight: 24 },
+    summaryEditor: { gap: 10 },
     summaryInput: {
       backgroundColor: colors.surface,
       borderColor: colors.border,
@@ -285,17 +318,7 @@ const createStyles = (colors: AppColors) =>
     },
     summaryActions: { flexDirection: 'row', gap: 8 },
     summaryAction: { flex: 1, minHeight: 46, paddingHorizontal: 10 },
-    editSummary: { alignSelf: 'flex-start', minHeight: 42, paddingHorizontal: 14 },
-    briefCard: {
-      backgroundColor: colors.surface,
-      borderColor: colors.border,
-      borderRadius: 20,
-      borderWidth: 1,
-      gap: 11,
-      padding: 16,
-    },
-    briefTitle: { color: colors.ink, fontSize: 19, fontWeight: '900' },
-    briefCopy: { color: colors.muted, fontSize: 14, lineHeight: 21 },
+    addSummary: { alignSelf: 'flex-start', minHeight: 36, paddingHorizontal: 0 },
     success: { color: colors.brand, fontSize: 14, fontWeight: '700', lineHeight: 20 },
     empty: {
       backgroundColor: colors.surface,

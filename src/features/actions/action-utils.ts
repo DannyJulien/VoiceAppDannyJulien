@@ -81,3 +81,16 @@ export function formatCalendarDay(value: Date | string) {
   if (Number.isNaN(date.getTime())) return 'Unknown date';
   return new Intl.DateTimeFormat(undefined, { dateStyle: 'full' }).format(date);
 }
+
+/**
+ * The value a `datetime-local` input understands: `YYYY-MM-DDTHH:mm` in the device's
+ * local time, without seconds or offset. A stored ISO timestamp is converted; a value
+ * already in that shape passes through; anything unreadable becomes an empty field.
+ */
+export function localDateTimeInputValue(value: string | null) {
+  if (!value?.trim()) return '';
+  const date = new Date(value.trim());
+  if (Number.isNaN(date.getTime())) return '';
+  const pad = (part: number) => String(part).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}

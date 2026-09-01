@@ -35,5 +35,17 @@ describe('understood action checklist items', () => {
     const result = understoodActionSchema.parse(baseAction);
 
     expect(result.checklistItems).toEqual([]);
+    expect(result.checklistTargetActionId).toBeNull();
+  });
+
+  it('keeps an explicit existing checklist target with its additions', () => {
+    const result = understoodActionSchema.parse({
+      ...baseAction,
+      checklistItems: ['Lights', 'Water bottles'],
+      checklistTargetActionId: 'd24c3d05-61f1-4c7a-a0ed-1a75c77a42d1',
+    });
+
+    expect(result.checklistTargetActionId).toBe('d24c3d05-61f1-4c7a-a0ed-1a75c77a42d1');
+    expect(result.checklistItems).toEqual(['Lights', 'Water bottles']);
   });
 });

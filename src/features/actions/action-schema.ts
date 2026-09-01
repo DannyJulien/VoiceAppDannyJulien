@@ -72,6 +72,7 @@ export const understoodActionSchema = z.object({
   clarificationQuestion: z.string().trim().max(500).nullable(),
   suggestedCategory: actionCategorySchema.nullable().default(null),
   suggestedProjectName: z.string().trim().min(1).max(80).nullable().default(null),
+  checklistTargetActionId: z.string().uuid().nullable().default(null),
   checklistItems: checklistItemsSchema,
 });
 

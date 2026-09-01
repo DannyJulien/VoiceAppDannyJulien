@@ -1,6 +1,10 @@
 import type { ActionCategory, ActionStatus, ActionType, Database, Json } from '@/types/database';
 
-import { actionTypeForIntent, type UnderstoodAction } from '@/features/actions/action-schema';
+import {
+  actionTypeForIntent,
+  normalizeChecklistItems,
+  type UnderstoodAction,
+} from '@/features/actions/action-schema';
 import { projectIdForFiling, type FilingDecision } from '@/features/actions/filing-gate';
 import { createContact, getContacts } from '@/features/contacts/contact-service';
 import { normalizedContactName } from '@/features/contacts/contact-utils';
@@ -10,6 +14,7 @@ import { getSupabaseClient } from '@/services/supabase/client';
 
 export type SavedAction = Database['public']['Tables']['actions']['Row'];
 export type ChecklistItem = Database['public']['Tables']['action_checklist_items']['Row'];
+export type ChecklistCandidate = { id: string; items: string[]; title: string };
 export type ActionFilter = 'all' | ActionType;
 
 export type ActionReviewInput = {
@@ -51,6 +56,11 @@ export function suggestedPeopleFrom(value: Json): SuggestedPerson[] {
   });
 }
 
+export function checklistItemsFrom(value: Json): string[] {
+  if (!Array.isArray(value)) return [];
+  return normalizeChecklistItems(value.filter((item): item is string => typeof item === 'string'));
+}
+
 async function ensureChecklistItems(
   actionId: string,
   userId: string,
@@ -76,6 +86,184 @@ async function ensureChecklistItems(
       user_id: userId,
     })),
   );
+  if (error) throw error;
+}
+
+async function getChecklistAction(actionId: string, userId: string) {
+  const { data, error } = await getSupabaseClient()
+    .from('actions')
+    .select()
+    .eq('id', actionId)
+    .eq('user_id', userId)
+    .single();
+  if (error) throw new Error('This checklist is no longer available.');
+  return data;
+}
+
+async function reopenChecklistIfCompleted(action: SavedAction, userId: string) {
+  if (action.status !== 'completed') return action;
+  return updateAction(action.id, userId, { status: 'approved' });
+}
+
+export async function getOpenChecklistCandidates(userId: string): Promise<ChecklistCandidate[]> {
+  const client = getSupabaseClient();
+  const { data: itemRows, error: itemError } = await client
+    .from('action_checklist_items')
+    .select('action_id, title')
+    .eq('user_id', userId)
+    .order('position', { ascending: true })
+    .limit(240);
+  if (itemError) throw itemError;
+
+  const itemsByAction = new Map<string, string[]>();
+  for (const item of itemRows) {
+    const items = itemsByAction.get(item.action_id) ?? [];
+    items.push(item.title);
+    itemsByAction.set(item.action_id, items);
+  }
+  const actionIds = [...itemsByAction.keys()].slice(0, 40);
+  if (!actionIds.length) return [];
+
+  const { data: actions, error: actionError } = await client
+    .from('actions')
+    .select('id, title')
+    .eq('user_id', userId)
+    .eq('status', 'approved')
+    .in('id', actionIds);
+  if (actionError) throw actionError;
+
+  return actions
+    .map((action) => ({
+      id: action.id,
+      items: itemsByAction.get(action.id) ?? [],
+      title: action.title,
+    }))
+    .filter((action) => action.items.length > 0)
+    .slice(0, 40);
+}
+
+export async function appendActionChecklistItems(
+  actionId: string,
+  userId: string,
+  titles: readonly string[],
+) {
+  const client = getSupabaseClient();
+  const action = await getChecklistAction(actionId, userId);
+  if (action.status === 'pending') throw new Error('Approve this checklist before adding items.');
+
+  const { data: existing, error: existingError } = await client
+    .from('action_checklist_items')
+    .select()
+    .eq('action_id', actionId)
+    .eq('user_id', userId)
+    .order('position', { ascending: true });
+  if (existingError) throw existingError;
+  if (!existing.length) throw new Error('This note does not have a checklist yet.');
+
+  const existingNames = new Set(existing.map((item) => item.title.trim().toLocaleLowerCase()));
+  const additions = normalizeChecklistItems(titles).filter(
+    (title) => !existingNames.has(title.toLocaleLowerCase()),
+  );
+  if (!additions.length) return action;
+  if (existing.length + additions.length > 30) {
+    throw new Error('A checklist can contain up to 30 items.');
+  }
+
+  const { error: insertError } = await client.from('action_checklist_items').insert(
+    additions.map((title, offset) => ({
+      action_id: actionId,
+      position: existing.length + offset,
+      title,
+      user_id: userId,
+    })),
+  );
+  if (insertError) throw insertError;
+  return reopenChecklistIfCompleted(action, userId);
+}
+
+export async function createActionChecklistItem(
+  actionId: string,
+  userId: string,
+  rawTitle: string,
+) {
+  const title = rawTitle.trim();
+  if (!title) throw new Error('Add a checklist item first.');
+  if (title.length > 280) throw new Error('Keep checklist items under 280 characters.');
+
+  const client = getSupabaseClient();
+  const action = await getChecklistAction(actionId, userId);
+  const { data: existing, error: existingError } = await client
+    .from('action_checklist_items')
+    .select()
+    .eq('action_id', actionId)
+    .eq('user_id', userId)
+    .order('position', { ascending: true });
+  if (existingError) throw existingError;
+  if (existing.length >= 30) throw new Error('A checklist can contain up to 30 items.');
+  if (
+    existing.some((item) => item.title.trim().toLocaleLowerCase() === title.toLocaleLowerCase())
+  ) {
+    throw new Error('This item is already on the checklist.');
+  }
+
+  const { error } = await client.from('action_checklist_items').insert({
+    action_id: actionId,
+    position: existing.length,
+    title,
+    user_id: userId,
+  });
+  if (error) throw error;
+  return reopenChecklistIfCompleted(action, userId);
+}
+
+export async function renameActionChecklistItem(itemId: string, userId: string, rawTitle: string) {
+  const title = rawTitle.trim();
+  if (!title) throw new Error('A checklist item needs a name.');
+  if (title.length > 280) throw new Error('Keep checklist items under 280 characters.');
+
+  const { data, error } = await getSupabaseClient()
+    .from('action_checklist_items')
+    .update({ title })
+    .eq('id', itemId)
+    .eq('user_id', userId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteActionChecklistItem(item: ChecklistItem, userId: string) {
+  const client = getSupabaseClient();
+  const { error: deleteError } = await client
+    .from('action_checklist_items')
+    .delete()
+    .eq('id', item.id)
+    .eq('user_id', userId);
+  if (deleteError) throw deleteError;
+
+  const { data: following, error: followingError } = await client
+    .from('action_checklist_items')
+    .select()
+    .eq('action_id', item.action_id)
+    .eq('user_id', userId)
+    .gt('position', item.position)
+    .order('position', { ascending: true });
+  if (followingError) throw followingError;
+  for (const next of following) {
+    const { error } = await client
+      .from('action_checklist_items')
+      .update({ position: next.position - 1 })
+      .eq('id', next.id)
+      .eq('user_id', userId);
+    if (error) throw error;
+  }
+}
+
+export async function moveActionChecklistItem(itemId: string, direction: -1 | 1) {
+  const { error } = await getSupabaseClient().rpc('move_action_checklist_item', {
+    p_direction: direction,
+    p_item_id: itemId,
+  });
   if (error) throw error;
 }
 
@@ -134,20 +322,33 @@ export async function fileUnderstoodAction({
     .maybeSingle();
   if (existingError) throw existingError;
   if (existing) {
-    await ensureChecklistItems(existing.id, userId, action.checklistItems);
+    if (!existing.checklist_target_action_id) {
+      await ensureChecklistItems(existing.id, userId, action.checklistItems);
+    }
     return existing;
+  }
+
+  const isChecklistAppend = Boolean(action.checklistTargetActionId && action.checklistItems.length);
+  if (isChecklistAppend && decision.outcome === 'auto') {
+    return appendActionChecklistItems(
+      action.checklistTargetActionId!,
+      userId,
+      action.checklistItems,
+    );
   }
 
   const autoFiled = decision.outcome === 'auto';
   // Below the low bar nothing of the AI's placement is kept: the user gets the
   // text with a title and decides everything else (Kern: never guess).
-  const keepSuggestions = decision.outcome !== 'raw';
+  const keepSuggestions = decision.outcome !== 'raw' || isChecklistAppend;
   const { data, error } = await client
     .from('actions')
     .insert({
       action_type: actionTypeForIntent(action.intent),
       auto_filed_at: autoFiled ? new Date().toISOString() : null,
       category: autoFiled ? (action.suggestedCategory ?? 'inbox') : 'inbox',
+      checklist_append_items: isChecklistAppend ? action.checklistItems : [],
+      checklist_target_action_id: isChecklistAppend ? action.checklistTargetActionId : null,
       clarification_question: action.clarificationQuestion,
       confidence: action.confidence,
       message_draft: action.messageDraft,
@@ -167,7 +368,7 @@ export async function fileUnderstoodAction({
     .select()
     .single();
   if (error) throw error;
-  await ensureChecklistItems(data.id, userId, action.checklistItems);
+  if (!isChecklistAppend) await ensureChecklistItems(data.id, userId, action.checklistItems);
 
   if (autoFiled && decision.contactIds.length) {
     const rows = action.people.flatMap((person, index) => {
@@ -197,6 +398,22 @@ export async function approvePendingAction(
     projectName = action.suggested_project_name,
   }: PendingApprovalInput = {},
 ) {
+  const checklistAppendItems = checklistItemsFrom(action.checklist_append_items);
+  if (action.checklist_target_action_id && checklistAppendItems.length) {
+    const appendedAction = await appendActionChecklistItems(
+      action.checklist_target_action_id,
+      userId,
+      checklistAppendItems,
+    );
+    const { error } = await getSupabaseClient()
+      .from('actions')
+      .delete()
+      .eq('id', action.id)
+      .eq('user_id', userId);
+    if (error) throw error;
+    return appendedAction;
+  }
+
   // A suggested name only resolves to a project the user already has. Creating one is an
   // explicit choice on the edit screen, never a side effect of approving.
   const normalizedName = projectName?.trim() ? normalizedProjectName(projectName) : null;

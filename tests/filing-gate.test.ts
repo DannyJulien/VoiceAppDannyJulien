@@ -29,6 +29,7 @@ function capture(overrides: Partial<UnderstoodAction> = {}): UnderstoodAction {
     suggestedProjectName: null,
     checklistItems: [],
     ...overrides,
+    checklistTargetActionId: overrides.checklistTargetActionId ?? null,
   };
 }
 

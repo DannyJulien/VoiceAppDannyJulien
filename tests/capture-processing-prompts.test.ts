@@ -7,6 +7,7 @@ import {
 
 describe('capture processing prompts', () => {
   const instructions = captureProcessingInstructions({
+    knownChecklists: 'Existing open checklists: "Cycling holiday" (id: "checklist-id").',
     knownProjects: 'Existing projects: "Handled".',
     timezone: 'Europe/Brussels',
   });
@@ -33,6 +34,7 @@ describe('capture processing prompts', () => {
   it('keeps the user context and safe common rules in every request', () => {
     expect(instructions).toContain("The user's timezone is Europe/Brussels.");
     expect(instructions).toContain('Existing projects: "Handled".');
+    expect(instructions).toContain('Existing open checklists: "Cycling holiday"');
     expect(instructions).toContain(
       'Never invent a critical time, contact, fact, task, project, or commitment.',
     );
@@ -51,5 +53,6 @@ describe('capture processing prompts', () => {
       'without checkbox symbols, numbering, invented items, or duplicates',
     );
     expect(instructions).toContain('never turn each list item into a separate action');
+    expect(instructions).toContain('checklistTargetActionId: set this only');
   });
 });

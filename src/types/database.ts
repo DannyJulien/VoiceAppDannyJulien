@@ -93,6 +93,8 @@ export type Database = {
           clarification_question: string | null;
           project_id: string | null;
           category: ActionCategory;
+          checklist_append_items: Json;
+          checklist_target_action_id: string | null;
           suggested_category: ActionCategory | null;
           suggested_project_name: string | null;
           suggested_people: Json;
@@ -118,6 +120,8 @@ export type Database = {
           clarification_question?: string | null;
           project_id?: string | null;
           category?: ActionCategory;
+          checklist_append_items?: Json;
+          checklist_target_action_id?: string | null;
           suggested_category?: ActionCategory | null;
           suggested_project_name?: string | null;
           suggested_people?: Json;
@@ -138,6 +142,8 @@ export type Database = {
           clarification_question?: string | null;
           project_id?: string | null;
           category?: ActionCategory;
+          checklist_append_items?: Json;
+          checklist_target_action_id?: string | null;
           suggested_category?: ActionCategory | null;
           suggested_project_name?: string | null;
           suggested_people?: Json;
@@ -441,7 +447,12 @@ export type Database = {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      move_action_checklist_item: {
+        Args: { p_direction: number; p_item_id: string };
+        Returns: undefined;
+      };
+    };
     Enums: {
       preferred_language: PreferredLanguage;
       action_type: ActionType;

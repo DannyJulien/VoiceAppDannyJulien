@@ -1,14 +1,15 @@
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 
 import { AppButton } from '@/components/app-button';
+import { IconButton } from '@/components/icon-button';
+import { PlusIcon } from '@/components/icons';
 import { useTabBarInset } from '@/components/mobile-navigation';
 import { Screen } from '@/components/screen';
 import { type AppColors, useTheme } from '@/features/theme/theme-provider';
-import { contactLabel, contactValidationError } from '@/features/contacts/contact-utils';
-import { createContact, getContacts } from '@/features/contacts/contact-service';
+import { contactLabel } from '@/features/contacts/contact-utils';
+import { getContacts } from '@/features/contacts/contact-service';
 import { useAuth } from '@/features/auth/auth-provider';
 
 export default function ContactsScreen() {
@@ -16,40 +17,13 @@ export default function ContactsScreen() {
   const styles = createStyles(colors);
   const tabBarInset = useTabBarInset();
   const router = useRouter();
-  const queryClient = useQueryClient();
   const { session } = useAuth();
   const userId = session?.user.id;
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [company, setCompany] = useState('');
-  const [validationError, setValidationError] = useState<string | null>(null);
   const contactsQuery = useQuery({
     queryKey: ['contacts', userId],
     queryFn: () => getContacts(userId!),
     enabled: Boolean(userId),
   });
-  const createMutation = useMutation({
-    mutationFn: () => {
-      if (!userId) throw new Error('You need to be signed in.');
-      return createContact(userId, { company, email, name, phone });
-    },
-    onSuccess: () => {
-      setCompany('');
-      setEmail('');
-      setName('');
-      setPhone('');
-      setValidationError(null);
-      if (userId) queryClient.invalidateQueries({ queryKey: ['contacts', userId] });
-    },
-  });
-
-  function saveContact() {
-    const error = contactValidationError({ email, name, phone });
-    setValidationError(error);
-    if (error) return;
-    createMutation.mutate();
-  }
 
   return (
     <Screen>
@@ -62,59 +36,15 @@ export default function ContactsScreen() {
           Save someone once. From a note, you can open WhatsApp, SMS, or an email to them.
         </Text>
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Add a person</Text>
-          <TextInput
-            accessibilityLabel="Contact name"
-            onChangeText={setName}
-            placeholder="Name"
-            placeholderTextColor={colors.muted}
-            style={styles.input}
-            value={name}
-          />
-          <TextInput
-            accessibilityLabel="Contact email"
-            autoCapitalize="none"
-            keyboardType="email-address"
-            onChangeText={setEmail}
-            placeholder="Email (optional if phone is present)"
-            placeholderTextColor={colors.muted}
-            style={styles.input}
-            value={email}
-          />
-          <TextInput
-            accessibilityLabel="Contact phone"
-            keyboardType="phone-pad"
-            onChangeText={setPhone}
-            placeholder="Phone, e.g. +32470123456 (for WhatsApp)"
-            placeholderTextColor={colors.muted}
-            style={styles.input}
-            value={phone}
-          />
-          <TextInput
-            accessibilityLabel="Contact company"
-            onChangeText={setCompany}
-            placeholder="Company (optional)"
-            placeholderTextColor={colors.muted}
-            style={styles.input}
-            value={company}
-          />
-          {validationError ? <Text style={styles.error}>{validationError}</Text> : null}
-          {createMutation.error ? (
-            <Text accessibilityRole="alert" style={styles.error}>
-              {createMutation.error instanceof Error
-                ? createMutation.error.message
-                : 'Unable to add this contact.'}
-            </Text>
-          ) : null}
-          <AppButton
-            label="Save contact"
-            loading={createMutation.isPending}
-            onPress={saveContact}
+        <View style={styles.listHeader}>
+          <Text style={styles.listTitle}>Saved contacts</Text>
+          <IconButton
+            accessibilityLabel="Add a person"
+            label="New"
+            onPress={() => router.push('/contacts/new')}
+            renderIcon={(color, size) => <PlusIcon color={color} size={size} />}
           />
         </View>
-
-        <Text style={styles.listTitle}>Saved contacts</Text>
         {contactsQuery.isPending ? <Text style={styles.copy}>Loading contacts…</Text> : null}
         {contactsQuery.error ? (
           <View accessibilityRole="alert" style={styles.errorCard}>
@@ -131,7 +61,7 @@ export default function ContactsScreen() {
           </View>
         ) : null}
         {contactsQuery.data?.length === 0 ? (
-          <Text style={styles.copy}>No contacts yet. Add one above when you are ready.</Text>
+          <Text style={styles.copy}>No contacts yet. Tap New to add someone.</Text>
         ) : null}
         <View style={styles.list}>
           {contactsQuery.data?.map((contact) => (
@@ -167,26 +97,14 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
     lineHeight: 40,
   },
   copy: { color: colors.muted, fontSize: 16, lineHeight: 24 },
-  card: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 22,
-    borderWidth: 1,
-    gap: 10,
-    padding: 18,
+  listHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
+    justifyContent: 'space-between',
+    marginTop: 4,
   },
-  cardTitle: { color: colors.ink, fontSize: 18, fontWeight: '800', marginBottom: 2 },
-  input: {
-    backgroundColor: colors.canvas,
-    borderColor: colors.border,
-    borderRadius: 14,
-    borderWidth: 1,
-    color: colors.ink,
-    fontSize: 16,
-    minHeight: 50,
-    paddingHorizontal: 14,
-  },
-  listTitle: { color: colors.ink, fontSize: 19, fontWeight: '900', marginTop: 4 },
+  listTitle: { color: colors.ink, fontSize: 19, fontWeight: '900' },
   list: { gap: 9 },
   contactCard: {
     backgroundColor: colors.surface,

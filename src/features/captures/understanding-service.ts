@@ -1,6 +1,10 @@
 import { FunctionsHttpError } from '@supabase/supabase-js';
 
-import { fileUnderstoodAction, type SavedAction } from '@/features/actions/action-service';
+import {
+  fileUnderstoodAction,
+  getOpenChecklistCandidates,
+  type SavedAction,
+} from '@/features/actions/action-service';
 import { understoodActionSchema } from '@/features/actions/action-schema';
 import { decideFiling, type FilingDecision } from '@/features/actions/filing-gate';
 import { getProfile } from '@/features/auth/profile-service';
@@ -22,10 +26,14 @@ type UnderstandingInput = {
 export type FiledCapture = { action: SavedAction; decision: FilingDecision };
 
 async function understand({ captureId, text, timezone, userId }: UnderstandingInput) {
-  const projects = await getProjects(userId);
+  const [projects, checklists] = await Promise.all([
+    getProjects(userId),
+    getOpenChecklistCandidates(userId),
+  ]);
   const { data, error } = await getSupabaseClient().functions.invoke(processCaptureFunction, {
     body: {
       captureId,
+      checklists,
       projects: projects.map((project) => ({ name: project.name, summary: project.summary })),
       text,
       timezone,

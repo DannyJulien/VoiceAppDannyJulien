@@ -36,6 +36,8 @@ const action: SavedAction = {
   clarification_question: null,
   project_id: null,
   category: 'inbox',
+  checklist_append_items: [],
+  checklist_target_action_id: null,
   suggested_category: null,
   suggested_project_name: null,
   suggested_people: [],

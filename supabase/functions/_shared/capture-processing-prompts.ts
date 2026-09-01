@@ -11,6 +11,7 @@ export const captureIntents = [
 export type CaptureIntent = (typeof captureIntents)[number];
 
 type ProcessingPromptInput = {
+  knownChecklists: string;
   knownProjects: string;
   timezone: string;
 };
@@ -57,6 +58,7 @@ const processingTemplates: Record<CaptureIntent, string> = {
  * the model to use a distinct output template for the intent it selects.
  */
 export function captureProcessingInstructions({
+  knownChecklists,
   knownProjects,
   timezone,
 }: ProcessingPromptInput): string {
@@ -72,9 +74,12 @@ GLOBAL RULES
 - Set fields that do not apply to the selected intent to null. In particular, messageDraft is normally only for message, and scheduledAt needs an explicit unambiguous time.
 - Preserve the user's language in title, summary, clarificationQuestion, and messageDraft.
 - checklistItems: return an empty array unless the user explicitly gave a short to-do list or a set of distinct items for one subject. When there is a list, return its items in spoken order, without checkbox symbols, numbering, invented items, or duplicates. Keep one clear title for the whole checklist; never turn each list item into a separate action.
+- checklistTargetActionId: set this only when the user explicitly asks to add items to one existing checklist and exactly one checklist below clearly matches their named subject. Use that checklist's exact id and return only the new items in checklistItems. When the target is ambiguous, missing, or merely implied, return null and create a normal note instead. Never target a checklist based only on a similar word.
 
 INTENT-SPECIFIC TEMPLATES
 ${templates}
 
-${knownProjects}`;
+${knownProjects}
+
+${knownChecklists}`;
 }

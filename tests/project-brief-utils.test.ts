@@ -2,6 +2,7 @@ import { describe, expect, it } from '@jest/globals';
 
 import {
   buildProjectBrief,
+  formatExportedOn,
   type ProjectBriefAction,
 } from '@/features/projects/project-brief-utils';
 
@@ -63,7 +64,7 @@ describe('project brief export', () => {
     expect(brief.content).toContain('Due: 2026-09-02T09:00:00.000Z');
     expect(brief.content).toContain('## History');
     expect(brief.content).toContain('Previous decision');
-    expect(brief.archiveActionIds).toEqual(['knowledge-1', 'idea-1']);
+    expect(brief.exportedActionIds).toEqual(['knowledge-1', 'idea-1']);
     expect(brief.includedActionIds).toEqual([
       'knowledge-1',
       'shipped-1',
@@ -98,6 +99,16 @@ describe('project brief export', () => {
     expect(brief.content).toContain('Test the export');
     expect(brief.content).not.toContain('Previous decision');
     expect(brief.includedActionIds).toEqual(['knowledge-2', 'todo-1']);
-    expect(brief.archiveActionIds).toEqual(['knowledge-2']);
+    expect(brief.exportedActionIds).toEqual(['knowledge-2']);
+  });
+});
+
+describe('formatExportedOn', () => {
+  it('renders the export moment as a short local date', () => {
+    expect(formatExportedOn(new Date(2026, 8, 1, 22, 30).toISOString())).toBe('1 Sept 2026');
+  });
+
+  it('falls back to the raw value when it is not a date', () => {
+    expect(formatExportedOn('unknown')).toBe('unknown');
   });
 });

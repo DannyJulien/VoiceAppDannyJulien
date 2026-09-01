@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { AppButton } from '@/components/app-button';
+import { BackButton } from '@/components/back-button';
 import { useTabBarInset } from '@/components/mobile-navigation';
 import { Screen } from '@/components/screen';
 import { type AppColors, useTheme } from '@/features/theme/theme-provider';
@@ -119,7 +120,7 @@ export default function EditActionScreen() {
         <Text style={styles.copy}>
           It may have been removed or you no longer have access to it.
         </Text>
-        <AppButton label="Back to timeline" onPress={() => router.replace('/timeline')} />
+        <BackButton fallbackHref="/timeline" fallbackLabel="Back to timeline" label="Go back" />
       </Screen>
     );
   }

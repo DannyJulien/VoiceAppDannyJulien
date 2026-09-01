@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation, useQuery } from '@tanstack/react-query';
 
 import { AppButton } from '@/components/app-button';
+import { BackButton } from '@/components/back-button';
 import { useTabBarInset } from '@/components/mobile-navigation';
 import { Screen } from '@/components/screen';
 import { type AppColors, useTheme } from '@/features/theme/theme-provider';
@@ -49,7 +50,7 @@ export default function AddToMeetingScreen() {
     return (
       <Screen contentStyle={styles.centered}>
         <Text style={styles.title}>Briefing unavailable</Text>
-        <AppButton label="Back to research" onPress={() => router.replace('/research')} />
+        <BackButton fallbackHref="/research" fallbackLabel="Back to research" label="Go back" />
       </Screen>
     );
   }
@@ -108,9 +109,9 @@ export default function AddToMeetingScreen() {
   return (
     <Screen>
       <ScrollView contentContainerStyle={[styles.content, tabBarInset]} keyboardShouldPersistTaps="handled">
-        <AppButton
-          label="‹ Research"
-          onPress={() => router.back()}
+        <BackButton
+          fallbackHref="/research"
+          fallbackLabel="‹ Research"
           style={styles.back}
           variant="quiet"
         />

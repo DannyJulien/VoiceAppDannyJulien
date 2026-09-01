@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { AppButton } from '@/components/app-button';
+import { BackButton } from '@/components/back-button';
 import { useTabBarInset } from '@/components/mobile-navigation';
 import { Screen } from '@/components/screen';
 import { type AppColors, useTheme } from '@/features/theme/theme-provider';
@@ -49,9 +50,10 @@ export default function ResearchResultScreen() {
             onPress={() => router.replace('/research')}
             variant="secondary"
           />
-          <AppButton
-            label="Go to timeline"
-            onPress={() => router.replace('/timeline')}
+          <BackButton
+            fallbackHref="/timeline"
+            fallbackLabel="Go to timeline"
+            label="Go back"
             variant="quiet"
           />
         </View>
@@ -110,9 +112,9 @@ function ResearchResultContent({ result, userId }: { result: ResearchResult; use
         contentContainerStyle={[styles.content, tabBarInset]}
         keyboardShouldPersistTaps="handled"
       >
-        <AppButton
-          label="‹ Research"
-          onPress={() => router.replace('/research')}
+        <BackButton
+          fallbackHref="/research"
+          fallbackLabel="‹ Research"
           style={styles.back}
           variant="quiet"
         />

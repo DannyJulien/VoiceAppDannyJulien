@@ -83,6 +83,40 @@ export function CalendarIcon({ color, size = 20 }: IconProps) {
   );
 }
 
+export function MicrophoneIcon({ color, size = 20 }: IconProps) {
+  return (
+    <IconFrame size={size}>
+      <Path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Z" stroke={color} {...stroke} />
+      <Path d="M19 11a7 7 0 0 1-14 0M12 18v3M8 21h8" stroke={color} {...stroke} />
+    </IconFrame>
+  );
+}
+
+export function TimelineIcon({ color, size = 20 }: IconProps) {
+  return (
+    <IconFrame size={size}>
+      <Line stroke={color} x1={8} x2={21} y1={6} y2={6} {...stroke} />
+      <Line stroke={color} x1={8} x2={21} y1={12} y2={12} {...stroke} />
+      <Line stroke={color} x1={8} x2={21} y1={18} y2={18} {...stroke} />
+      <Circle cx={4} cy={6} fill={color} r={1.5} />
+      <Circle cx={4} cy={12} fill={color} r={1.5} />
+      <Circle cx={4} cy={18} fill={color} r={1.5} />
+    </IconFrame>
+  );
+}
+
+export function FolderIcon({ color, size = 20 }: IconProps) {
+  return (
+    <IconFrame size={size}>
+      <Path
+        d="M3 6a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6Z"
+        stroke={color}
+        {...stroke}
+      />
+    </IconFrame>
+  );
+}
+
 export function SearchIcon({ color, size = 20 }: IconProps) {
   return (
     <IconFrame size={size}>

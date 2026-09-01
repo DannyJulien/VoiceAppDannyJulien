@@ -1,14 +1,14 @@
 import type { ActionCategory } from '@/types/database';
 
 export const categories: { value: ActionCategory; label: string; color: string }[] = [
-  { value: 'inbox', label: 'Inbox', color: '#667085' },
-  { value: 'work', label: 'Work', color: '#4F46E5' },
-  { value: 'personal', label: 'Personal', color: '#DB2777' },
-  { value: 'meeting', label: 'Meetings', color: '#0F766E' },
-  { value: 'idea', label: 'Ideas', color: '#EA580C' },
+  { value: 'inbox', label: 'Inbox', color: '#5D6B82' },
+  { value: 'work', label: 'Work', color: '#2563EB' },
+  { value: 'personal', label: 'Personal', color: '#C0268A' },
+  { value: 'meeting', label: 'Meetings', color: '#0F9F8A' },
+  { value: 'idea', label: 'Ideas', color: '#C76A00' },
 ];
 
-export const projectColors = ['#4F46E5', '#0F766E', '#DB2777', '#EA580C', '#2563EB'];
+export const projectColors = ['#2563EB', '#0F9F8A', '#C0268A', '#C76A00', '#0E7490'];
 export const maxProjectSummaryLength = 500;
 
 type SupabaseError = {

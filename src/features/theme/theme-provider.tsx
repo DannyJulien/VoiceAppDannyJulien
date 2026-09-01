@@ -1,6 +1,14 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SystemUI from 'expo-system-ui';
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type PropsWithChildren } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type PropsWithChildren,
+} from 'react';
 
 export type ThemeMode = 'light' | 'dark';
 
@@ -20,44 +28,50 @@ export type AppColors = Readonly<{
   accentSoft: string;
   nav: string;
   navMuted: string;
+  onBrand: string;
+  onBrandMuted: string;
 }>;
 
 const themeStorageKey = 'handled.theme-mode.v1';
 
 const palettes: Record<ThemeMode, AppColors> = {
   light: {
-    ink: '#111827',
-    muted: '#667085',
-    canvas: '#F7F8FC',
+    ink: '#142033',
+    muted: '#5D6B82',
+    canvas: '#F5F7FB',
     surface: '#FFFFFF',
-    border: '#E4E7EC',
-    brand: '#4F46E5',
-    brandPressed: '#3730A3',
-    brandSoft: '#EEF2FF',
-    danger: '#D92D20',
-    dangerSoft: '#FEF3F2',
-    focus: '#A5B4FC',
-    accent: '#F97316',
-    accentSoft: '#FFF0E6',
-    nav: '#111827',
-    navMuted: '#A5B4FC',
+    border: '#DDE5F0',
+    brand: '#2563EB',
+    brandPressed: '#1D4ED8',
+    brandSoft: '#EAF1FF',
+    danger: '#B42318',
+    dangerSoft: '#FFF1F0',
+    focus: '#93B4FF',
+    accent: '#0F9F8A',
+    accentSoft: '#E7F8F4',
+    nav: '#12213D',
+    navMuted: '#B9C8E3',
+    onBrand: '#FFFFFF',
+    onBrandMuted: '#DBEAFE',
   },
   dark: {
-    ink: '#F8FAFC',
-    muted: '#A8B3C7',
-    canvas: '#0B1220',
-    surface: '#131D2E',
-    border: '#2A3850',
-    brand: '#9B95FF',
-    brandPressed: '#B6B2FF',
-    brandSoft: '#242653',
-    danger: '#FF9A93',
-    dangerSoft: '#40222D',
-    focus: '#7772E8',
-    accent: '#FFAE68',
-    accentSoft: '#402B1E',
-    nav: '#070D18',
-    navMuted: '#B9B6FF',
+    ink: '#F5F8FC',
+    muted: '#B4C0D2',
+    canvas: '#091322',
+    surface: '#111E30',
+    border: '#273A55',
+    brand: '#86B4FF',
+    brandPressed: '#B8D2FF',
+    brandSoft: '#1C3154',
+    danger: '#FFA8A0',
+    dangerSoft: '#48232B',
+    focus: '#5C8EE5',
+    accent: '#63D6C3',
+    accentSoft: '#153A39',
+    nav: '#070F1D',
+    navMuted: '#B7C7E6',
+    onBrand: '#071525',
+    onBrandMuted: '#D7E6FF',
   },
 };
 
@@ -96,10 +110,7 @@ export function ThemeProvider({ children }: PropsWithChildren) {
     void AsyncStorage.setItem(themeStorageKey, nextMode).catch(() => undefined);
   }, []);
 
-  const value = useMemo(
-    () => ({ colors: palettes[mode], mode, setMode }),
-    [mode, setMode],
-  );
+  const value = useMemo(() => ({ colors: palettes[mode], mode, setMode }), [mode, setMode]);
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }

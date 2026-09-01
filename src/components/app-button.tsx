@@ -32,6 +32,7 @@ export function AppButton({
       accessibilityHint={accessibilityHint}
       accessibilityState={{ disabled: isDisabled, busy: loading }}
       disabled={isDisabled}
+      hitSlop={4}
       onPress={onPress}
       style={({ pressed }) => [
         styles.base,
@@ -44,7 +45,7 @@ export function AppButton({
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={isPrimary ? colors.surface : colors.brand} />
+        <ActivityIndicator color={isPrimary ? colors.onBrand : colors.brand} />
       ) : (
         <Text style={[styles.label, isPrimary ? styles.primaryLabel : styles.secondaryLabel]}>
           {label}
@@ -54,20 +55,26 @@ export function AppButton({
   );
 }
 
-const createStyles = (colors: AppColors) => StyleSheet.create({
-  base: {
-    minHeight: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 16,
-    paddingHorizontal: 18,
-  },
-  primary: { backgroundColor: colors.brand, boxShadow: `0px 4px 10px ${colors.brand}2E` },
-  secondary: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
-  quiet: { backgroundColor: 'transparent' },
-  pressed: { opacity: 0.86 },
-  disabled: { opacity: 0.48 },
-  label: { fontSize: 15, fontWeight: '800' },
-  primaryLabel: { color: colors.surface },
-  secondaryLabel: { color: colors.brand },
-});
+const createStyles = (colors: AppColors) =>
+  StyleSheet.create({
+    base: {
+      minHeight: 50,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderRadius: 16,
+      paddingHorizontal: 18,
+    },
+    primary: {
+      backgroundColor: colors.brand,
+      borderColor: colors.brand,
+      borderWidth: 1,
+      boxShadow: `0px 5px 12px ${colors.brand}2E`,
+    },
+    secondary: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+    quiet: { backgroundColor: 'transparent' },
+    pressed: { opacity: 0.86 },
+    disabled: { opacity: 0.48 },
+    label: { fontSize: 15, fontWeight: '800' },
+    primaryLabel: { color: colors.onBrand },
+    secondaryLabel: { color: colors.brand },
+  });

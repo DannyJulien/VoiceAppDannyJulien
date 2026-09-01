@@ -1,15 +1,23 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import {
+  CalendarIcon,
+  FolderIcon,
+  MicrophoneIcon,
+  TimelineIcon,
+  UsersIcon,
+} from '@/components/icons';
 import { Layout } from '@/constants/theme';
 import { type AppColors, useTheme } from '@/features/theme/theme-provider';
 
 const destinations = [
-  { icon: '●', label: 'Capture', path: '/home' },
-  { icon: '≡', label: 'Timeline', path: '/timeline' },
-  { icon: '□', label: 'Calendar', path: '/calendar' },
-  { icon: '◇', label: 'Projects', path: '/projects' },
-  { icon: '◌', label: 'People', path: '/contacts' },
+  { Icon: MicrophoneIcon, label: 'Capture', path: '/home' },
+  { Icon: TimelineIcon, label: 'Timeline', path: '/timeline' },
+  { Icon: CalendarIcon, label: 'Calendar', path: '/calendar' },
+  { Icon: FolderIcon, label: 'Projects', path: '/projects' },
+  { Icon: UsersIcon, label: 'People', path: '/contacts' },
 ] as const;
 
 // Space between the pill and the physical bottom edge when the device has no home indicator.
@@ -68,9 +76,7 @@ export function MobileNavigation() {
               ]}
             >
               <View style={styles.iconWrap}>
-                <Text style={[styles.icon, selected && styles.iconSelected]}>
-                  {destination.icon}
-                </Text>
+                <destination.Icon color={selected ? colors.onBrand : colors.navMuted} size={19} />
               </View>
               <Text style={[styles.label, selected && styles.labelSelected]}>
                 {destination.label}
@@ -83,46 +89,52 @@ export function MobileNavigation() {
   );
 }
 
-const createStyles = (colors: AppColors) => StyleSheet.create({
-  wrapper: {
-    // Overlay the screen content instead of reserving a strip below it.
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-    right: 0,
-    paddingHorizontal: 20,
-  },
-  bar: {
-    alignItems: 'center',
-    alignSelf: 'center',
-    backgroundColor: colors.nav,
-    borderRadius: 999,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    maxWidth: Layout.contentMaxWidth,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    width: '100%',
-    // Soft lift so the pill reads as floating above the page.
-    shadowColor: '#0F172A',
-    shadowOffset: { height: 8, width: 0 },
-    shadowOpacity: 0.18,
-    shadowRadius: 16,
-    elevation: 10,
-  },
-  item: {
-    alignItems: 'center',
-    borderRadius: 999,
-    flex: 1,
-    gap: 2,
-    paddingHorizontal: 4,
-    paddingVertical: 6,
-  },
-  itemSelected: { backgroundColor: 'rgba(255,255,255,0.12)' },
-  pressed: { opacity: 0.72 },
-  iconWrap: { alignItems: 'center', justifyContent: 'center', minHeight: 21, minWidth: 24 },
-  icon: { color: '#98A2B3', fontSize: 18, fontWeight: '900', lineHeight: 21 },
-  iconSelected: { color: '#FFFFFF' },
-  label: { color: '#98A2B3', fontSize: 11, fontWeight: '700' },
-  labelSelected: { color: '#FFFFFF', fontWeight: '900' },
-});
+const createStyles = (colors: AppColors) =>
+  StyleSheet.create({
+    wrapper: {
+      // Overlay the screen content instead of reserving a strip below it.
+      bottom: 0,
+      left: 0,
+      position: 'absolute',
+      right: 0,
+      paddingHorizontal: 20,
+    },
+    bar: {
+      alignItems: 'center',
+      alignSelf: 'center',
+      backgroundColor: colors.nav,
+      borderRadius: 999,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      maxWidth: Layout.contentMaxWidth,
+      paddingHorizontal: 6,
+      paddingVertical: 5,
+      width: '100%',
+      // Soft lift so the pill reads as floating above the page.
+      shadowColor: '#0F172A',
+      shadowOffset: { height: 8, width: 0 },
+      shadowOpacity: 0.18,
+      shadowRadius: 16,
+      elevation: 10,
+    },
+    item: {
+      alignItems: 'center',
+      borderRadius: 999,
+      flex: 1,
+      gap: 2,
+      minHeight: 50,
+      paddingHorizontal: 4,
+      paddingVertical: 4,
+    },
+    itemSelected: { backgroundColor: colors.brand },
+    pressed: { opacity: 0.72 },
+    iconWrap: { alignItems: 'center', justifyContent: 'center', minHeight: 22, minWidth: 24 },
+    label: {
+      color: colors.navMuted,
+      fontSize: 10,
+      fontWeight: '800',
+      letterSpacing: -0.1,
+      lineHeight: 12,
+    },
+    labelSelected: { color: colors.onBrand, fontWeight: '900' },
+  });

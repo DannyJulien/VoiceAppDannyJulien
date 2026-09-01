@@ -45,6 +45,7 @@ export function IconButton({
       accessibilityRole="button"
       accessibilityState={{ disabled }}
       disabled={disabled}
+      hitSlop={4}
       onPress={onPress}
       style={({ pressed }) => [
         styles.base,
@@ -74,7 +75,7 @@ const createStyles = (colors: AppColors) =>
     },
     square: { borderRadius: 14, height: 44, width: 44 },
     pill: { borderRadius: 999, minHeight: 44, paddingHorizontal: 16 },
-    danger: { backgroundColor: colors.dangerSoft, borderColor: '#FBD3CE' },
+    danger: { backgroundColor: colors.dangerSoft, borderColor: colors.danger },
     pressed: { opacity: 0.8 },
     disabled: { opacity: 0.48 },
     label: { fontSize: 15, fontWeight: '800' },

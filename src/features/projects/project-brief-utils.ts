@@ -22,7 +22,7 @@ export type ProjectBriefAction = {
 };
 
 export type BuiltProjectBrief = {
-  archiveActionIds: string[];
+  exportedActionIds: string[];
   content: string;
   includedActionIds: string[];
   mode: ProjectBriefMode;
@@ -103,7 +103,7 @@ export function buildProjectBrief({
     mode === 'full'
       ? [...context, ...currentIdeas, ...openTodos, ...history]
       : [...context, ...currentIdeas, ...openTodos];
-  const archiveActions = [...newKnowledge, ...newIdeas];
+  const exportedActions = [...newKnowledge, ...newIdeas];
 
   const heading =
     mode === 'full'
@@ -154,9 +154,23 @@ export function buildProjectBrief({
   }
 
   return {
-    archiveActionIds: uniqueIds(archiveActions),
+    exportedActionIds: uniqueIds(exportedActions),
     content: `${parts.join('\n\n')}\n`,
     includedActionIds: uniqueIds(includedActions),
     mode,
   };
+}
+
+/**
+ * Short local date for the "In brief" marker on a note that a brief already
+ * handed over, e.g. "1 Sep 2026". Unreadable input falls back to the raw text.
+ */
+export function formatExportedOn(exportedAt: string) {
+  const date = new Date(exportedAt);
+  if (Number.isNaN(date.getTime())) return exportedAt;
+  return new Intl.DateTimeFormat('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  }).format(date);
 }

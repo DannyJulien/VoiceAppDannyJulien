@@ -16,6 +16,7 @@ import {
   exportProjectBrief,
   type ProjectBriefMode,
 } from '@/features/projects/project-brief-service';
+import { formatExportedOn } from '@/features/projects/project-brief-utils';
 import { categoryDetails, maxProjectSummaryLength } from '@/features/projects/project-utils';
 
 export default function ProjectTimelineScreen() {
@@ -87,9 +88,9 @@ export default function ProjectTimelineScreen() {
       </Screen>
     );
 
+  // Every note stays in the project view, exactly as in the Timeline tab. A brief
+  // export only marks what it handed over; it never hides anything (#89).
   const actions = actionsQuery.data ?? [];
-  const activeActions = actions.filter((action) => !action.archived_at);
-  const archivedActions = actions.filter((action) => action.archived_at);
 
   return (
     <Screen>
@@ -198,14 +199,14 @@ export default function ProjectTimelineScreen() {
           ) : null}
         </View>
         {actionsQuery.isPending ? <Text style={styles.copy}>Loading timeline…</Text> : null}
-        {activeActions.length === 0 ? (
+        {!actionsQuery.isPending && actions.length === 0 ? (
           <View style={styles.empty}>
             <Text style={styles.emptyTitle}>This timeline is empty</Text>
             <Text style={styles.copy}>Add a voice or typed note and it will appear here.</Text>
           </View>
         ) : null}
         <View style={styles.timeline}>
-          {activeActions.map((action) => {
+          {actions.map((action) => {
             const category = categoryDetails(action.category);
             return (
               <View key={action.id} style={styles.eventRow}>
@@ -221,6 +222,14 @@ export default function ProjectTimelineScreen() {
                     </Text>
                   ) : null}
                   <Text style={styles.date}>{new Date(action.created_at).toLocaleString()}</Text>
+                  {action.exported_at ? (
+                    <Text
+                      accessibilityLabel={`Included in a Claude Code brief on ${formatExportedOn(action.exported_at)}`}
+                      style={styles.exported}
+                    >
+                      In brief · {formatExportedOn(action.exported_at)}
+                    </Text>
+                  ) : null}
                   <AppButton
                     label="Open note"
                     onPress={() =>
@@ -234,15 +243,6 @@ export default function ProjectTimelineScreen() {
             );
           })}
         </View>
-        {archivedActions.length ? (
-          <View style={styles.archivedCard}>
-            <Text style={styles.archivedTitle}>Shipped to Claude Code</Text>
-            <Text style={styles.copy}>
-              {archivedActions.length} {archivedActions.length === 1 ? 'entry has' : 'entries have'}{' '}
-              already been included in a brief. They remain in the full brief history.
-            </Text>
-          </View>
-        ) : null}
       </ScrollView>
     </Screen>
   );
@@ -331,12 +331,17 @@ const createStyles = (colors: AppColors) =>
     eventCopy: { color: colors.muted, fontSize: 14, lineHeight: 20 },
     date: { color: colors.muted, fontSize: 12 },
     open: { alignSelf: 'flex-start', minHeight: 32, paddingHorizontal: 0 },
-    archivedCard: {
+    exported: {
+      alignSelf: 'flex-start',
       backgroundColor: colors.brandSoft,
-      borderRadius: 18,
-      gap: 7,
-      padding: 16,
+      borderRadius: 99,
+      color: colors.brand,
+      fontSize: 12,
+      fontWeight: '800',
+      marginTop: 2,
+      overflow: 'hidden',
+      paddingHorizontal: 9,
+      paddingVertical: 3,
     },
-    archivedTitle: { color: colors.ink, fontSize: 16, fontWeight: '900' },
     error: { color: colors.danger, fontSize: 14, lineHeight: 20 },
   });

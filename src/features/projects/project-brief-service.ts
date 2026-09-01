@@ -53,14 +53,16 @@ export async function exportProjectBrief({
     if (entriesError) throw projectBriefError(entriesError) ?? entriesError;
   }
 
-  if (brief.archiveActionIds.length) {
+  if (brief.exportedActionIds.length) {
+    // Marks what "new only" has already handed over. It never hides a note: the project
+    // view and the timeline both keep showing exported entries (#89).
     const shippedAt = new Date().toISOString();
     const { error: archiveError } = await client
       .from('actions')
-      .update({ archived_at: shippedAt, exported_at: shippedAt })
+      .update({ exported_at: shippedAt })
       .eq('project_id', projectId)
       .eq('user_id', userId)
-      .in('id', brief.archiveActionIds);
+      .in('id', brief.exportedActionIds);
     if (archiveError) throw projectBriefError(archiveError) ?? archiveError;
   }
 

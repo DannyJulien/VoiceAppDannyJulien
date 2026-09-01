@@ -13,8 +13,51 @@ export type CaptureIntent = (typeof captureIntents)[number];
 type ProcessingPromptInput = {
   knownChecklists: string;
   knownProjects: string;
+  now: Date;
   timezone: string;
 };
+
+/**
+ * "Saturday 2026-08-29 14:05" for the given instant in the user's timezone.
+ * The model needs the weekday to resolve "Friday" and the year to avoid guessing
+ * one from its training data. An unknown timezone name falls back to UTC.
+ */
+export function describeCurrentMoment(now: Date, timezone: string): string {
+  const options: Intl.DateTimeFormatOptions = {
+    weekday: 'long',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  };
+  let formatter: Intl.DateTimeFormat;
+  try {
+    formatter = new Intl.DateTimeFormat('en-US', { ...options, timeZone: timezone });
+  } catch {
+    formatter = new Intl.DateTimeFormat('en-US', { ...options, timeZone: 'UTC' });
+  }
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    formatter.formatToParts(now).find((item) => item.type === type)?.value ?? '';
+  // Some engines print midnight as "24" with hour12: false.
+  const hour = part('hour') === '24' ? '00' : part('hour');
+  return `${part('weekday')} ${part('year')}-${part('month')}-${part('day')} ${hour}:${part('minute')}`;
+}
+
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * The model occasionally resolves a relative date against the wrong year. A
+ * reminder more than a day in the past cannot be what the user meant, so it is
+ * dropped rather than saved. Anything unparsable is dropped for the same reason.
+ */
+export function sanitizeScheduledAt(scheduledAt: string | null, now: Date): string | null {
+  if (scheduledAt === null) return null;
+  const timestamp = Date.parse(scheduledAt);
+  if (Number.isNaN(timestamp)) return null;
+  return now.getTime() - timestamp > ONE_DAY_MS ? null : scheduledAt;
+}
 
 const processingTemplates: Record<CaptureIntent, string> = {
   note: `NOTE TEMPLATE
@@ -60,14 +103,16 @@ const processingTemplates: Record<CaptureIntent, string> = {
 export function captureProcessingInstructions({
   knownChecklists,
   knownProjects,
+  now,
   timezone,
 }: ProcessingPromptInput): string {
   const templates = captureIntents.map((intent) => processingTemplates[intent]).join('\n\n');
 
-  return `Turn one voice capture into one useful action or useful context. The user's timezone is ${timezone}. First determine the one best intent. Then follow exactly the processing template for that intent below when filling the structured response. The templates deliberately produce different levels of detail for different capture types.
+  return `Turn one voice capture into one useful action or useful context. The user's timezone is ${timezone}. Right now it is ${describeCurrentMoment(now, timezone)} in ${timezone}. First determine the one best intent. Then follow exactly the processing template for that intent below when filling the structured response. The templates deliberately produce different levels of detail for different capture types.
 
 GLOBAL RULES
 - Never invent a critical time, contact, fact, task, project, or commitment.
+- Resolve relative dates such as "tomorrow", "Friday", or "next week" against the current moment above, so the result is never earlier than the current moment. "Friday" means the next Friday from today. Return scheduledAt as an ISO 8601 timestamp with the user's UTC offset.
 - Use requiresClarification with a question when a key detail is missing.
 - Suggest one category only when confident; otherwise use inbox.
 - Set suggestedProjectName to an exact matching existing project name when clearly related. When no existing name fits but the capture clearly names a substantial ongoing project, propose a concise new project name. Otherwise use null. Never use a person's name or a generic one-off task as a project.

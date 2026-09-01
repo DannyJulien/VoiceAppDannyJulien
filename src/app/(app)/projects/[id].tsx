@@ -164,10 +164,6 @@ export default function ProjectTimelineScreen() {
             </>
           )}
         </View>
-        <AppButton
-          label="Add a note to this project"
-          onPress={() => router.push({ pathname: '/note/new', params: { projectId: project.id } })}
-        />
         <View style={styles.briefCard}>
           <Text style={styles.briefTitle}>Claude Code brief</Text>
           <Text style={styles.briefCopy}>

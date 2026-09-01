@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { AppButton } from '@/components/app-button';
+import { AppTextInput } from '@/components/app-text-input';
 import { BackButton } from '@/components/back-button';
 import { useTabBarInset } from '@/components/mobile-navigation';
 import { Screen } from '@/components/screen';
@@ -195,7 +196,7 @@ function ResearchResultContent({ result, userId }: { result: ResearchResult; use
         <View style={styles.shareBox}>
           <Text style={styles.sectionLabel}>SHARE MESSAGE</Text>
           {isEditingShare ? (
-            <TextInput
+            <AppTextInput
               accessibilityLabel="Share message"
               multiline
               onChangeText={setShareMessage}
@@ -295,17 +296,7 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
     gap: 10,
     padding: 16,
   },
-  shareInput: {
-    backgroundColor: colors.canvas,
-    borderColor: colors.border,
-    borderRadius: 12,
-    borderWidth: 1,
-    color: colors.ink,
-    fontSize: 16,
-    minHeight: 120,
-    padding: 13,
-    textAlignVertical: 'top',
-  },
+  shareInput: { minHeight: 120, padding: 13 },
   actions: { gap: 10 },
   error: { color: colors.danger, fontSize: 14 },
 });

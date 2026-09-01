@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { AppButton } from '@/components/app-button';
+import { AppTextInput } from '@/components/app-text-input';
 import { BackButton } from '@/components/back-button';
 import { useTabBarInset } from '@/components/mobile-navigation';
 import { Screen } from '@/components/screen';
@@ -66,39 +67,35 @@ export default function NewContactScreen() {
           </Text>
         </View>
         <View style={styles.form}>
-          <TextInput
+          <AppTextInput
             accessibilityLabel="Contact name"
             autoFocus
             onChangeText={setName}
             placeholder="Name"
-            placeholderTextColor={colors.muted}
             style={styles.input}
             value={name}
           />
-          <TextInput
+          <AppTextInput
             accessibilityLabel="Contact email"
             autoCapitalize="none"
             keyboardType="email-address"
             onChangeText={setEmail}
             placeholder="Email (optional if phone is present)"
-            placeholderTextColor={colors.muted}
             style={styles.input}
             value={email}
           />
-          <TextInput
+          <AppTextInput
             accessibilityLabel="Contact phone"
             keyboardType="phone-pad"
             onChangeText={setPhone}
             placeholder="Phone, e.g. +32470123456 (for WhatsApp)"
-            placeholderTextColor={colors.muted}
             style={styles.input}
             value={phone}
           />
-          <TextInput
+          <AppTextInput
             accessibilityLabel="Contact company"
             onChangeText={setCompany}
             placeholder="Company (optional)"
-            placeholderTextColor={colors.muted}
             style={styles.input}
             value={company}
           />
@@ -140,15 +137,6 @@ const createStyles = (colors: AppColors) =>
     },
     copy: { color: colors.muted, fontSize: 16, lineHeight: 23 },
     form: { gap: 12 },
-    input: {
-      backgroundColor: colors.surface,
-      borderColor: colors.border,
-      borderRadius: 14,
-      borderWidth: 1,
-      color: colors.ink,
-      fontSize: 16,
-      minHeight: 52,
-      paddingHorizontal: 14,
-    },
+    input: { backgroundColor: colors.surface, borderRadius: 14 },
     error: { color: colors.danger, fontSize: 14, lineHeight: 20 },
   });

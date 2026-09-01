@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { AppButton } from '@/components/app-button';
+import { AppTextInput } from '@/components/app-text-input';
 import { BackButton } from '@/components/back-button';
 import { IconButton } from '@/components/icon-button';
 import { MailIcon, MessageIcon, UsersIcon } from '@/components/icons';
@@ -200,14 +201,12 @@ export default function SendActionScreen() {
             ) : null}
           </View>
           <Text style={styles.fieldLabel}>Message</Text>
-          <TextInput
+          <AppTextInput
             accessibilityHint="Leave empty to send the note summary or title."
             accessibilityLabel="Message draft"
             multiline
             onChangeText={setEditedDraft}
             placeholder={action.summary?.trim() || action.title}
-            placeholderTextColor={colors.muted}
-            style={[styles.input, styles.multilineInput]}
             value={draft}
           />
         </View>
@@ -289,17 +288,6 @@ const createStyles = (colors: AppColors) =>
       padding: 18,
     },
     fieldLabel: { color: colors.ink, fontSize: 14, fontWeight: '700', marginTop: 2 },
-    input: {
-      backgroundColor: colors.canvas,
-      borderColor: colors.border,
-      borderRadius: 12,
-      borderWidth: 1,
-      color: colors.ink,
-      fontSize: 16,
-      minHeight: 52,
-      paddingHorizontal: 14,
-    },
-    multilineInput: { minHeight: 110, paddingTop: 13, textAlignVertical: 'top' },
     compactActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     contactChoices: { gap: 8, paddingRight: 4 },
     contactChoice: {

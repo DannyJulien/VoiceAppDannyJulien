@@ -1,7 +1,8 @@
-import type { CSSProperties } from 'react';
-import { Platform, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useState, type CSSProperties } from 'react';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 
 import { AppButton } from '@/components/app-button';
+import { AppTextInput } from '@/components/app-text-input';
 import { localDateTimeInputValue } from '@/features/actions/action-utils';
 import { type AppColors, useThemePreference } from '@/features/theme/theme-provider';
 
@@ -25,25 +26,27 @@ type DateTimeFieldProps = {
 export function DateTimeField({ accessibilityLabel, onChange, value }: DateTimeFieldProps) {
   const { colors, mode } = useThemePreference();
   const styles = createStyles(colors);
+  const [focused, setFocused] = useState(false);
 
   if (Platform.OS !== 'web') {
     return (
-      <TextInput
+      <AppTextInput
         accessibilityHint="Example: 2026-08-23 16:30"
         accessibilityLabel={accessibilityLabel}
         onChangeText={onChange}
         placeholder="2026-08-23 16:30"
-        placeholderTextColor={colors.muted}
-        style={styles.input}
         value={value}
       />
     );
   }
 
+  // Mirrors AppTextInput, including its in-box focus state; the browser outline is
+  // switched off globally in global.css.
   const webInput: CSSProperties = {
-    backgroundColor: colors.canvas,
-    border: `1px solid ${colors.border}`,
+    backgroundColor: focused ? colors.surface : colors.canvas,
+    border: `1px solid ${focused ? colors.brand : colors.border}`,
     borderRadius: 12,
+    boxShadow: focused ? `inset 0 0 0 2px ${colors.brandSoft}` : undefined,
     boxSizing: 'border-box',
     color: colors.ink,
     // Makes the browser's picker popup and icon follow the app theme.
@@ -53,7 +56,6 @@ export function DateTimeField({ accessibilityLabel, onChange, value }: DateTimeF
     fontSize: 16,
     minHeight: 52,
     minWidth: 0,
-    outlineColor: colors.focus,
     padding: '0 14px',
   };
 
@@ -62,7 +64,9 @@ export function DateTimeField({ accessibilityLabel, onChange, value }: DateTimeF
       <View style={styles.row}>
         <input
           aria-label={accessibilityLabel}
+          onBlur={() => setFocused(false)}
           onChange={(event) => onChange(event.target.value)}
+          onFocus={() => setFocused(true)}
           style={webInput}
           type="datetime-local"
           value={localDateTimeInputValue(value)}
@@ -88,14 +92,4 @@ const createStyles = (colors: AppColors) =>
     row: { alignItems: 'center', flexDirection: 'row', gap: 8 },
     clear: { minHeight: 52, paddingHorizontal: 12 },
     hint: { color: colors.muted, fontSize: 13, lineHeight: 18 },
-    input: {
-      backgroundColor: colors.canvas,
-      borderColor: colors.border,
-      borderRadius: 12,
-      borderWidth: 1,
-      color: colors.ink,
-      fontSize: 16,
-      minHeight: 52,
-      paddingHorizontal: 14,
-    },
   });

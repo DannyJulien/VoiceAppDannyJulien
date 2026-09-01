@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { AppButton } from '@/components/app-button';
+import { AppTextInput } from '@/components/app-text-input';
 import { IconButton } from '@/components/icon-button';
 import { PencilIcon, PlusIcon, TrashIcon } from '@/components/icons';
 import { useTabBarInset } from '@/components/mobile-navigation';
@@ -119,38 +120,34 @@ export default function ContactTimelineScreen() {
         {editing ? (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Edit this person</Text>
-            <TextInput
+            <AppTextInput
               accessibilityLabel="Contact name"
               onChangeText={setName}
               placeholder="Name"
-              placeholderTextColor={colors.muted}
               style={styles.input}
               value={name}
             />
-            <TextInput
+            <AppTextInput
               accessibilityLabel="Contact email"
               autoCapitalize="none"
               keyboardType="email-address"
               onChangeText={setEmail}
               placeholder="Email (optional if phone is present)"
-              placeholderTextColor={colors.muted}
               style={styles.input}
               value={email}
             />
-            <TextInput
+            <AppTextInput
               accessibilityLabel="Contact phone"
               keyboardType="phone-pad"
               onChangeText={setPhone}
               placeholder="Phone, e.g. +32470123456 (for WhatsApp)"
-              placeholderTextColor={colors.muted}
               style={styles.input}
               value={phone}
             />
-            <TextInput
+            <AppTextInput
               accessibilityLabel="Contact company"
               onChangeText={setCompany}
               placeholder="Company (optional)"
-              placeholderTextColor={colors.muted}
               style={styles.input}
               value={company}
             />
@@ -283,16 +280,7 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
     padding: 18,
   },
   cardTitle: { color: colors.ink, fontSize: 18, fontWeight: '800', marginBottom: 2 },
-  input: {
-    backgroundColor: colors.canvas,
-    borderColor: colors.border,
-    borderRadius: 14,
-    borderWidth: 1,
-    color: colors.ink,
-    fontSize: 16,
-    minHeight: 50,
-    paddingHorizontal: 14,
-  },
+  input: { borderRadius: 14, minHeight: 50 },
   actions: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
   actionsRight: { flexDirection: 'row', gap: 10 },
   confirmCard: {

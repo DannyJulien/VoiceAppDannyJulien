@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { AppButton } from '@/components/app-button';
+import { AppTextInput } from '@/components/app-text-input';
 import { BackButton } from '@/components/back-button';
 import { useTabBarInset } from '@/components/mobile-navigation';
 import { Screen } from '@/components/screen';
@@ -96,13 +97,11 @@ export default function ResearchActionScreen() {
         </Text>
 
         <Text style={styles.fieldLabel}>Research question (optional)</Text>
-        <TextInput
+        <AppTextInput
           accessibilityHint="Leave empty to research the note title."
           accessibilityLabel="Research topic"
           onChangeText={setResearchTopic}
           placeholder={action.title}
-          placeholderTextColor={colors.muted}
-          style={styles.input}
           value={researchTopic}
         />
         <AppButton
@@ -154,16 +153,6 @@ const createStyles = (colors: AppColors) =>
     },
     copy: { color: colors.muted, fontSize: 16, lineHeight: 24 },
     fieldLabel: { color: colors.ink, fontSize: 14, fontWeight: '700', marginTop: 2 },
-    input: {
-      backgroundColor: colors.canvas,
-      borderColor: colors.border,
-      borderRadius: 12,
-      borderWidth: 1,
-      color: colors.ink,
-      fontSize: 16,
-      minHeight: 52,
-      paddingHorizontal: 14,
-    },
     textAction: {
       backgroundColor: colors.canvas,
       borderRadius: 12,

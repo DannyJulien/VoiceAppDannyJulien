@@ -16,3 +16,10 @@ body {
   font-family: var(--font-display);
   margin: 0;
 }
+
+/* Text fields draw their own focus state inside the box (see AppTextInput).
+   The browser outline sits outside it and gets clipped by cards and screen edges. */
+input:focus,
+textarea:focus {
+  outline: none;
+}

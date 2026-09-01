@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { AppButton } from '@/components/app-button';
@@ -18,7 +18,6 @@ export default function NewNoteScreen() {
   const styles = createStyles(colors);
   const tabBarInset = useTabBarInset();
   const router = useRouter();
-  const { projectId } = useLocalSearchParams<{ projectId?: string }>();
   const queryClient = useQueryClient();
   const { session } = useAuth();
   const userId = session?.user.id;
@@ -33,7 +32,6 @@ export default function NewNoteScreen() {
           text: text.trim(),
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC',
           userId,
-          projectId,
         });
       } catch (error) {
         throw new Error(await messageForUnderstandingError(error));
@@ -43,13 +41,6 @@ export default function NewNoteScreen() {
       if (userId) {
         queryClient.invalidateQueries({ queryKey: ['actions', userId] });
         queryClient.invalidateQueries({ queryKey: ['projects', userId] });
-        if (projectId) {
-          queryClient.invalidateQueries({ queryKey: ['project-actions', projectId, userId] });
-        }
-      }
-      if (projectId) {
-        router.replace({ pathname: '/projects/[id]', params: { id: projectId } });
-        return;
       }
       if (decision.outcome === 'auto') {
         router.replace({ pathname: '/action/[id]', params: { id: action.id } });
@@ -87,11 +78,6 @@ export default function NewNoteScreen() {
             Write naturally. Handle will understand the note and file it when it is sure. Anything
             unclear, or involving another person, waits in your Inbox for approval.
           </Text>
-          {projectId ? (
-            <Text style={styles.projectHint}>
-              This note will stay in the project timeline you selected.
-            </Text>
-          ) : null}
         </View>
 
         <TextInput
@@ -143,7 +129,6 @@ const createStyles = (colors: AppColors) =>
       lineHeight: 39,
     },
     copy: { color: colors.muted, fontSize: 16, lineHeight: 23 },
-    projectHint: { color: colors.brand, fontSize: 14, fontWeight: '700', lineHeight: 20 },
     input: {
       backgroundColor: colors.surface,
       borderColor: colors.border,

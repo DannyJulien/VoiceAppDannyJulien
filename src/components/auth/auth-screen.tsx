@@ -29,19 +29,20 @@ export function AuthScreen({ eyebrow, title, description, children }: AuthScreen
   );
 }
 
-const createStyles = (colors: AppColors) => StyleSheet.create({
-  content: { justifyContent: 'center', gap: 34 },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  mark: { width: 12, height: 12, borderRadius: 6, backgroundColor: colors.brand },
-  brand: { color: colors.ink, fontSize: 18, fontWeight: '800', letterSpacing: -0.4 },
-  copy: { gap: 10 },
-  eyebrow: { color: colors.brand, fontSize: 13, fontWeight: '800', letterSpacing: 1.2 },
-  title: {
-    color: colors.ink,
-    fontSize: 38,
-    lineHeight: 43,
-    fontWeight: '800',
-    letterSpacing: -1.2,
-  },
-  description: { color: colors.muted, fontSize: 16, lineHeight: 24 },
-});
+const createStyles = (colors: AppColors) =>
+  StyleSheet.create({
+    content: { justifyContent: 'center', gap: 30 },
+    header: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    mark: { width: 12, height: 12, borderRadius: 6, backgroundColor: colors.brand },
+    brand: { color: colors.ink, fontSize: 18, fontWeight: '800', letterSpacing: -0.4 },
+    copy: { gap: 10 },
+    eyebrow: { color: colors.brand, fontSize: 13, fontWeight: '800', letterSpacing: 1.2 },
+    title: {
+      color: colors.ink,
+      fontSize: 34,
+      lineHeight: 40,
+      fontWeight: '800',
+      letterSpacing: -1.2,
+    },
+    description: { color: colors.muted, fontSize: 16, lineHeight: 24 },
+  });

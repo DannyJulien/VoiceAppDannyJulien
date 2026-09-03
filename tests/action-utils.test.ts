@@ -8,6 +8,7 @@ import {
   isChecklistAppendProposal,
   localDateKey,
   localDateTimeInputValue,
+  normalizedActionLocation,
   normalizedSchedule,
   statusLabel,
 } from '@/features/actions/action-utils';
@@ -106,6 +107,11 @@ describe('action utilities', () => {
   it('formats action labels for the inbox', () => {
     expect(actionTypeLabel('reminder')).toBe('Reminder');
     expect(statusLabel('completed')).toBe('Completed');
+  });
+
+  it('keeps a location readable while removing accidental whitespace', () => {
+    expect(normalizedActionLocation('  Brussels   Central  ')).toBe('Brussels Central');
+    expect(normalizedActionLocation('  ')).toBe('');
   });
 
   it('normalizes a valid schedule and rejects invalid values', () => {

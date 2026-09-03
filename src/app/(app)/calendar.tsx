@@ -77,7 +77,10 @@ export default function CalendarScreen() {
 
   return (
     <Screen>
-      <ScrollView contentContainerStyle={[styles.content, tabBarInset]} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.content, tabBarInset]}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.header}>
           <Text style={styles.eyebrow}>YOUR SCHEDULE</Text>
           <Text style={styles.title}>Calendar</Text>
@@ -200,6 +203,11 @@ export default function CalendarScreen() {
                 </View>
                 <View style={styles.actionCopy}>
                   <Text style={styles.actionTitle}>{action.title}</Text>
+                  {action.location ? (
+                    <Text numberOfLines={1} style={styles.actionLocation}>
+                      {action.location}
+                    </Text>
+                  ) : null}
                   {action.summary ? (
                     <Text numberOfLines={2} style={styles.actionSummary}>
                       {action.summary}
@@ -222,69 +230,77 @@ export default function CalendarScreen() {
   );
 }
 
-const createStyles = (colors: AppColors) => StyleSheet.create({
-  content: { gap: 18, paddingBottom: 32, paddingTop: 24 },
-  header: { gap: 5 },
-  eyebrow: { color: colors.brand, fontSize: 12, fontWeight: '900', letterSpacing: 1.1 },
-  title: {
-    color: colors.ink,
-    fontSize: 34,
-    fontWeight: '900',
-    letterSpacing: -1.1,
-    lineHeight: 40,
-  },
-  copy: { color: colors.muted, fontSize: 15, lineHeight: 22 },
-  monthCard: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 22,
-    borderWidth: 1,
-    gap: 12,
-    padding: 14,
-  },
-  monthHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
-  monthTitle: { color: colors.ink, fontSize: 18, fontWeight: '900' },
-  monthButton: { minHeight: 36, minWidth: 40, paddingHorizontal: 0 },
-  weekdays: { flexDirection: 'row' },
-  weekday: { color: colors.muted, flex: 1, fontSize: 11, fontWeight: '900', textAlign: 'center' },
-  dayGrid: { flexDirection: 'row', flexWrap: 'wrap' },
-  dayCell: {
-    alignItems: 'center',
-    borderRadius: 12,
-    height: 46,
-    justifyContent: 'center',
-    width: '14.2857%',
-  },
-  dayCellSelected: { backgroundColor: colors.brand },
-  dayCellPressed: { opacity: 0.76 },
-  dayNumber: { color: colors.ink, fontSize: 14, fontWeight: '800' },
-  dayNumberSelected: { color: colors.surface },
-  dayBadge: { backgroundColor: colors.accent, borderRadius: 3, height: 6, marginTop: 3, width: 6 },
-  dayBadgeSelected: { backgroundColor: '#FDE68A' },
-  agendaHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
-  agendaTitle: { color: colors.ink, fontSize: 21, fontWeight: '900' },
-  agendaDate: { color: colors.muted, fontSize: 13, marginTop: 2 },
-  agendaList: { gap: 10 },
-  agendaItem: { gap: 2 },
-  calendarButton: { alignSelf: 'flex-start', minHeight: 40, paddingHorizontal: 4 },
-  actionCard: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 18,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: 13,
-    padding: 15,
-  },
-  actionCardPressed: { opacity: 0.8, transform: [{ scale: 0.99 }] },
-  timeBlock: { alignItems: 'flex-start', gap: 4, minWidth: 70 },
-  time: { color: colors.brand, fontSize: 13, fontWeight: '900' },
-  type: { color: colors.muted, fontSize: 11, fontWeight: '800' },
-  actionCopy: { flex: 1, gap: 3 },
-  actionTitle: { color: colors.ink, fontSize: 16, fontWeight: '900', lineHeight: 22 },
-  actionSummary: { color: colors.muted, fontSize: 13, lineHeight: 19 },
-  empty: { backgroundColor: colors.accentSoft, borderRadius: 18, gap: 10, padding: 18 },
-  emptyTitle: { color: colors.ink, fontSize: 17, fontWeight: '900' },
-  errorCard: { backgroundColor: colors.dangerSoft, borderRadius: 16, gap: 10, padding: 14 },
-  error: { color: colors.danger, fontSize: 14, lineHeight: 20 },
-});
+const createStyles = (colors: AppColors) =>
+  StyleSheet.create({
+    content: { gap: 18, paddingBottom: 32, paddingTop: 24 },
+    header: { gap: 5 },
+    eyebrow: { color: colors.brand, fontSize: 12, fontWeight: '900', letterSpacing: 1.1 },
+    title: {
+      color: colors.ink,
+      fontSize: 34,
+      fontWeight: '900',
+      letterSpacing: -1.1,
+      lineHeight: 40,
+    },
+    copy: { color: colors.muted, fontSize: 15, lineHeight: 22 },
+    monthCard: {
+      backgroundColor: colors.surface,
+      borderColor: colors.border,
+      borderRadius: 22,
+      borderWidth: 1,
+      gap: 12,
+      padding: 14,
+    },
+    monthHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
+    monthTitle: { color: colors.ink, fontSize: 18, fontWeight: '900' },
+    monthButton: { minHeight: 36, minWidth: 40, paddingHorizontal: 0 },
+    weekdays: { flexDirection: 'row' },
+    weekday: { color: colors.muted, flex: 1, fontSize: 11, fontWeight: '900', textAlign: 'center' },
+    dayGrid: { flexDirection: 'row', flexWrap: 'wrap' },
+    dayCell: {
+      alignItems: 'center',
+      borderRadius: 12,
+      height: 46,
+      justifyContent: 'center',
+      width: '14.2857%',
+    },
+    dayCellSelected: { backgroundColor: colors.brand },
+    dayCellPressed: { opacity: 0.76 },
+    dayNumber: { color: colors.ink, fontSize: 14, fontWeight: '800' },
+    dayNumberSelected: { color: colors.surface },
+    dayBadge: {
+      backgroundColor: colors.accent,
+      borderRadius: 3,
+      height: 6,
+      marginTop: 3,
+      width: 6,
+    },
+    dayBadgeSelected: { backgroundColor: '#FDE68A' },
+    agendaHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
+    agendaTitle: { color: colors.ink, fontSize: 21, fontWeight: '900' },
+    agendaDate: { color: colors.muted, fontSize: 13, marginTop: 2 },
+    agendaList: { gap: 10 },
+    agendaItem: { gap: 2 },
+    calendarButton: { alignSelf: 'flex-start', minHeight: 40, paddingHorizontal: 4 },
+    actionCard: {
+      backgroundColor: colors.surface,
+      borderColor: colors.border,
+      borderRadius: 18,
+      borderWidth: 1,
+      flexDirection: 'row',
+      gap: 13,
+      padding: 15,
+    },
+    actionCardPressed: { opacity: 0.8, transform: [{ scale: 0.99 }] },
+    timeBlock: { alignItems: 'flex-start', gap: 4, minWidth: 70 },
+    time: { color: colors.brand, fontSize: 13, fontWeight: '900' },
+    type: { color: colors.muted, fontSize: 11, fontWeight: '800' },
+    actionCopy: { flex: 1, gap: 3 },
+    actionTitle: { color: colors.ink, fontSize: 16, fontWeight: '900', lineHeight: 22 },
+    actionLocation: { color: colors.brand, fontSize: 13, fontWeight: '800', lineHeight: 19 },
+    actionSummary: { color: colors.muted, fontSize: 13, lineHeight: 19 },
+    empty: { backgroundColor: colors.accentSoft, borderRadius: 18, gap: 10, padding: 18 },
+    emptyTitle: { color: colors.ink, fontSize: 17, fontWeight: '900' },
+    errorCard: { backgroundColor: colors.dangerSoft, borderRadius: 16, gap: 10, padding: 14 },
+    error: { color: colors.danger, fontSize: 14, lineHeight: 20 },
+  });

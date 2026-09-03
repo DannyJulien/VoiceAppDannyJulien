@@ -66,6 +66,11 @@ describe('capture processing prompts', () => {
     expect(instructions).toContain('never turn each list item into a separate action');
     expect(instructions).toContain('checklistTargetActionId: set this only');
   });
+
+  it('only asks the model to keep places that were explicitly stated', () => {
+    expect(instructions).toContain('location: return a concise human-readable place only when');
+    expect(instructions).toContain('never invent an address, city, country, or place from context');
+  });
 });
 
 describe('describeCurrentMoment', () => {

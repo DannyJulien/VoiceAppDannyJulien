@@ -116,6 +116,7 @@ GLOBAL RULES
 - Use requiresClarification with a question when a key detail is missing.
 - Suggest one category only when confident; otherwise use inbox.
 - Set suggestedProjectName to an exact matching existing project name when clearly related. When no existing name fits but the capture clearly names a substantial ongoing project, propose a concise new project name. Otherwise use null. Never use a person's name or a generic one-off task as a project.
+- location: return a concise human-readable place only when the user explicitly named a meaningful location, venue, address, or remote meeting place. Preserve the level of specificity they gave (for example, "Brussels Central" or "Delhaize in Mechelen"); never invent an address, city, country, or place from context. Use null when no clear location was stated or the place is ambiguous.
 - Set fields that do not apply to the selected intent to null. In particular, messageDraft is normally only for message, and scheduledAt needs an explicit unambiguous time.
 - Preserve the user's language in title, summary, clarificationQuestion, and messageDraft.
 - checklistItems: return an empty array unless the user explicitly gave a short to-do list or a set of distinct items for one subject. When there is a list, return its items in spoken order, without checkbox symbols, numbering, invented items, or duplicates. Keep one clear title for the whole checklist; never turn each list item into a separate action.

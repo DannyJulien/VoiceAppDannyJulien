@@ -54,6 +54,7 @@ export const understoodActionSchema = z.object({
   intent: actionIntentSchema,
   title: z.string().trim().min(1).max(280),
   summary: z.string().trim().max(2_000),
+  location: z.string().trim().min(1).max(280).nullable().default(null),
   topic: z.string().trim().min(1).max(280).nullable().default(null),
   couldBenefitFromResearch: z.boolean().default(false),
   researchReason: z.string().trim().max(500).nullable().default(null),

@@ -84,6 +84,7 @@ export type Database = {
           action_type: ActionType;
           title: string;
           summary: string | null;
+          location: string | null;
           status: ActionStatus;
           scheduled_at: string | null;
           scheduled_timezone: string | null;
@@ -111,6 +112,7 @@ export type Database = {
           action_type: ActionType;
           title: string;
           summary?: string | null;
+          location?: string | null;
           status?: ActionStatus;
           scheduled_at?: string | null;
           scheduled_timezone?: string | null;
@@ -133,6 +135,7 @@ export type Database = {
           voice_capture_id?: string | null;
           title?: string;
           summary?: string | null;
+          location?: string | null;
           status?: ActionStatus;
           scheduled_at?: string | null;
           scheduled_timezone?: string | null;

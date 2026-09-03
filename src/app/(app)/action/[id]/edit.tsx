@@ -17,7 +17,11 @@ import {
   suggestedPeopleFrom,
   updateAction,
 } from '@/features/actions/action-service';
-import { isChecklistAppendProposal, normalizedSchedule } from '@/features/actions/action-utils';
+import {
+  isChecklistAppendProposal,
+  normalizedActionLocation,
+  normalizedSchedule,
+} from '@/features/actions/action-utils';
 import { useAuth } from '@/features/auth/auth-provider';
 import { findOrCreateProject, getProjects } from '@/features/projects/project-service';
 import { categories, normalizedProjectName } from '@/features/projects/project-utils';
@@ -38,6 +42,7 @@ export default function EditActionScreen() {
   const userId = session?.user.id;
   const [editedTitle, setEditedTitle] = useState<string | null>(null);
   const [editedSummary, setEditedSummary] = useState<string | null>(null);
+  const [editedLocation, setEditedLocation] = useState<string | null>(null);
   const [editedScheduledAt, setEditedScheduledAt] = useState<string | null>(null);
   const [editedCategory, setEditedCategory] = useState<ActionCategory | null>(null);
   const [editedProject, setEditedProject] = useState<string | null>(null);
@@ -65,6 +70,7 @@ export default function EditActionScreen() {
   const suggestedPeople = suggestedPeopleFrom(action?.suggested_people ?? []);
   const title = editedTitle ?? action?.title ?? '';
   const summary = editedSummary ?? action?.summary ?? '';
+  const location = editedLocation ?? action?.location ?? '';
   const scheduledAt = editedScheduledAt ?? action?.scheduled_at ?? '';
   const category = editedCategory ?? action?.suggested_category ?? action?.category ?? 'inbox';
   // The AI's suggested project only matters while it doesn't match an existing project;
@@ -101,6 +107,7 @@ export default function EditActionScreen() {
           : projectChoice;
     return {
       category,
+      location: normalizedActionLocation(location) || null,
       project_id: projectId,
       scheduled_at: scheduled,
       scheduled_timezone: scheduled
@@ -226,6 +233,13 @@ export default function EditActionScreen() {
             accessibilityLabel="Schedule"
             onChange={setEditedScheduledAt}
             value={scheduledAt}
+          />
+          <Text style={styles.fieldLabel}>Where (optional)</Text>
+          <AppTextInput
+            accessibilityLabel="Location"
+            onChangeText={setEditedLocation}
+            placeholder="For example: Brussels Central"
+            value={location}
           />
           <Text style={styles.fieldLabel}>Category</Text>
           <ScrollView

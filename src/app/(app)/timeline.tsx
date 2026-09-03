@@ -37,7 +37,7 @@ function ActionCard({ action, emphasis = 'history', project }: ActionCardProps) 
         : emphasis === 'next'
           ? 'NEXT STEP'
           : actionTypeLabel(action.action_type).toUpperCase();
-  const context = project?.name ?? category.label;
+  const context = [project?.name ?? category.label, action.location].filter(Boolean).join(' · ');
   const timeLabel =
     emphasis === 'recent' || emphasis === 'history'
       ? `Added ${formatActionWhen(action.created_at)}`

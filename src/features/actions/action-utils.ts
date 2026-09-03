@@ -27,6 +27,11 @@ export function statusLabel(status: ActionStatus) {
   return status.charAt(0).toUpperCase() + status.slice(1);
 }
 
+/** A place is displayed as the user said it, with only accidental whitespace removed. */
+export function normalizedActionLocation(value: string) {
+  return value.trim().replace(/\s+/g, ' ');
+}
+
 export function checklistItemsFrom(value: Json): string[] {
   if (!Array.isArray(value)) return [];
   return normalizeChecklistItems(value.filter((item): item is string => typeof item === 'string'));
@@ -53,6 +58,7 @@ export type ApprovedActionFields = {
   scheduled_at?: string | null;
   scheduled_timezone?: string | null;
   summary?: string | null;
+  location?: string | null;
   title?: string;
 };
 

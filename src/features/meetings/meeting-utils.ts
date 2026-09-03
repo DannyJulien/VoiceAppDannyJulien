@@ -43,12 +43,13 @@ function icsDate(value: string) {
 export type IcsEventInput = {
   description: string;
   end?: string | null;
+  location?: string | null;
   start: string;
   title: string;
   uid: string;
 };
 
-export function createIcsEvent({ description, end, start, title, uid }: IcsEventInput) {
+export function createIcsEvent({ description, end, location, start, title, uid }: IcsEventInput) {
   const now = icsDate(new Date().toISOString());
   const lines = [
     'BEGIN:VCALENDAR',
@@ -61,6 +62,7 @@ export function createIcsEvent({ description, end, start, title, uid }: IcsEvent
     `DTSTART:${icsDate(start)}`,
     ...(end ? [`DTEND:${icsDate(end)}`] : []),
     `SUMMARY:${icsEscape(title)}`,
+    ...(location?.trim() ? [`LOCATION:${icsEscape(location.trim())}`] : []),
     `DESCRIPTION:${icsEscape(description)}`,
     'END:VEVENT',
     'END:VCALENDAR',

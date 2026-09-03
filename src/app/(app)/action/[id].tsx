@@ -480,6 +480,12 @@ export default function ActionDetailsScreen() {
                 <Text style={styles.metaValue}>{formatActionWhen(action.scheduled_at)}</Text>
               </View>
             ) : null}
+            {action.location ? (
+              <View style={styles.metaTile}>
+                <Text style={styles.metaLabel}>WHERE</Text>
+                <Text style={styles.metaValue}>{action.location}</Text>
+              </View>
+            ) : null}
             <View style={styles.metaTile}>
               <Text style={styles.metaLabel}>CAPTURED</Text>
               <Text style={styles.metaValue}>{formatActionWhen(action.created_at)}</Text>

@@ -35,6 +35,7 @@ export type ActionReviewInput = {
 export type ManualNoteInput = {
   category: ActionCategory;
   contactId?: string | null;
+  location?: string | null;
   projectId?: string | null;
   scheduledAt?: string | null;
   summary: string;
@@ -283,6 +284,7 @@ export async function saveReviewedAction({
       clarification_question: action.clarificationQuestion,
       category,
       confidence: action.confidence,
+      location: action.location,
       message_draft: action.messageDraft,
       requires_clarification: action.requiresClarification,
       project_id: projectId,
@@ -352,6 +354,7 @@ export async function fileUnderstoodAction({
       checklist_target_action_id: isChecklistAppend ? action.checklistTargetActionId : null,
       clarification_question: action.clarificationQuestion,
       confidence: action.confidence,
+      location: action.location,
       message_draft: action.messageDraft,
       project_id: projectIdForFiling(decision, projectId),
       requires_clarification: action.requiresClarification,
@@ -481,6 +484,7 @@ export async function approvePendingActionWithEdits(
 export async function createManualNote({
   category,
   contactId = null,
+  location = null,
   projectId = null,
   scheduledAt = null,
   summary,
@@ -494,6 +498,7 @@ export async function createManualNote({
     .insert({
       action_type: 'note',
       category,
+      location,
       project_id: projectId,
       scheduled_at: scheduledAt,
       scheduled_timezone: scheduledAt ? timezone : null,

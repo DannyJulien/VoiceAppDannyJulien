@@ -14,7 +14,7 @@ import { type AppColors, useTheme } from '@/features/theme/theme-provider';
 
 const destinations = [
   { Icon: MicrophoneIcon, label: 'Capture', path: '/home' },
-  { Icon: TimelineIcon, label: 'Timeline', path: '/timeline' },
+  { Icon: TimelineIcon, label: 'Today', path: '/timeline' },
   { Icon: CalendarIcon, label: 'Calendar', path: '/calendar' },
   { Icon: FolderIcon, label: 'Projects', path: '/projects' },
   { Icon: UsersIcon, label: 'People', path: '/contacts' },

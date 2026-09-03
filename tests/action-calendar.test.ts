@@ -42,6 +42,12 @@ describe('adding a dated item to your own calendar', () => {
     );
   });
 
+  it('adds an optional location to the calendar event', () => {
+    expect(createActionIcsEvent({ ...scheduled, location: 'Brussels Central' })).toContain(
+      'LOCATION:Brussels Central',
+    );
+  });
+
   it('leaves out an empty summary', () => {
     expect(actionEventDescription({ ...scheduled, summary: '   ' })).toBe(
       'Task\n\nPlanned in Handled.',

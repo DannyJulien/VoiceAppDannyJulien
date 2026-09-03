@@ -14,6 +14,7 @@ function capture(overrides: Partial<UnderstoodAction> = {}): UnderstoodAction {
     intent: 'reminder',
     title: 'Call the dentist',
     summary: 'Call the dentist on Friday.',
+    location: null,
     topic: null,
     couldBenefitFromResearch: false,
     researchReason: null,

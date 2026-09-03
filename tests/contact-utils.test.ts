@@ -27,6 +27,7 @@ const action: SavedAction = {
   action_type: 'note',
   title: 'Plan the meeting',
   summary: 'Bring the proposal.',
+  location: null,
   status: 'approved',
   scheduled_at: null,
   scheduled_timezone: null,

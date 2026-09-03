@@ -7,6 +7,7 @@ const baseAction = {
   confidence: 0.93,
   couldBenefitFromResearch: false,
   intent: 'note',
+  location: null,
   messageDraft: null,
   people: [],
   researchFreshness: 'not_time_sensitive',
@@ -36,6 +37,14 @@ describe('understood action checklist items', () => {
 
     expect(result.checklistItems).toEqual([]);
     expect(result.checklistTargetActionId).toBeNull();
+    expect(result.location).toBeNull();
+  });
+
+  it('keeps a specific spoken place but rejects an empty location', () => {
+    expect(
+      understoodActionSchema.parse({ ...baseAction, location: 'Brussels Central' }).location,
+    ).toBe('Brussels Central');
+    expect(() => understoodActionSchema.parse({ ...baseAction, location: '   ' })).toThrow();
   });
 
   it('keeps an explicit existing checklist target with its additions', () => {

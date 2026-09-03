@@ -8,6 +8,7 @@ export const ACTION_EVENT_MINUTES = 30;
 export type CalendarAction = {
   action_type: ActionType;
   id: string;
+  location?: string | null;
   scheduled_at: string | null;
   summary?: string | null;
   title: string;
@@ -42,6 +43,7 @@ export function createActionIcsEvent(action: CalendarAction, minutes = ACTION_EV
   return createIcsEvent({
     description: actionEventDescription(action),
     end: endFromStart(action.scheduled_at, minutes),
+    location: action.location,
     start: action.scheduled_at,
     title: action.title,
     uid: `action-${action.id}@handled`,

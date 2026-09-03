@@ -116,6 +116,7 @@ export default function TimelineScreen() {
                 {action.project_id
                   ? `${projectsQuery.data?.find((project) => project.id === action.project_id)?.name ?? 'Project'} · `
                   : `${categoryDetails(action.category).label} · `}
+                {action.location ? `${action.location} · ` : ''}
                 {formatActionWhen(action.created_at)}
               </Text>
             </Pressable>
@@ -126,46 +127,47 @@ export default function TimelineScreen() {
   );
 }
 
-const createStyles = (colors: AppColors) => StyleSheet.create({
-  content: { gap: 18, paddingBottom: 30, paddingTop: 24 },
-  titleBlock: { gap: 5 },
-  eyebrow: { color: colors.brand, fontSize: 12, fontWeight: '800', letterSpacing: 1.1 },
-  title: {
-    color: colors.ink,
-    fontSize: 34,
-    fontWeight: '900',
-    letterSpacing: -1.1,
-    lineHeight: 40,
-  },
-  copy: { color: colors.muted, fontSize: 16, lineHeight: 24 },
-  filters: { gap: 8 },
-  filter: { minHeight: 42, paddingHorizontal: 14 },
-  list: { gap: 10 },
-  actionCard: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 20,
-    borderWidth: 1,
-    gap: 8,
-    padding: 18,
-  },
-  actionCardPressed: { opacity: 0.82, transform: [{ scale: 0.99 }] },
-  cardTopRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  cardType: { color: colors.brand, fontSize: 12, fontWeight: '900', letterSpacing: 0.7 },
-  cardStatus: { color: colors.muted, fontSize: 13, fontWeight: '700' },
-  cardTitle: { color: colors.ink, fontSize: 18, fontWeight: '800', lineHeight: 24 },
-  cardSummary: { color: colors.muted, fontSize: 14, lineHeight: 20 },
-  cardWhen: { color: colors.muted, fontSize: 14, lineHeight: 20 },
-  empty: {
-    alignItems: 'flex-start',
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 20,
-    borderWidth: 1,
-    gap: 12,
-    padding: 20,
-  },
-  emptyTitle: { color: colors.ink, fontSize: 19, fontWeight: '800' },
-  error: { color: colors.danger, fontSize: 14, lineHeight: 20 },
-  errorCard: { gap: 10 },
-});
+const createStyles = (colors: AppColors) =>
+  StyleSheet.create({
+    content: { gap: 18, paddingBottom: 30, paddingTop: 24 },
+    titleBlock: { gap: 5 },
+    eyebrow: { color: colors.brand, fontSize: 12, fontWeight: '800', letterSpacing: 1.1 },
+    title: {
+      color: colors.ink,
+      fontSize: 34,
+      fontWeight: '900',
+      letterSpacing: -1.1,
+      lineHeight: 40,
+    },
+    copy: { color: colors.muted, fontSize: 16, lineHeight: 24 },
+    filters: { gap: 8 },
+    filter: { minHeight: 42, paddingHorizontal: 14 },
+    list: { gap: 10 },
+    actionCard: {
+      backgroundColor: colors.surface,
+      borderColor: colors.border,
+      borderRadius: 20,
+      borderWidth: 1,
+      gap: 8,
+      padding: 18,
+    },
+    actionCardPressed: { opacity: 0.82, transform: [{ scale: 0.99 }] },
+    cardTopRow: { flexDirection: 'row', justifyContent: 'space-between' },
+    cardType: { color: colors.brand, fontSize: 12, fontWeight: '900', letterSpacing: 0.7 },
+    cardStatus: { color: colors.muted, fontSize: 13, fontWeight: '700' },
+    cardTitle: { color: colors.ink, fontSize: 18, fontWeight: '800', lineHeight: 24 },
+    cardSummary: { color: colors.muted, fontSize: 14, lineHeight: 20 },
+    cardWhen: { color: colors.muted, fontSize: 14, lineHeight: 20 },
+    empty: {
+      alignItems: 'flex-start',
+      backgroundColor: colors.surface,
+      borderColor: colors.border,
+      borderRadius: 20,
+      borderWidth: 1,
+      gap: 12,
+      padding: 20,
+    },
+    emptyTitle: { color: colors.ink, fontSize: 19, fontWeight: '800' },
+    error: { color: colors.danger, fontSize: 14, lineHeight: 20 },
+    errorCard: { gap: 10 },
+  });

@@ -259,9 +259,11 @@ function RecordingPulse({
     loudness.set(withTiming(normalized, { duration: 250 }));
   }, [active, loudness, meteringDb]);
 
+  // Max growth stays under the 12px layout gap around the button, so the ring
+  // never overlaps the status text; loudness mostly shows as brightness instead.
   const ringStyle = useAnimatedStyle(() => ({
-    opacity: visible.get() * (0.35 + 0.45 * loudness.get()),
-    transform: [{ scale: 1 + 0.05 * breath.get() + 0.4 * loudness.get() }],
+    opacity: visible.get() * (0.3 + 0.65 * loudness.get()),
+    transform: [{ scale: 1 + 0.03 * breath.get() + 0.09 * loudness.get() }],
   }));
 
   return <Animated.View pointerEvents="none" style={[style, ringStyle]} />;

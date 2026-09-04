@@ -1,5 +1,23 @@
 import { useEffect } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  type StyleProp,
+  Text,
+  View,
+  type ViewStyle,
+} from 'react-native';
+import Animated, {
+  cancelAnimation,
+  Easing,
+  type SharedValue,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -28,6 +46,7 @@ export default function HomeScreen() {
     error: captureError,
     filingDecision,
     isRecording,
+    meteringDb,
     inboxAction,
     pendingCount,
     phase,
@@ -83,6 +102,13 @@ export default function HomeScreen() {
                 {!isRecording ? <View style={styles.micBase} /> : null}
               </View>
             </Pressable>
+            {isRecording ? (
+              <VoiceLevelBars
+                barStyle={styles.levelBar}
+                meteringDb={meteringDb}
+                style={styles.levelBars}
+              />
+            ) : null}
             <Text style={styles.captureStatus}>
               {isRecording
                 ? `Listening · ${formatDuration(durationMillis)}`
@@ -185,6 +211,80 @@ export default function HomeScreen() {
   );
 }
 
+// expo-audio metering is dBFS: -160 is silence, 0 is clipping; speech lives between these two.
+const METERING_FLOOR_DB = -60;
+const METERING_CEILING_DB = -10;
+
+// Desynced cycle lengths so the bars never march in step.
+const BAR_CYCLE_MS = [340, 260, 420, 300, 380];
+const BAR_MIN_HEIGHT = 4;
+const BAR_MAX_HEIGHT = 26;
+
+function VoiceLevelBars({
+  barStyle,
+  meteringDb,
+  style,
+}: {
+  barStyle: StyleProp<ViewStyle>;
+  meteringDb: number | undefined;
+  style: StyleProp<ViewStyle>;
+}) {
+  const loudness = useSharedValue(0);
+
+  useEffect(() => {
+    const db = meteringDb ?? METERING_FLOOR_DB;
+    const normalized = Math.min(
+      1,
+      Math.max(0, (db - METERING_FLOOR_DB) / (METERING_CEILING_DB - METERING_FLOOR_DB)),
+    );
+    // Ramp over one polling interval so the 4 Hz metering updates read as continuous.
+    loudness.set(withTiming(normalized, { duration: 250 }));
+  }, [loudness, meteringDb]);
+
+  return (
+    <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={style}>
+      {BAR_CYCLE_MS.map((cycleMs, index) => (
+        <LevelBar cycleMs={cycleMs} key={index} loudness={loudness} style={barStyle} />
+      ))}
+    </View>
+  );
+}
+
+function LevelBar({
+  cycleMs,
+  loudness,
+  style,
+}: {
+  cycleMs: number;
+  loudness: SharedValue<number>;
+  style: StyleProp<ViewStyle>;
+}) {
+  const bounce = useSharedValue(0);
+
+  useEffect(() => {
+    bounce.set(
+      withRepeat(
+        withSequence(
+          withTiming(1, { duration: cycleMs, easing: Easing.inOut(Easing.quad) }),
+          withTiming(0.25, { duration: cycleMs, easing: Easing.inOut(Easing.quad) }),
+        ),
+        -1,
+      ),
+    );
+    return () => cancelAnimation(bounce);
+  }, [bounce, cycleMs]);
+
+  const animatedStyle = useAnimatedStyle(() => {
+    // Idle ripple stays small; real voice level opens up the full travel.
+    const amplitude = 0.12 + 0.88 * loudness.get();
+    return {
+      height: BAR_MIN_HEIGHT + (BAR_MAX_HEIGHT - BAR_MIN_HEIGHT) * amplitude * bounce.get(),
+    };
+  });
+
+  return <Animated.View style={[style, animatedStyle]} />;
+}
+
 const createStyles = (colors: AppColors) =>
   StyleSheet.create({
     content: { paddingTop: 8 },
@@ -217,6 +317,14 @@ const createStyles = (colors: AppColors) =>
     },
     copy: { color: colors.onBrandMuted, fontSize: 15, lineHeight: 23, maxWidth: 370 },
     captureArea: { alignItems: 'center', gap: 12, marginTop: 6 },
+    levelBars: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      gap: 4,
+      height: BAR_MAX_HEIGHT + 2,
+      justifyContent: 'center',
+    },
+    levelBar: { backgroundColor: colors.onBrand, borderRadius: 3, width: 5 },
     microphone: {
       alignItems: 'center',
       backgroundColor: colors.accent,

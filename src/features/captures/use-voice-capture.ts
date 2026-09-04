@@ -25,7 +25,12 @@ type CapturePhase = 'idle' | 'recording' | 'uploading' | 'understanding' | 'uplo
 
 export type { UnderstoodAction } from '@/features/actions/action-schema';
 
-const recordingOptions = { ...RecordingPresets.HIGH_QUALITY, directory: 'document' as const };
+const recordingOptions = {
+  ...RecordingPresets.HIGH_QUALITY,
+  directory: 'document' as const,
+  // Level metering drives the recording pulse on Home; off by default in every preset.
+  isMeteringEnabled: true,
+};
 export function useVoiceCapture(userId: string | undefined) {
   const recorder = useAudioRecorder(recordingOptions);
   const recorderState = useAudioRecorderState(recorder, 250);
@@ -166,6 +171,7 @@ export function useVoiceCapture(userId: string | undefined) {
     discardPendingUploads,
     durationMillis: recorderState.durationMillis,
     error,
+    meteringDb: recorderState.metering,
     isRecording: recorderState.isRecording,
     filingDecision: filedCapture?.decision ?? null,
     inboxAction: filedCapture?.action ?? null,

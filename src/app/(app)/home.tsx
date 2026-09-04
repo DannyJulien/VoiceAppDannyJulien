@@ -1,5 +1,22 @@
 import { useEffect } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  type StyleProp,
+  Text,
+  View,
+  type ViewStyle,
+} from 'react-native';
+import Animated, {
+  cancelAnimation,
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -28,6 +45,7 @@ export default function HomeScreen() {
     error: captureError,
     filingDecision,
     isRecording,
+    meteringDb,
     inboxAction,
     pendingCount,
     phase,
@@ -63,26 +81,35 @@ export default function HomeScreen() {
             Capture a thought by voice or write one down. Sort it after, without losing the flow.
           </Text>
           <View style={styles.captureArea}>
-            <Pressable
-              accessibilityHint={
-                isRecording ? 'Stops and securely uploads your recording' : 'Starts a new recording'
-              }
-              accessibilityLabel={isRecording ? 'Stop recording' : 'Start recording'}
-              accessibilityRole="button"
-              accessibilityState={{ busy: isBusy }}
-              disabled={isBusy}
-              onPress={isRecording ? stopRecording : startRecording}
-              style={({ pressed }) => [
-                styles.microphone,
-                isRecording && styles.microphoneRecording,
-                (pressed || isBusy) && styles.microphonePressed,
-              ]}
-            >
-              <View style={styles.microphoneIcon}>
-                <View style={isRecording ? styles.stopIcon : styles.micStem} />
-                {!isRecording ? <View style={styles.micBase} /> : null}
-              </View>
-            </Pressable>
+            <View style={styles.captureButtonWrap}>
+              <RecordingPulse
+                active={isRecording}
+                meteringDb={meteringDb}
+                style={styles.pulseRing}
+              />
+              <Pressable
+                accessibilityHint={
+                  isRecording
+                    ? 'Stops and securely uploads your recording'
+                    : 'Starts a new recording'
+                }
+                accessibilityLabel={isRecording ? 'Stop recording' : 'Start recording'}
+                accessibilityRole="button"
+                accessibilityState={{ busy: isBusy }}
+                disabled={isBusy}
+                onPress={isRecording ? stopRecording : startRecording}
+                style={({ pressed }) => [
+                  styles.microphone,
+                  isRecording && styles.microphoneRecording,
+                  (pressed || isBusy) && styles.microphonePressed,
+                ]}
+              >
+                <View style={styles.microphoneIcon}>
+                  <View style={isRecording ? styles.stopIcon : styles.micStem} />
+                  {!isRecording ? <View style={styles.micBase} /> : null}
+                </View>
+              </Pressable>
+            </View>
             <Text style={styles.captureStatus}>
               {isRecording
                 ? `Listening · ${formatDuration(durationMillis)}`
@@ -185,6 +212,61 @@ export default function HomeScreen() {
   );
 }
 
+// expo-audio metering is dBFS: -160 is silence, 0 is clipping; speech lives between these two.
+const METERING_FLOOR_DB = -60;
+const METERING_CEILING_DB = -10;
+
+function RecordingPulse({
+  active,
+  meteringDb,
+  style,
+}: {
+  active: boolean;
+  meteringDb: number | undefined;
+  style: StyleProp<ViewStyle>;
+}) {
+  const visible = useSharedValue(0);
+  const loudness = useSharedValue(0);
+  const breath = useSharedValue(0);
+
+  useEffect(() => {
+    visible.set(withTiming(active ? 1 : 0, { duration: 200 }));
+    if (active) {
+      breath.set(
+        withRepeat(
+          withSequence(
+            withTiming(1, { duration: 900, easing: Easing.inOut(Easing.quad) }),
+            withTiming(0, { duration: 900, easing: Easing.inOut(Easing.quad) }),
+          ),
+          -1,
+        ),
+      );
+    } else {
+      cancelAnimation(breath);
+      breath.set(withTiming(0, { duration: 200 }));
+      loudness.set(withTiming(0, { duration: 200 }));
+    }
+  }, [active, breath, loudness, visible]);
+
+  useEffect(() => {
+    if (!active) return;
+    const db = meteringDb ?? METERING_FLOOR_DB;
+    const normalized = Math.min(
+      1,
+      Math.max(0, (db - METERING_FLOOR_DB) / (METERING_CEILING_DB - METERING_FLOOR_DB)),
+    );
+    // Ramp over one polling interval so the 4 Hz metering updates read as a continuous swell.
+    loudness.set(withTiming(normalized, { duration: 250 }));
+  }, [active, loudness, meteringDb]);
+
+  const ringStyle = useAnimatedStyle(() => ({
+    opacity: visible.get() * (0.35 + 0.45 * loudness.get()),
+    transform: [{ scale: 1 + 0.05 * breath.get() + 0.4 * loudness.get() }],
+  }));
+
+  return <Animated.View pointerEvents="none" style={[style, ringStyle]} />;
+}
+
 const createStyles = (colors: AppColors) =>
   StyleSheet.create({
     content: { paddingTop: 8 },
@@ -217,6 +299,17 @@ const createStyles = (colors: AppColors) =>
     },
     copy: { color: colors.onBrandMuted, fontSize: 15, lineHeight: 23, maxWidth: 370 },
     captureArea: { alignItems: 'center', gap: 12, marginTop: 6 },
+    captureButtonWrap: { alignItems: 'center', justifyContent: 'center' },
+    pulseRing: {
+      position: 'absolute',
+      top: 0,
+      right: 0,
+      bottom: 0,
+      left: 0,
+      borderColor: colors.onBrand,
+      borderRadius: 66,
+      borderWidth: 3,
+    },
     microphone: {
       alignItems: 'center',
       backgroundColor: colors.accent,

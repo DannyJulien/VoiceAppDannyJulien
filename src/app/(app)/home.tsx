@@ -11,6 +11,7 @@ import {
 import Animated, {
   cancelAnimation,
   Easing,
+  type SharedValue,
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
@@ -81,35 +82,33 @@ export default function HomeScreen() {
             Capture a thought by voice or write one down. Sort it after, without losing the flow.
           </Text>
           <View style={styles.captureArea}>
-            <View style={styles.captureButtonWrap}>
-              <RecordingPulse
-                active={isRecording}
+            <Pressable
+              accessibilityHint={
+                isRecording ? 'Stops and securely uploads your recording' : 'Starts a new recording'
+              }
+              accessibilityLabel={isRecording ? 'Stop recording' : 'Start recording'}
+              accessibilityRole="button"
+              accessibilityState={{ busy: isBusy }}
+              disabled={isBusy}
+              onPress={isRecording ? stopRecording : startRecording}
+              style={({ pressed }) => [
+                styles.microphone,
+                isRecording && styles.microphoneRecording,
+                (pressed || isBusy) && styles.microphonePressed,
+              ]}
+            >
+              <View style={styles.microphoneIcon}>
+                <View style={isRecording ? styles.stopIcon : styles.micStem} />
+                {!isRecording ? <View style={styles.micBase} /> : null}
+              </View>
+            </Pressable>
+            {isRecording ? (
+              <VoiceLevelBars
+                barStyle={styles.levelBar}
                 meteringDb={meteringDb}
-                style={styles.pulseRing}
+                style={styles.levelBars}
               />
-              <Pressable
-                accessibilityHint={
-                  isRecording
-                    ? 'Stops and securely uploads your recording'
-                    : 'Starts a new recording'
-                }
-                accessibilityLabel={isRecording ? 'Stop recording' : 'Start recording'}
-                accessibilityRole="button"
-                accessibilityState={{ busy: isBusy }}
-                disabled={isBusy}
-                onPress={isRecording ? stopRecording : startRecording}
-                style={({ pressed }) => [
-                  styles.microphone,
-                  isRecording && styles.microphoneRecording,
-                  (pressed || isBusy) && styles.microphonePressed,
-                ]}
-              >
-                <View style={styles.microphoneIcon}>
-                  <View style={isRecording ? styles.stopIcon : styles.micStem} />
-                  {!isRecording ? <View style={styles.micBase} /> : null}
-                </View>
-              </Pressable>
-            </View>
+            ) : null}
             <Text style={styles.captureStatus}>
               {isRecording
                 ? `Listening · ${formatDuration(durationMillis)}`
@@ -216,57 +215,74 @@ export default function HomeScreen() {
 const METERING_FLOOR_DB = -60;
 const METERING_CEILING_DB = -10;
 
-function RecordingPulse({
-  active,
+// Desynced cycle lengths so the bars never march in step.
+const BAR_CYCLE_MS = [340, 260, 420, 300, 380];
+const BAR_MIN_HEIGHT = 4;
+const BAR_MAX_HEIGHT = 26;
+
+function VoiceLevelBars({
+  barStyle,
   meteringDb,
   style,
 }: {
-  active: boolean;
+  barStyle: StyleProp<ViewStyle>;
   meteringDb: number | undefined;
   style: StyleProp<ViewStyle>;
 }) {
-  const visible = useSharedValue(0);
   const loudness = useSharedValue(0);
-  const breath = useSharedValue(0);
 
   useEffect(() => {
-    visible.set(withTiming(active ? 1 : 0, { duration: 200 }));
-    if (active) {
-      breath.set(
-        withRepeat(
-          withSequence(
-            withTiming(1, { duration: 900, easing: Easing.inOut(Easing.quad) }),
-            withTiming(0, { duration: 900, easing: Easing.inOut(Easing.quad) }),
-          ),
-          -1,
-        ),
-      );
-    } else {
-      cancelAnimation(breath);
-      breath.set(withTiming(0, { duration: 200 }));
-      loudness.set(withTiming(0, { duration: 200 }));
-    }
-  }, [active, breath, loudness, visible]);
-
-  useEffect(() => {
-    if (!active) return;
     const db = meteringDb ?? METERING_FLOOR_DB;
     const normalized = Math.min(
       1,
       Math.max(0, (db - METERING_FLOOR_DB) / (METERING_CEILING_DB - METERING_FLOOR_DB)),
     );
-    // Ramp over one polling interval so the 4 Hz metering updates read as a continuous swell.
+    // Ramp over one polling interval so the 4 Hz metering updates read as continuous.
     loudness.set(withTiming(normalized, { duration: 250 }));
-  }, [active, loudness, meteringDb]);
+  }, [loudness, meteringDb]);
 
-  // Max growth stays under the 12px layout gap around the button, so the ring
-  // never overlaps the status text; loudness mostly shows as brightness instead.
-  const ringStyle = useAnimatedStyle(() => ({
-    opacity: visible.get() * (0.3 + 0.65 * loudness.get()),
-    transform: [{ scale: 1 + 0.03 * breath.get() + 0.09 * loudness.get() }],
-  }));
+  return (
+    <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={style}>
+      {BAR_CYCLE_MS.map((cycleMs, index) => (
+        <LevelBar cycleMs={cycleMs} key={index} loudness={loudness} style={barStyle} />
+      ))}
+    </View>
+  );
+}
 
-  return <Animated.View pointerEvents="none" style={[style, ringStyle]} />;
+function LevelBar({
+  cycleMs,
+  loudness,
+  style,
+}: {
+  cycleMs: number;
+  loudness: SharedValue<number>;
+  style: StyleProp<ViewStyle>;
+}) {
+  const bounce = useSharedValue(0);
+
+  useEffect(() => {
+    bounce.set(
+      withRepeat(
+        withSequence(
+          withTiming(1, { duration: cycleMs, easing: Easing.inOut(Easing.quad) }),
+          withTiming(0.25, { duration: cycleMs, easing: Easing.inOut(Easing.quad) }),
+        ),
+        -1,
+      ),
+    );
+    return () => cancelAnimation(bounce);
+  }, [bounce, cycleMs]);
+
+  const animatedStyle = useAnimatedStyle(() => {
+    // Idle ripple stays small; real voice level opens up the full travel.
+    const amplitude = 0.12 + 0.88 * loudness.get();
+    return {
+      height: BAR_MIN_HEIGHT + (BAR_MAX_HEIGHT - BAR_MIN_HEIGHT) * amplitude * bounce.get(),
+    };
+  });
+
+  return <Animated.View style={[style, animatedStyle]} />;
 }
 
 const createStyles = (colors: AppColors) =>
@@ -301,17 +317,14 @@ const createStyles = (colors: AppColors) =>
     },
     copy: { color: colors.onBrandMuted, fontSize: 15, lineHeight: 23, maxWidth: 370 },
     captureArea: { alignItems: 'center', gap: 12, marginTop: 6 },
-    captureButtonWrap: { alignItems: 'center', justifyContent: 'center' },
-    pulseRing: {
-      position: 'absolute',
-      top: 0,
-      right: 0,
-      bottom: 0,
-      left: 0,
-      borderColor: colors.onBrand,
-      borderRadius: 66,
-      borderWidth: 3,
+    levelBars: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      gap: 4,
+      height: BAR_MAX_HEIGHT + 2,
+      justifyContent: 'center',
     },
+    levelBar: { backgroundColor: colors.onBrand, borderRadius: 3, width: 5 },
     microphone: {
       alignItems: 'center',
       backgroundColor: colors.accent,

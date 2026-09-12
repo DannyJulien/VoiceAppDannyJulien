@@ -1,4 +1,4 @@
-import { FunctionsHttpError } from '@supabase/supabase-js';
+import { FunctionsFetchError, FunctionsHttpError } from '@supabase/supabase-js';
 
 import {
   fileUnderstoodAction,
@@ -12,6 +12,7 @@ import { messageForCaptureError } from '@/features/captures/capture-utils';
 import { getContacts } from '@/features/contacts/contact-service';
 import { getProjects } from '@/features/projects/project-service';
 import { getSupabaseClient } from '@/services/supabase/client';
+import { isNetworkTimeoutError } from '@/services/supabase/fetch-with-timeout';
 
 const processCaptureFunction = 'process-captur';
 
@@ -76,9 +77,18 @@ export function saveVoiceCapture(input: Omit<UnderstandingInput, 'text'>) {
 
 export function saveTypedCapture(
   input: Required<Pick<UnderstandingInput, 'text' | 'timezone' | 'userId'>> &
-    Pick<UnderstandingInput, 'projectId'>,
+    Pick<UnderstandingInput, 'captureId' | 'projectId'>,
 ) {
   return fileCapture(input);
+}
+
+/** True only for failures where saving locally is safer than showing a terminal error. */
+export function isRecoverableConnectionError(error: unknown) {
+  if (error instanceof FunctionsFetchError || isNetworkTimeoutError(error)) return true;
+  const message = error instanceof Error ? error.message : '';
+  return /failed to fetch|failed to send a request|load failed|network request failed|networkerror/i.test(
+    message,
+  );
 }
 
 export async function messageForUnderstandingError(error: unknown) {

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { randomUUID } from 'expo-crypto';
 
 import { AppButton } from '@/components/app-button';
 import { AppTextInput } from '@/components/app-text-input';
@@ -10,9 +11,15 @@ import { Screen } from '@/components/screen';
 import { type AppColors, useTheme } from '@/features/theme/theme-provider';
 import { useAuth } from '@/features/auth/auth-provider';
 import {
+  isRecoverableConnectionError,
   messageForUnderstandingError,
   saveTypedCapture,
 } from '@/features/captures/understanding-service';
+import { queuePendingTypedCapture } from '@/features/captures/typed-capture-outbox';
+
+type TypedNoteSaveResult =
+  | { kind: 'filed'; result: Awaited<ReturnType<typeof saveTypedCapture>> }
+  | { kind: 'queued' };
 
 export default function NewNoteScreen() {
   const colors = useTheme();
@@ -28,17 +35,40 @@ export default function NewNoteScreen() {
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!userId) throw new Error('You need to be signed in.');
+      const captureId = randomUUID();
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC';
       try {
-        return await saveTypedCapture({
+        const result = await saveTypedCapture({
+          captureId,
           text: text.trim(),
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC',
+          timezone,
           userId,
         });
+        return { kind: 'filed', result } satisfies TypedNoteSaveResult;
       } catch (error) {
+        if (isRecoverableConnectionError(error)) {
+          await queuePendingTypedCapture({
+            id: captureId,
+            projectId: null,
+            text: text.trim(),
+            timezone,
+            userId,
+          });
+          return { kind: 'queued' } satisfies TypedNoteSaveResult;
+        }
         throw new Error(await messageForUnderstandingError(error));
       }
     },
-    onSuccess: ({ action, decision }) => {
+    onSuccess: (saved) => {
+      if (saved.kind === 'queued') {
+        if (userId) {
+          queryClient.invalidateQueries({ queryKey: ['pending-typed-captures', userId] });
+        }
+        router.replace('/');
+        return;
+      }
+
+      const { action, decision } = saved.result;
       if (userId) {
         queryClient.invalidateQueries({ queryKey: ['actions', userId] });
         queryClient.invalidateQueries({ queryKey: ['projects', userId] });

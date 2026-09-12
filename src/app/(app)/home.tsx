@@ -19,7 +19,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
-import { useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { AppButton } from '@/components/app-button';
 import { useTabBarInset } from '@/components/mobile-navigation';
@@ -29,6 +29,11 @@ import { filingReasonLabel } from '@/features/actions/filing-gate';
 import { useAuth } from '@/features/auth/auth-provider';
 import { formatDuration } from '@/features/captures/capture-utils';
 import { useVoiceCapture } from '@/features/captures/use-voice-capture';
+import { saveTypedCapture } from '@/features/captures/understanding-service';
+import {
+  getPendingTypedCaptureCount,
+  retryPendingTypedCaptures,
+} from '@/features/captures/typed-capture-outbox';
 
 export default function HomeScreen() {
   const colors = useTheme();
@@ -38,6 +43,33 @@ export default function HomeScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const voiceCapture = useVoiceCapture(session?.user.id);
+  const userId = session?.user.id;
+  const pendingTypedCapturesQuery = useQuery({
+    enabled: Boolean(userId),
+    queryFn: () => getPendingTypedCaptureCount(userId!),
+    queryKey: ['pending-typed-captures', userId],
+  });
+  const retryTypedCapturesMutation = useMutation({
+    mutationFn: async () => {
+      if (!userId) throw new Error('You need to be signed in.');
+      return retryPendingTypedCaptures(userId, (capture) =>
+        saveTypedCapture({
+          captureId: capture.id,
+          projectId: capture.projectId,
+          text: capture.text,
+          timezone: capture.timezone,
+          userId,
+        }),
+      );
+    },
+    onSuccess: (result) => {
+      void queryClient.invalidateQueries({ queryKey: ['pending-typed-captures', userId] });
+      if (result.syncedCount > 0 && userId) {
+        void queryClient.invalidateQueries({ queryKey: ['actions', userId] });
+        void queryClient.invalidateQueries({ queryKey: ['projects', userId] });
+      }
+    },
+  });
   const {
     canRetryProcessing,
     clearInboxAction,
@@ -56,6 +88,7 @@ export default function HomeScreen() {
     stopRecording,
   } = voiceCapture;
   const isBusy = phase === 'uploading' || phase === 'understanding';
+  const pendingTypedCaptureCount = pendingTypedCapturesQuery.data ?? 0;
 
   useEffect(() => {
     if (!inboxAction || !session?.user.id) return;
@@ -190,6 +223,29 @@ export default function HomeScreen() {
               onPress={discardPendingUploads}
               variant="quiet"
             />
+          </View>
+        ) : null}
+        {pendingTypedCaptureCount > 0 ? (
+          <View style={styles.outboxCard}>
+            <Text style={styles.retryTitle}>
+              {pendingTypedCaptureCount} typed {pendingTypedCaptureCount === 1 ? 'note' : 'notes'}
+              {' awaiting sync'}
+            </Text>
+            <Text style={styles.retryCopy}>
+              Your {pendingTypedCaptureCount === 1 ? 'note is' : 'notes are'} safely saved on this
+              device. Connect to the internet, then sync when you are ready.
+            </Text>
+            <AppButton
+              label="Retry sync"
+              loading={retryTypedCapturesMutation.isPending}
+              onPress={() => retryTypedCapturesMutation.mutate()}
+              variant="secondary"
+            />
+            {retryTypedCapturesMutation.error ? (
+              <Text accessibilityRole="alert" style={styles.error}>
+                Your note is still safe on this device. Please try syncing again later.
+              </Text>
+            ) : null}
           </View>
         ) : null}
         {canRetryProcessing ? (
@@ -374,6 +430,14 @@ const createStyles = (colors: AppColors) =>
     resumeCopy: { color: colors.muted, fontSize: 14, lineHeight: 20 },
     resumeButton: { minHeight: 42, paddingHorizontal: 13 },
     retryCard: { backgroundColor: colors.dangerSoft, borderRadius: 18, gap: 8, padding: 18 },
+    outboxCard: {
+      backgroundColor: colors.brandSoft,
+      borderColor: colors.focus,
+      borderRadius: 18,
+      borderWidth: 1,
+      gap: 8,
+      padding: 18,
+    },
     retryTitle: { color: colors.ink, fontSize: 16, fontWeight: '800' },
     retryCopy: { color: colors.muted, fontSize: 14, lineHeight: 20 },
     error: { color: colors.danger, fontSize: 14, marginTop: 4 },

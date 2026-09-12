@@ -258,19 +258,43 @@ Deno.serve(async (request) => {
     let transcript: string;
 
     if (manualText) {
-      const { data: capture, error: captureError } = await admin
-        .from('voice_captures')
-        .insert({
-          processing_status: 'transcribed',
-          transcript: manualText,
-          user_id: auth.user.id,
-        })
-        .select('id')
-        .single();
-      if (captureError || !capture)
-        return json({ error: 'The typed note could not be saved.' }, 500);
+      const requestedCaptureId =
+        typeof payload?.captureId === 'string' && /^[0-9a-f-]{36}$/i.test(payload.captureId)
+          ? payload.captureId
+          : null;
+      let capture: { id: string; transcript: string | null } | null = null;
+
+      if (requestedCaptureId) {
+        const { data: existing, error: existingError } = await admin
+          .from('voice_captures')
+          .select('id, transcript')
+          .eq('id', requestedCaptureId)
+          .eq('user_id', auth.user.id)
+          .maybeSingle();
+        if (existingError) return json({ error: 'The typed note could not be saved.' }, 500);
+        if (existing?.transcript && existing.transcript !== manualText) {
+          return json({ error: 'This saved note no longer matches its original text.' }, 409);
+        }
+        capture = existing;
+      }
+
+      if (!capture) {
+        const { data, error: captureError } = await admin
+          .from('voice_captures')
+          .insert({
+            ...(requestedCaptureId ? { id: requestedCaptureId } : {}),
+            processing_status: 'transcribed',
+            transcript: manualText,
+            user_id: auth.user.id,
+          })
+          .select('id, transcript')
+          .single();
+        if (captureError || !data) return json({ error: 'The typed note could not be saved.' }, 500);
+        capture = data;
+      }
+
       captureId = capture.id;
-      transcript = manualText;
+      transcript = capture.transcript ?? manualText;
     } else {
       const { data: capture, error: captureError } = await admin
         .from('voice_captures')
